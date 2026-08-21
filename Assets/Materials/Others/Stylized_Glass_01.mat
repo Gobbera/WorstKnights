@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Stylized_Glass_01
+  m_Shader: {fileID: -6465566751694194690, guid: 0f2b54b1a0417a34fbfe9e4595fec7d1, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Inner_Rim_Power: 0.4
+    - _Inner_Rim_Smoothness: 0.044
+    - _LightSpecCutOff: 0.5
+    - _LightSpecCutOffSmoothness: 0.5
+    - _Light_Spec_Cut_Off: 0.138
+    - _Light_Spec_Cut_Off_Smoothness: 0.083
+    - _Outer_Rim_Smoothness: 0.137
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _Rim_Outer_Power: 1.6
+    - _Rim_Power: 0
+    - _ViewSpecOff: 0.5
+    - _View_Spec_Off: 0.773
+    m_Colors:
+    - _Base_Color: {r: 0.6367924, g: 1, b: 1, a: 0.39215687}
+    - _Inner_Glow_Color: {r: 1, g: 0.97863775, b: 0.9764151, a: 1}
+    - _Outer_Rim_Color: {r: 1, g: 1, b: 1, a: 1}
+    - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Specular_Color: {r: 0.8820755, g: 1, b: 0.99410963, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
+--- !u!114 &7727918746300824117
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion
+  version: 10

@@ -1,0 +1,158 @@
+using Photon.Pun;
+using UnityEngine;
+
+[DisallowMultipleComponent]
+[RequireComponent(typeof(PhotonView), typeof(PlayerInputHandler), typeof(PlayerMovement))]
+public class PlayerController : MonoBehaviourPun
+{
+    [SerializeField] private IPlayerInput playerInput;
+    [SerializeField] private IPlayerMovement playerMovement;
+    [SerializeField] private HandEquipmentController handEquipmentController;
+    [SerializeField] private PlayerEmoteWheelController emoteWheelController;
+    [SerializeField] private PlayerPickupInteractor playerPickupInteractor;
+
+    private void Awake()
+    {
+        if (playerInput == null)
+            playerInput = GetComponent<PlayerInputHandler>();
+
+        if (playerMovement == null)
+            playerMovement = GetComponent<PlayerMovement>();
+
+        if (handEquipmentController == null)
+            handEquipmentController = GetComponent<HandEquipmentController>();
+
+        if (emoteWheelController == null)
+            emoteWheelController = GetComponent<PlayerEmoteWheelController>();
+
+        if (playerPickupInteractor == null)
+            playerPickupInteractor = GetComponent<PlayerPickupInteractor>();
+    }
+
+    private void Update()
+    {
+        if (!photonView.IsMine)
+            return;
+
+        if (!ValidateComponents())
+            return;
+
+        playerInput.UpdateInput();
+        HandleMovement();
+    }
+
+    private bool ValidateComponents()
+    {
+        if (playerInput != null && playerMovement != null)
+            return true;
+
+        Debug.LogError("PlayerController: Missing PlayerInputHandler or PlayerMovement component!", gameObject);
+        return false;
+    }
+
+    private void HandleMovement()
+    {
+        if (handEquipmentController == null)
+            handEquipmentController = GetComponent<HandEquipmentController>();
+
+        if (emoteWheelController == null)
+            emoteWheelController = GetComponent<PlayerEmoteWheelController>();
+
+        if (playerPickupInteractor == null)
+            playerPickupInteractor = GetComponent<PlayerPickupInteractor>();
+
+        if (playerPickupInteractor != null && playerPickupInteractor.IsInteractionUiOpen)
+        {
+            playerMovement.SetSprintHeld(false);
+            UpdateMovementState(Vector2.zero);
+            playerMovement.Move(Vector2.zero);
+            return;
+        }
+
+        Vector2 movementInput = playerInput.MovementInput;
+        playerMovement.SetSprintHeld(playerInput.SprintPressed);
+
+        UpdateMovementState(movementInput);
+        if (emoteWheelController == null || !emoteWheelController.IsWheelOpen)
+        {
+            ProcessKickInput();
+            ProcessAttackInput();
+            ProcessJumpInput();
+        }
+
+        playerMovement.Move(movementInput);
+    }
+
+    private void ProcessAttackInput()
+    {
+        if (handEquipmentController == null)
+            handEquipmentController = GetComponent<HandEquipmentController>();
+
+        if (handEquipmentController != null && handEquipmentController.SuppressesDefaultPrimaryAttack)
+            return;
+
+        if (playerInput.AttackPressed)
+            playerMovement.Attack();
+    }
+
+    private void ProcessKickInput()
+    {
+        if (playerInput.KickPressed)
+            playerMovement.Kick();
+    }
+
+    private void ProcessJumpInput()
+    {
+        if (playerInput.JumpPressed)
+            playerMovement.Jump();
+    }
+
+    private void UpdateMovementState(Vector2 movementInput)
+    {
+        playerMovement.RefreshGrounding();
+
+        if (!playerMovement.IsGrounded || playerMovement.IsJumpQueued)
+        {
+            playerMovement.SetState(MovementState.air);
+            return;
+        }
+
+        if (playerMovement.IsMovementControlLocked)
+        {
+            playerMovement.SetState(
+                playerMovement.CurrentState == MovementState.crouching
+                    ? MovementState.crouching
+                    : MovementState.idle);
+            return;
+        }
+
+        if (playerInput.CrouchHeld)
+        {
+            playerMovement.StartCrouch();
+            return;
+        }
+
+        if (playerMovement.CurrentState == MovementState.crouching)
+        {
+            playerMovement.StopCrouch();
+            if (playerMovement.CurrentState == MovementState.crouching)
+                return;
+        }
+
+        if (movementInput.sqrMagnitude > 0.01f)
+        {
+            bool canSprint = playerInput.SprintPressed
+                && IsForwardSprintInput(movementInput)
+                && playerMovement.CanSprint;
+            playerMovement.SetState(canSprint ? MovementState.sprinting : MovementState.walking);
+            return;
+        }
+
+        playerMovement.SetState(MovementState.idle);
+    }
+
+    private static bool IsForwardSprintInput(Vector2 movementInput)
+    {
+        return movementInput.y > 0.01f;
+    }
+}

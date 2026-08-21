@@ -1,0 +1,26 @@
+public enum MovementAnimatorSemantic
+{
+    Horizontal,
+    Vertical,
+    IsGrounded,
+    IsCrouching,
+    IsSprinting,
+    IsJumping,
+    IsFalling,
+    MovementMagnitude,
+    IsMoving,
+    SpeedMultiplier,
+    VerticalSpeed,
+    CrouchEnterTrigger,
+    CrouchExitTrigger,
+    JumpTrigger,
+    LandTrigger,
+    IdleTurnLeftTrigger,
+    IdleTurnRightTrigger,
+    AttackTrigger,
+    RightHandOccupied,
+    LeftHandOccupied,
+    LeftTorchEquipped,
+    ThumbsUpTrigger,
+    KickTrigger
+}

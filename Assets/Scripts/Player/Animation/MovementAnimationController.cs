@@ -1,0 +1,462 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+[DisallowMultipleComponent]
+[RequireComponent(typeof(Animator))]
+public partial class MovementAnimationController : MonoBehaviour
+{
+    private const string DefaultMirrorResourcePath = "MovementAnimatorMirror";
+    private const float AnimationParameterSnapEpsilon = 0.001f;
+    private const string ReactionDamageStatePath = "Base Layer.Reaction Damage";
+    private const string JumpStatePath = "Base Layer.Jump";
+    private const string FallingStatePath = "Base Layer.Falling";
+    private const string LandingStatePath = "Base Layer.Landing";
+    private const string StandUpStatePath = "Base Layer.Stand Up";
+    private const string UpperBodyAttackLayerName = "Upper Body Attack";
+    private const string UpperBodyAttackLayerEmptyStatePath = "Upper Body Attack.Empty";
+    private const string AttackComboStep1StatePath = "Upper Body Attack.Attack_1";
+    private const string AttackComboStep2StatePath = "Upper Body Attack.Attack_2";
+    private const string AttackComboStep3StatePath = "Upper Body Attack.Attack_3";
+    private const string RightDrawnStatePath = "Upper Body Attack.Right Drawn";
+    private const string LeftDrawnStatePath = "Upper Body Attack.Left Drawn";
+    private const string KickLayerName = "Kick";
+    private const string KickLayerEmptyStatePath = "Kick.Empty";
+    private const string KickLayerKickStatePath = "Kick.Kick";
+    private const string EmoteLayerName = "Thumbs Up";
+    private const string EmoteLayerEmptyStatePath = "Thumbs Up.Empty";
+    private const string EmoteLayerThumbsUpStatePath = "Thumbs Up.ThumbsUp";
+    private const string EmoteLayerPointStatePath = "Thumbs Up.Point";
+
+    [Header("References")]
+    public Animator animator;
+    public PlayerMovement playerMovement;
+    [SerializeField] private MovementAnimatorMirror animatorMirror;
+
+    [Header("Animation Parameters")]
+    [Range(-2f, 2f)]
+    public float horizontal;
+    [Range(-2f, 2f)]
+    public float vertical;
+
+    [Header("Smoothing")]
+    [Range(0.05f, 0.5f)]
+    public float animationSmoothTime = 0.1f;
+    [SerializeField] [Range(0.05f, 0.6f)] private float reversalAnimationSmoothTime = 0.18f;
+    [SerializeField] [Range(-1f, 0f)] private float reversalAnimationDotThreshold = -0.25f;
+    [SerializeField] [Min(0f)] private float upperBodyAttackLayerFadeOutTime = 0.16f;
+
+    [Header("Airborne Animation")]
+    [SerializeField] private bool allowFallingWithoutJump = true;
+    [SerializeField] private bool suppressAirborneAnimations;
+
+    [Header("Crouch Transition Animation")]
+    [SerializeField] private bool enableCrouchTransitionAnimations = true;
+    [SerializeField] private string crouchEnterStateName = "Crouch";
+    [SerializeField] private string crouchExitStateName = "Stand Up";
+
+    [Header("Idle Turn In Place")]
+    [SerializeField] private bool enableIdleTurnInPlace = true;
+    [SerializeField] [Range(45f, 180f)] private float idleTurnTriggerAngle = 85f;
+    [SerializeField] [Range(0.05f, 1f)] private float idleTurnCooldown = 0.35f;
+    [SerializeField] [Range(0f, 0.2f)] private float idleTurnMovementThreshold = 0.05f;
+
+    private readonly HashSet<string> parameterNames = new HashSet<string>();
+    private bool wasGrounded;
+    private bool hasInitializedAnimatorState;
+    private bool hasAirbornePhase;
+    private bool pendingJumpAirborneStart;
+    private bool airborneJumpStarted;
+    private bool hasIdleTurnYawSample;
+    private bool wasCrouching;
+    private int lastAttackAnimationSequence;
+    private int lastKickAnimationSequence;
+    private int lastJumpAnimationSequence;
+    private int lastLandingAnimationSequence;
+    private int lastPickupAnimationSequence;
+    private int lastDrawAnimationSequence;
+    private int lastDamageAnimationSequence;
+    private int lastEmoteAnimationSequence;
+    private float airborneTime;
+    private float idleTurnAccumulatedYaw;
+    private float idleTurnCooldownTimer;
+    private float lastIdleTurnYaw;
+    private float movementMagnitude;
+    private float horizontalVelocity;
+    private float verticalVelocity;
+    private float movementMagnitudeVelocity;
+    private int upperBodyAttackLayerIndex = -1;
+    private int kickLayerIndex = -1;
+    private int emoteLayerIndex = -1;
+
+    private void Awake()
+    {
+        if (animator == null)
+            animator = GetComponent<Animator>();
+
+        if (playerMovement == null)
+            playerMovement = GetComponentInParent<PlayerMovement>();
+
+        if (animatorMirror == null)
+            animatorMirror = Resources.Load<MovementAnimatorMirror>(DefaultMirrorResourcePath);
+
+        CacheAnimatorParameters();
+        CacheAnimatorLayerIndices();
+    }
+
+    private void Update()
+    {
+        if (playerMovement == null || animator == null)
+            return;
+
+        bool isGrounded = playerMovement.IsGrounded;
+        bool isJumpQueued = playerMovement.IsJumpQueued;
+        bool isCrouching = playerMovement.CurrentState == MovementState.crouching;
+        bool isSprinting = playerMovement.CurrentState == MovementState.sprinting;
+        float verticalSpeed = playerMovement.VerticalVelocity;
+        float movementScale = GetMovementParameterScale();
+
+        if (!hasInitializedAnimatorState)
+            InitializeRuntimeState(isGrounded, isJumpQueued);
+
+        if (playerMovement.JumpAnimationSequence != lastJumpAnimationSequence)
+        {
+            PlayJumpAnimation();
+            lastJumpAnimationSequence = playerMovement.JumpAnimationSequence;
+            pendingJumpAirborneStart = true;
+        }
+
+        if (playerMovement.AttackAnimationSequence != lastAttackAnimationSequence)
+        {
+            PlayAttackAnimation();
+            lastAttackAnimationSequence = playerMovement.AttackAnimationSequence;
+        }
+
+        if (playerMovement.KickAnimationSequence != lastKickAnimationSequence)
+        {
+            PlayKickAnimation();
+            lastKickAnimationSequence = playerMovement.KickAnimationSequence;
+        }
+
+        if (playerMovement.LandingAnimationSequence != lastLandingAnimationSequence)
+        {
+            PlayLandAnimation();
+            lastLandingAnimationSequence = playerMovement.LandingAnimationSequence;
+        }
+
+        if (playerMovement.PickupAnimationSequence != lastPickupAnimationSequence)
+        {
+            PlayPickupAnimation(playerMovement.PickupAnimationHand);
+            lastPickupAnimationSequence = playerMovement.PickupAnimationSequence;
+        }
+
+        if (playerMovement.DrawAnimationSequence != lastDrawAnimationSequence)
+        {
+            PlayDrawAnimation(playerMovement.DrawAnimationHand);
+            lastDrawAnimationSequence = playerMovement.DrawAnimationSequence;
+        }
+
+        if (playerMovement.DamageAnimationSequence != lastDamageAnimationSequence)
+        {
+            PlayDamageAnimation(playerMovement.CurrentDamageAnimationType);
+            lastDamageAnimationSequence = playerMovement.DamageAnimationSequence;
+        }
+
+        if (playerMovement.EmoteAnimationSequence != lastEmoteAnimationSequence)
+        {
+            PlayEmoteAnimation(playerMovement.CurrentEmoteType);
+            lastEmoteAnimationSequence = playerMovement.EmoteAnimationSequence;
+        }
+
+        UpdateCrouchTransitionAnimationState(isGrounded, isJumpQueued, isCrouching);
+        UpdateAirborneAnimationState(isGrounded, isJumpQueued);
+        UpdateIdleTurnAnimationState(isGrounded, isJumpQueued);
+
+        bool isJumping = playerMovement.CurrentState == MovementState.air
+            || playerMovement.CurrentState == MovementState.jumping
+            || isJumpQueued;
+        bool isFalling = ComputeIsFalling(isGrounded, isJumpQueued, verticalSpeed);
+        UpdateLocomotionAnimationState(isGrounded, isJumpQueued, movementScale);
+        UpdateUpperBodyAttackAnimationState();
+        UpdateKickAnimationState();
+        UpdateEmoteAnimationState(isGrounded, isJumpQueued);
+
+        SetBoolIfExists(MovementAnimatorSemantic.IsGrounded, "IsGrounded", isGrounded);
+        SetBoolIfExists(MovementAnimatorSemantic.IsCrouching, "IsCrouching", isCrouching);
+        SetBoolIfExists(MovementAnimatorSemantic.IsSprinting, "IsSprinting", isSprinting);
+        SetBoolIfExists(MovementAnimatorSemantic.IsJumping, "IsJumping", isJumping);
+        SetBoolIfExists(MovementAnimatorSemantic.IsFalling, "IsFalling", isFalling);
+        SetBoolIfExists(MovementAnimatorSemantic.RightHandOccupied, "IsRightHandOccupied", playerMovement.IsRightHandOccupied);
+        SetBoolIfExists(MovementAnimatorSemantic.LeftHandOccupied, "IsLeftHandOccupied", playerMovement.IsLeftHandOccupied);
+        SetBoolIfExists(MovementAnimatorSemantic.LeftTorchEquipped, "IsLeftTorchEquipped", playerMovement.IsLeftHandTorchEquipped);
+
+        SetFloatDirectIfExists(MovementAnimatorSemantic.Horizontal, "Horizontal", horizontal);
+        SetFloatDirectIfExists(MovementAnimatorSemantic.Vertical, "Vertical", vertical);
+        SetFloatDirectIfExists(MovementAnimatorSemantic.MovementMagnitude, "MovementMagnitude", movementMagnitude);
+        SetBoolIfExists(MovementAnimatorSemantic.IsMoving, "IsMoving", HasLocomotionStateIntent());
+
+        SetFloatIfExists(MovementAnimatorSemantic.SpeedMultiplier, "SpeedMultiplier", movementScale);
+        SetFloatIfExists(MovementAnimatorSemantic.VerticalSpeed, "VerticalSpeed", verticalSpeed);
+    }
+
+    private bool HasLocomotionStateIntent()
+    {
+        if (movementMagnitude > 0.1f)
+            return true;
+
+        return playerMovement != null
+            && playerMovement.HasLocomotionIntent
+            && playerMovement.CurrentState != MovementState.idle;
+    }
+
+    private void InitializeRuntimeState(bool isGrounded, bool isJumpQueued)
+    {
+        lastAttackAnimationSequence = playerMovement.AttackAnimationSequence;
+        lastKickAnimationSequence = playerMovement.KickAnimationSequence;
+        lastJumpAnimationSequence = playerMovement.JumpAnimationSequence;
+        lastLandingAnimationSequence = playerMovement.LandingAnimationSequence;
+        lastPickupAnimationSequence = playerMovement.PickupAnimationSequence;
+        lastDrawAnimationSequence = playerMovement.DrawAnimationSequence;
+        lastDamageAnimationSequence = playerMovement.DamageAnimationSequence;
+        lastEmoteAnimationSequence = playerMovement.EmoteAnimationSequence;
+        hasInitializedAnimatorState = true;
+        wasGrounded = isGrounded;
+        ResetTriggerIfExists(MovementAnimatorSemantic.AttackTrigger, "Attack");
+        ResetTriggerIfExists(MovementAnimatorSemantic.KickTrigger, "Kick");
+        ResetTriggerIfExists(MovementAnimatorSemantic.JumpTrigger, "Jump");
+        ResetTriggerIfExists(MovementAnimatorSemantic.LandTrigger, "Land");
+        ResetTriggerIfExists(MovementAnimatorSemantic.ThumbsUpTrigger, "ThumbsUp");
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchEnterTrigger, "CrouchEnter");
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchExitTrigger, "CrouchExit");
+        ResetTriggerIfExists(MovementAnimatorSemantic.IdleTurnLeftTrigger, "IdleTurnLeft");
+        ResetTriggerIfExists(MovementAnimatorSemantic.IdleTurnRightTrigger, "IdleTurnRight");
+        lastIdleTurnYaw = transform.eulerAngles.y;
+        hasIdleTurnYawSample = true;
+        wasCrouching = playerMovement.CurrentState == MovementState.crouching;
+        UpdateEmoteAnimationState(isGrounded, isJumpQueued);
+        ResetKickAnimationLayer();
+        ResetUpperBodyAttackAnimationLayer();
+
+        if (!isGrounded)
+            BeginAirbornePhase(isJumpQueued);
+    }
+
+    public void PlayCrouchEnterAnimation()
+    {
+        if (!enableCrouchTransitionAnimations)
+            return;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchExitTrigger, "CrouchExit");
+
+        if (!string.IsNullOrWhiteSpace(crouchEnterStateName) && TryPlayState(crouchEnterStateName, 0.08f))
+            return;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchEnterTrigger, "CrouchEnter");
+        SetTriggerIfExists(MovementAnimatorSemantic.CrouchEnterTrigger, "CrouchEnter");
+    }
+
+    public void PlayCrouchExitAnimation()
+    {
+        if (!enableCrouchTransitionAnimations)
+            return;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchEnterTrigger, "CrouchEnter");
+
+        if (!string.IsNullOrWhiteSpace(crouchExitStateName) && TryPlayState(crouchExitStateName, 0.08f))
+            return;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchExitTrigger, "CrouchExit");
+        SetTriggerIfExists(MovementAnimatorSemantic.CrouchExitTrigger, "CrouchExit");
+    }
+
+    public void PlayJumpAnimation()
+    {
+        ResetTriggerIfExists(MovementAnimatorSemantic.LandTrigger, "Land");
+
+        if (TryPlayState("Jump", 0.12f))
+            return;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.JumpTrigger, "Jump");
+        SetTriggerIfExists(MovementAnimatorSemantic.JumpTrigger, "Jump");
+    }
+
+    public void PlayAttackAnimation()
+    {
+        CacheAnimatorLayerIndices();
+
+        string statePath = ResolveAttackComboStatePath(playerMovement != null ? playerMovement.AttackComboStep : 1);
+        if (TryPlayStateOnLayer(upperBodyAttackLayerIndex, statePath, 0.06f))
+        {
+            SetLayerWeightIfNeeded(upperBodyAttackLayerIndex, 1f);
+            return;
+        }
+
+        if (TryPlayState("Upper Body Attack.Attack", 0.06f))
+        {
+            SetLayerWeightIfNeeded(upperBodyAttackLayerIndex, 1f);
+            return;
+        }
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.AttackTrigger, "Attack");
+        SetTriggerIfExists(MovementAnimatorSemantic.AttackTrigger, "Attack");
+        SetLayerWeightIfNeeded(upperBodyAttackLayerIndex, 1f);
+    }
+
+    private static string ResolveAttackComboStatePath(int comboStep)
+    {
+        switch (comboStep)
+        {
+            case 2:
+                return AttackComboStep2StatePath;
+            case 3:
+                return AttackComboStep3StatePath;
+            default:
+                return AttackComboStep1StatePath;
+        }
+    }
+
+    public void PlayKickAnimation()
+    {
+        CacheAnimatorLayerIndices();
+
+        if (TryPlayStateOnLayer(kickLayerIndex, KickLayerKickStatePath, 0.05f))
+        {
+            SetLayerWeightIfNeeded(kickLayerIndex, 1f);
+            return;
+        }
+
+        if (TryPlayState("Kick", 0.05f))
+            return;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.KickTrigger, "Kick");
+        SetTriggerIfExists(MovementAnimatorSemantic.KickTrigger, "Kick");
+    }
+
+    public void PlayLandAnimation()
+    {
+        ResetTriggerIfExists(MovementAnimatorSemantic.JumpTrigger, "Jump");
+
+        if (TryPlayState("Landing", 0.05f))
+            return;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.LandTrigger, "Land");
+        SetTriggerIfExists(MovementAnimatorSemantic.LandTrigger, "Land");
+    }
+
+    public void PlayThumbsUpAnimation()
+    {
+        PlayEmoteAnimation(PlayerEmoteType.ThumbsUp);
+    }
+
+    public void PlayPickupAnimation(HandType hand)
+    {
+        CacheAnimatorLayerIndices();
+
+        string statePath = hand == HandType.Left
+            ? "Upper Body Attack.Pick Up Item Left"
+            : "Upper Body Attack.Pick Up Item Right";
+
+        if (TryPlayStateOnLayer(upperBodyAttackLayerIndex, statePath, 0.05f) || TryPlayState(statePath, 0.05f))
+        {
+            SetLayerWeightIfNeeded(upperBodyAttackLayerIndex, 1f);
+            return;
+        }
+
+        Debug.LogWarning($"MovementAnimationController: state '{statePath}' nao foi encontrado.", gameObject);
+    }
+
+    public void PlayDrawAnimation(HandType hand)
+    {
+        CacheAnimatorLayerIndices();
+
+        string statePath = hand == HandType.Left
+            ? LeftDrawnStatePath
+            : RightDrawnStatePath;
+
+        if (TryPlayStateOnLayer(upperBodyAttackLayerIndex, statePath, 0.05f) || TryPlayState(statePath, 0.05f))
+        {
+            SetLayerWeightIfNeeded(upperBodyAttackLayerIndex, 1f);
+            return;
+        }
+
+        Debug.LogWarning($"MovementAnimationController: state '{statePath}' nao foi encontrado.", gameObject);
+    }
+
+    public void PlayDamageAnimation(PlayerDamageAnimationType type)
+    {
+        if (type == PlayerDamageAnimationType.None)
+            return;
+
+        string statePath;
+        switch (type)
+        {
+            case PlayerDamageAnimationType.ReactionDamage:
+                statePath = "Base Layer.Reaction Damage";
+                break;
+            default:
+                Debug.LogWarning($"MovementAnimationController: tipo de animacao de dano nao suportado: {type}.", gameObject);
+                return;
+        }
+
+        if (!TryPlayState(statePath, 0.05f))
+            Debug.LogWarning($"MovementAnimationController: state '{statePath}' nao foi encontrado.", gameObject);
+    }
+
+    public void PlayEmoteAnimation(PlayerEmoteType type)
+    {
+        CacheAnimatorLayerIndices();
+
+        switch (type)
+        {
+            case PlayerEmoteType.None:
+                return;
+            case PlayerEmoteType.ThumbsUp:
+                if (TryPlayStateOnLayer(emoteLayerIndex, EmoteLayerThumbsUpStatePath, 0.05f)
+                    || TryPlayState(EmoteLayerThumbsUpStatePath, 0.05f))
+                {
+                    SetLayerWeightIfNeeded(emoteLayerIndex, 1f);
+                    return;
+                }
+
+                ResetTriggerIfExists(MovementAnimatorSemantic.ThumbsUpTrigger, "ThumbsUp");
+                SetTriggerIfExists(MovementAnimatorSemantic.ThumbsUpTrigger, "ThumbsUp");
+                SetLayerWeightIfNeeded(emoteLayerIndex, 1f);
+                return;
+            case PlayerEmoteType.Point:
+                if (!(TryPlayStateOnLayer(emoteLayerIndex, EmoteLayerPointStatePath, 0.05f)
+                    || TryPlayState(EmoteLayerPointStatePath, 0.05f)))
+                {
+                    Debug.LogWarning("MovementAnimationController: state 'Thumbs Up.Point' nao foi encontrado.", gameObject);
+                    return;
+                }
+
+                SetLayerWeightIfNeeded(emoteLayerIndex, 1f);
+                return;
+            default:
+                Debug.LogWarning($"MovementAnimationController: emote nao suportado: {type}.", gameObject);
+                return;
+        }
+    }
+
+    public void PlayIdleTurnLeftAnimation()
+    {
+        PlayIdleTurnAnimation("IdleTurnLeft", MovementAnimatorSemantic.IdleTurnLeftTrigger);
+    }
+
+    public void PlayIdleTurnRightAnimation()
+    {
+        PlayIdleTurnAnimation("IdleTurnRight", MovementAnimatorSemantic.IdleTurnRightTrigger);
+    }
+
+    public void SetAllowFallingWithoutJump(bool allow)
+    {
+        allowFallingWithoutJump = allow;
+    }
+
+    public void SetAirborneAnimationSuppressed(bool suppress)
+    {
+        suppressAirborneAnimations = suppress;
+
+        if (suppress)
+            SetBoolIfExists(MovementAnimatorSemantic.IsFalling, "IsFalling", false);
+    }
+}

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bf2f54740f9492da8a20bda090d8f08, type: 3}
+  m_Name: PlayerAudioProfile_Default
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAudioProfile
+  walk:
+    cue: {fileID: 11400000, guid: 8b2dacb4f847c264ca583eb491a447f2, type: 2}
+    minPlanarSpeed: 0.1
+    metersPerStep: 1.4
+  sprint:
+    cue: {fileID: 11400000, guid: 3d7827db6b32c9a44b94e36424eae954, type: 2}
+    minPlanarSpeed: 0.1
+    metersPerStep: 3
+  crouch:
+    cue: {fileID: 11400000, guid: ce32de6ce0641c6418391ac26a62c28e, type: 2}
+    minPlanarSpeed: 0.1
+    metersPerStep: 0.6
+  attack: {fileID: 0}
+  jump: {fileID: 0}
+  land: {fileID: 0}
+  footstepHeightOffset: 0

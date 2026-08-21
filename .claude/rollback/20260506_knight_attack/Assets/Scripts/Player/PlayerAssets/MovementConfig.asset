@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0851259b8cbab1f4e8f8aad2cbb1e2ff, type: 3}
+  m_Name: MovementConfig
+  m_EditorClassIdentifier: Assembly-CSharp::MovementConfig
+  walkSpeed: 3
+  sprintSpeed: 7
+  enableSprintStrafeBias: 1
+  sprintStrafeInfluence: 0.5
+  sprintStrafeOpenTime: 0.5
+  sprintStrafeCurveExponent: 2.5
+  crouchSpeed: 1.5
+  maxSlideSpeed: 7
+  groundAcceleration: 45
+  airAcceleration: 18
+  accelerationTime: 0.1
+  decelerationTime: 0.15
+  sprintReleaseDecelerationTime: 0.22
+  directionChangeMinPlanarSpeed: 0.9
+  walkCameraTurnReversalAngle: 90
+  sprintReversalAngle: 90
+  cameraTurnReversalInputAlignmentDot: 0.6
+  sprintInputReversalDot: 0
+  directionChangeInputMemoryDuration: 0.12
+  walkReversalSpeedMultiplier: 0.22
+  sprintReversalSpeedMultiplier: 0.05
+  walkReversalHoldTime: 0.14
+  sprintReversalHoldTime: 0.2
+  walkReversalRecoveryTime: 0.3
+  sprintReversalRecoveryTime: 0.4
+  walkReversalAccelerationMultiplier: 1.2
+  sprintReversalAccelerationMultiplier: 1.9
+  jumpForce: 5
+  jumpCooldown: 0.15
+  jumpInputCooldown: 0.12
+  jumpDelay: 0.08
+  jumpGroundIgnoreTime: 0.12
+  fallingStartDelay: 0.08
+  minAirTimeForLand: 0.1
+  minAirHeightForLand: 0.08
+  minDownwardSpeedForLand: 1.5
+  groundedConfirmTimeForLand: 0.03
+  airMultiplier: 0.4
+  crouchYScale: 0.5
+  playerHeight: 2
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 59
+  groundProbeDistance: 0.18
+  groundProbeRadiusScale: 0.9
+  minSlopeAngleToAffect: 3
+  maxSlopeAngle: 45
+  slideSlopeAngle: 65
+  groundSnapAcceleration: 6
+  slideAcceleration: 9
+  wallCheckDistance: 0.2
+  wallCheckRadiusScale: 0.75
+  upperWallCheckHeightRatio: 0.58
+  maxStepHeight: 0.28
+  stepSearchDistance: 0.22
+  stepLiftSpeed: 4.5
+  groundDrag: 4

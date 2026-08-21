@@ -1,0 +1,697 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a4d9d1a8a1146c7a6ec480e2b361258, type: 3}
+  m_Name: MovementAnimatorMirror
+  m_EditorClassIdentifier: Assembly-CSharp::MovementAnimatorMirror
+  controller: {fileID: 9100000, guid: f0fa788e1c11a8b4b8eb5f85a2ff8ab6, type: 2}
+  controllerAssetPath: Assets/Skecth/KnightAnimController.controller
+  lastGeneratedUtc: 2026-07-22 02:26:48 UTC
+  bindings:
+  - semantic: 0
+    parameterName: Horizontal
+    parameterType: 1
+    existsInController: 1
+  - semantic: 1
+    parameterName: Vertical
+    parameterType: 1
+    existsInController: 1
+  - semantic: 2
+    parameterName: IsGrounded
+    parameterType: 4
+    existsInController: 1
+  - semantic: 3
+    parameterName: IsCrouching
+    parameterType: 4
+    existsInController: 1
+  - semantic: 4
+    parameterName: IsSprinting
+    parameterType: 4
+    existsInController: 0
+  - semantic: 5
+    parameterName: IsJumping
+    parameterType: 4
+    existsInController: 0
+  - semantic: 6
+    parameterName: IsFalling
+    parameterType: 4
+    existsInController: 1
+  - semantic: 7
+    parameterName: MovementMagnitude
+    parameterType: 1
+    existsInController: 1
+  - semantic: 8
+    parameterName: IsMoving
+    parameterType: 4
+    existsInController: 1
+  - semantic: 9
+    parameterName: SpeedMultiplier
+    parameterType: 1
+    existsInController: 1
+  - semantic: 10
+    parameterName: VerticalSpeed
+    parameterType: 1
+    existsInController: 0
+  - semantic: 11
+    parameterName: CrouchEnter
+    parameterType: 9
+    existsInController: 1
+  - semantic: 12
+    parameterName: CrouchExit
+    parameterType: 9
+    existsInController: 1
+  - semantic: 13
+    parameterName: Jump
+    parameterType: 9
+    existsInController: 1
+  - semantic: 17
+    parameterName: Attack
+    parameterType: 9
+    existsInController: 1
+  - semantic: 14
+    parameterName: Land
+    parameterType: 9
+    existsInController: 1
+  - semantic: 15
+    parameterName: IdleTurnLeft
+    parameterType: 9
+    existsInController: 1
+  - semantic: 16
+    parameterName: IdleTurnRight
+    parameterType: 9
+    existsInController: 1
+  - semantic: 18
+    parameterName: IsRightHandOccupied
+    parameterType: 4
+    existsInController: 1
+  - semantic: 19
+    parameterName: IsLeftHandOccupied
+    parameterType: 4
+    existsInController: 1
+  - semantic: 21
+    parameterName: ThumbsUp
+    parameterType: 9
+    existsInController: 1
+  parameters:
+  - name: Blend
+    parameterType: 1
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: Horizontal
+    parameterType: 1
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: Vertical
+    parameterType: 1
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: SpeedMultiplier
+    parameterType: 1
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: Jump
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: Attack
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: MovementMagnitude
+    parameterType: 1
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IsMoving
+    parameterType: 4
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IsGrounded
+    parameterType: 4
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: Land
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IsFalling
+    parameterType: 4
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IdleTurnLeft
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IdleTurnRight
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IsCrouching
+    parameterType: 4
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: CrouchEnter
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: CrouchExit
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IsRightHandOccupied
+    parameterType: 4
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IsLeftHandOccupied
+    parameterType: 4
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: IsLeftTorchEquipped
+    parameterType: 4
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  - name: ThumbsUp
+    parameterType: 9
+    defaultFloat: 0
+    defaultInt: 0
+    defaultBool: 0
+  states:
+  - layerName: Base Layer
+    statePath: Movement
+    motionName: KnightAnimController
+    isDefaultState: 0
+    isBlendTree: 1
+    transitions:
+    - destination: Idle
+      hasExitTime: 0
+      exitTime: 0.9333994
+      duration: 0.15
+      conditions:
+      - parameterName: IsMoving
+        mode: IfNot
+        threshold: 0.1
+    - destination: Jump
+      hasExitTime: 0
+      exitTime: 0.8538367
+      duration: 0.20000005
+      conditions:
+      - parameterName: Jump
+        mode: If
+        threshold: 0
+    - destination: Falling
+      hasExitTime: 0
+      exitTime: 0.75
+      duration: 0.18
+      conditions:
+      - parameterName: IsGrounded
+        mode: IfNot
+        threshold: 0
+      - parameterName: IsFalling
+        mode: If
+        threshold: 0
+    - destination: Crouch
+      hasExitTime: 1
+      exitTime: 0.75
+      duration: 0.25
+      conditions:
+      - parameterName: CrouchEnter
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: Idle
+    motionName: Knight
+    isDefaultState: 1
+    isBlendTree: 0
+    transitions:
+    - destination: Movement
+      hasExitTime: 0
+      exitTime: 0.98692244
+      duration: 0.2
+      conditions:
+      - parameterName: MovementMagnitude
+        mode: Greater
+        threshold: 0.1
+    - destination: Jump
+      hasExitTime: 0
+      exitTime: 0.9869224
+      duration: 0
+      conditions:
+      - parameterName: Jump
+        mode: If
+        threshold: 0
+    - destination: Falling
+      hasExitTime: 0
+      exitTime: 0.75
+      duration: 0.18
+      conditions:
+      - parameterName: IsGrounded
+        mode: IfNot
+        threshold: 0
+      - parameterName: IsFalling
+        mode: If
+        threshold: 0
+    - destination: StepLeftSide
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.15
+      conditions:
+      - parameterName: IdleTurnLeft
+        mode: If
+        threshold: 0
+      - parameterName: IsGrounded
+        mode: If
+        threshold: 0
+      - parameterName: IsMoving
+        mode: IfNot
+        threshold: 0
+    - destination: StepRightSide
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.15
+      conditions:
+      - parameterName: IdleTurnRight
+        mode: If
+        threshold: 0
+      - parameterName: IsGrounded
+        mode: If
+        threshold: 0
+      - parameterName: IsMoving
+        mode: IfNot
+        threshold: 0
+    - destination: Crouch
+      hasExitTime: 0
+      exitTime: 0.875
+      duration: 0.15
+      conditions:
+      - parameterName: CrouchEnter
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: Jump
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Falling
+      hasExitTime: 0
+      exitTime: 0.0000000017149673
+      duration: 0.25
+      conditions:
+      - parameterName: IsGrounded
+        mode: IfNot
+        threshold: 0
+      - parameterName: IsFalling
+        mode: If
+        threshold: 0
+    - destination: Landing
+      hasExitTime: 0
+      exitTime: 0.67391306
+      duration: 0.05
+      conditions:
+      - parameterName: Land
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: Landing
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Idle
+      hasExitTime: 0
+      exitTime: 0.6341463
+      duration: 0.2
+      conditions:
+      - parameterName: IsGrounded
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: Falling
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Landing
+      hasExitTime: 0
+      exitTime: 0.7619048
+      duration: 0.25
+      conditions:
+      - parameterName: Land
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: StepLeftSide
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Idle
+      hasExitTime: 1
+      exitTime: 0.7500001
+      duration: 0.15
+      conditions: []
+    - destination: Movement
+      hasExitTime: 0
+      exitTime: 0.75
+      duration: 0.15
+      conditions:
+      - parameterName: IsMoving
+        mode: If
+        threshold: 0
+      - parameterName: IsGrounded
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: StepRightSide
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Idle
+      hasExitTime: 1
+      exitTime: 0.75000006
+      duration: 0.15
+      conditions: []
+    - destination: Movement
+      hasExitTime: 0
+      exitTime: 0.75
+      duration: 0.15
+      conditions:
+      - parameterName: IsMoving
+        mode: If
+        threshold: 0
+      - parameterName: IsGrounded
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: Crouch
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Crouch Movement
+      hasExitTime: 1
+      exitTime: 0.75
+      duration: 0.1
+      conditions: []
+  - layerName: Base Layer
+    statePath: Crouch Movement
+    motionName: KnightAnimController
+    isDefaultState: 0
+    isBlendTree: 1
+    transitions:
+    - destination: Stand Up
+      hasExitTime: 1
+      exitTime: 0.75
+      duration: 0.25
+      conditions:
+      - parameterName: CrouchExit
+        mode: If
+        threshold: 0
+    - destination: Falling
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.18
+      conditions:
+      - parameterName: IsGrounded
+        mode: IfNot
+        threshold: 0
+      - parameterName: IsFalling
+        mode: If
+        threshold: 0
+  - layerName: Base Layer
+    statePath: Stand Up
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Idle
+      hasExitTime: 1
+      exitTime: 0.95
+      duration: 0.12
+      conditions:
+      - parameterName: MovementMagnitude
+        mode: Less
+        threshold: 0.1
+    - destination: Movement
+      hasExitTime: 0
+      exitTime: 0.95
+      duration: 0.15
+      conditions:
+      - parameterName: MovementMagnitude
+        mode: Greater
+        threshold: 0.1
+  - layerName: Base Layer
+    statePath: Reaction Damage
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Idle
+      hasExitTime: 1
+      exitTime: 0.95
+      duration: 0.15
+      conditions: []
+  - layerName: Right Hand Grip
+    statePath: Empty
+    motionName: None
+    isDefaultState: 1
+    isBlendTree: 0
+    transitions:
+    - destination: Grip
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.05
+      conditions:
+      - parameterName: IsRightHandOccupied
+        mode: If
+        threshold: 0
+  - layerName: Right Hand Grip
+    statePath: Grip
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.05
+      conditions:
+      - parameterName: IsRightHandOccupied
+        mode: IfNot
+        threshold: 0
+  - layerName: Left Hand Grip
+    statePath: Empty
+    motionName: None
+    isDefaultState: 1
+    isBlendTree: 0
+    transitions:
+    - destination: Grip
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.25
+      conditions:
+      - parameterName: IsLeftHandOccupied
+        mode: If
+        threshold: 0
+      - parameterName: IsLeftTorchEquipped
+        mode: IfNot
+        threshold: 0
+  - layerName: Left Hand Grip
+    statePath: Grip
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.25
+      conditions:
+      - parameterName: IsLeftHandOccupied
+        mode: IfNot
+        threshold: 0
+  - layerName: Thumbs Up
+    statePath: Empty
+    motionName: None
+    isDefaultState: 1
+    isBlendTree: 0
+    transitions:
+    - destination: ThumbsUp
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.05
+      conditions:
+      - parameterName: ThumbsUp
+        mode: If
+        threshold: 0
+  - layerName: Thumbs Up
+    statePath: ThumbsUp
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 1
+      duration: 0.05
+      conditions: []
+  - layerName: Thumbs Up
+    statePath: Point
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 1
+      duration: 0.05
+      conditions: []
+  - layerName: Upper Body Attack
+    statePath: Empty
+    motionName: None
+    isDefaultState: 1
+    isBlendTree: 0
+    transitions:
+    - destination: Attack_1
+      hasExitTime: 0
+      exitTime: 0.75
+      duration: 0.05
+      conditions:
+      - parameterName: Attack
+        mode: If
+        threshold: 0
+  - layerName: Upper Body Attack
+    statePath: Attack_1
+    motionName: Attack_1
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 0.95
+      duration: 0.15
+      conditions: []
+  - layerName: Upper Body Attack
+    statePath: Attack_2
+    motionName: Attack_2
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 0.95
+      duration: 0.15
+      conditions: []
+  - layerName: Upper Body Attack
+    statePath: Attack_3
+    motionName: Attack_3
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 0.95
+      duration: 0.08
+      conditions: []
+  - layerName: Upper Body Attack
+    statePath: Pick Up Item Right
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 1
+      duration: 0.05
+      conditions: []
+  - layerName: Upper Body Attack
+    statePath: Pick Up Item Left
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 1
+      duration: 0.05
+      conditions: []
+  - layerName: Upper Body Attack
+    statePath: Right Drawn
+    motionName: Right Drawn
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 0.95
+      duration: 0.12
+      conditions: []
+  - layerName: Upper Body Attack
+    statePath: Left Drawn
+    motionName: Left Drawn
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: Empty
+      hasExitTime: 1
+      exitTime: 0.95
+      duration: 0.12
+      conditions: []
+  - layerName: Torch Grip
+    statePath: New State
+    motionName: None
+    isDefaultState: 1
+    isBlendTree: 0
+    transitions:
+    - destination: Torch Grip
+      hasExitTime: 1
+      exitTime: 0.75
+      duration: 0.25
+      conditions:
+      - parameterName: IsLeftHandOccupied
+        mode: If
+        threshold: 0
+      - parameterName: IsLeftTorchEquipped
+        mode: If
+        threshold: 0
+  - layerName: Torch Grip
+    statePath: Torch Grip
+    motionName: Knight
+    isDefaultState: 0
+    isBlendTree: 0
+    transitions:
+    - destination: New State
+      hasExitTime: 0
+      exitTime: 0
+      duration: 0.1
+      conditions:
+      - parameterName: IsLeftTorchEquipped
+        mode: IfNot
+        threshold: 0

@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e31f8ef81e6d4232baee5830b478d600, type: 3}
+  m_Name: HeadBobProfile_Default
+  m_EditorClassIdentifier: Assembly-CSharp::HeadBobProfile
+  globalIntensity: 1
+  movementThreshold: 1
+  stateBlendSharpness: 1
+  motionBlendSharpness: 1
+  horizontalAmplitude: 0.15
+  verticalAmplitude: 0.12
+  forwardAmplitude: 0.1
+  pitchAmplitude: 0
+  rollAmplitude: 0
+  strafeLean:
+    enabled: 1
+    angle: -2.5
+    blendSharpness: 10
+    inputDeadzone: 0.05
+  idle:
+    referenceSpeed: 1
+    intensityMultiplier: 2.25
+    frequency: 2.21
+  walk:
+    referenceSpeed: 3
+    intensityMultiplier: 2
+    frequency: 1
+  sprint:
+    referenceSpeed: 6
+    intensityMultiplier: 4
+    frequency: 2
+  crouch:
+    referenceSpeed: 1.5
+    intensityMultiplier: 0.3
+    frequency: 0.7
+  airborne:
+    referenceSpeed: 0
+    intensityMultiplier: 0.1
+    frequency: 0.75
+  landing:
+    enabled: 1
+    minLandingSpeed: 1.25
+    fullLandingSpeed: 9
+    settleDistance: 0.028
+    settlePitch: 1.4
+    recoverySharpness: 9
