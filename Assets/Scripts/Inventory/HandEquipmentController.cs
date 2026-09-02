@@ -221,6 +221,33 @@ public class HandEquipmentController : MonoBehaviour
         return droppedCount;
     }
 
+    public int DropActiveEquippedItemsOnRagdoll()
+    {
+        ResolveReferences();
+
+        if (!HasLocalAuthority())
+            return 0;
+
+        int totalDropCount = CountActiveEquippedSlots();
+        if (totalDropCount <= 0)
+            return 0;
+
+        int dropOrder = 0;
+        int droppedCount = 0;
+        droppedCount += DropActiveEquippedItemOnRagdoll(HandType.Right, totalDropCount, ref dropOrder);
+        droppedCount += DropActiveEquippedItemOnRagdoll(HandType.Left, totalDropCount, ref dropOrder);
+
+        if (droppedCount > 0)
+        {
+            RefreshEquippedVisuals();
+            NotifyStateChanged();
+            BroadcastInventorySnapshotIfNeeded();
+            Debug.Log($"[HandEquipmentController] {droppedCount} item(ns) ativo(s) dropado(s) ao entrar em ragdoll.");
+        }
+
+        return droppedCount;
+    }
+
     public bool TryEquipWorldItem(WorldPickupItem pickupItem)
     {
         ResolveReferences();
@@ -1006,6 +1033,28 @@ public class HandEquipmentController : MonoBehaviour
         return droppedCount;
     }
 
+    private int DropActiveEquippedItemOnRagdoll(HandType hand, int totalDropCount, ref int dropOrder)
+    {
+        int activeIndex = GetActiveSlotIndex(hand);
+        ItemDefinition itemDefinition = GetItem(hand, activeIndex);
+        if (itemDefinition == null)
+            return 0;
+
+        int scatterIndex = dropOrder;
+        dropOrder++;
+
+        return TryDropInventorySlot(
+            hand,
+            activeIndex,
+            scatterAroundPlayer: true,
+            scatterIndex: scatterIndex,
+            scatterCount: totalDropCount,
+            refreshInventoryState: false,
+            broadcastInventorySnapshot: false)
+            ? 1
+            : 0;
+    }
+
     private bool TryDropInventorySlot(
         HandType hand,
         int slotIndex,
@@ -1094,6 +1143,18 @@ public class HandEquipmentController : MonoBehaviour
             if (GetItem(hand, slotIndex) != null)
                 count++;
         }
+
+        return count;
+    }
+
+    private int CountActiveEquippedSlots()
+    {
+        int count = 0;
+        if (HasActiveItem(HandType.Right))
+            count++;
+
+        if (HasActiveItem(HandType.Left))
+            count++;
 
         return count;
     }

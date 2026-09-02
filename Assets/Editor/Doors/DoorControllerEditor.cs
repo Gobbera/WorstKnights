@@ -16,6 +16,7 @@ public class DoorControllerEditor : Editor
     private SerializedProperty relockWhenSignalTurnsOffProperty;
     private SerializedProperty motionModeProperty;
     private SerializedProperty rotatePivotProperty;
+    private SerializedProperty openAwayFromInteractorProperty;
     private SerializedProperty openLocalEulerAnglesProperty;
     private SerializedProperty openLocalPositionOffsetProperty;
     private SerializedProperty moveDurationProperty;
@@ -40,6 +41,7 @@ public class DoorControllerEditor : Editor
         relockWhenSignalTurnsOffProperty = serializedObject.FindProperty("relockWhenSignalTurnsOff");
         motionModeProperty = serializedObject.FindProperty("motionMode");
         rotatePivotProperty = serializedObject.FindProperty("rotatePivot");
+        openAwayFromInteractorProperty = serializedObject.FindProperty("openAwayFromInteractor");
         openLocalEulerAnglesProperty = serializedObject.FindProperty("openLocalEulerAngles");
         openLocalPositionOffsetProperty = serializedObject.FindProperty("openLocalPositionOffset");
         moveDurationProperty = serializedObject.FindProperty("moveDuration");
@@ -131,6 +133,7 @@ public class DoorControllerEditor : Editor
         {
             case DoorController.DoorMotionMode.Rotate:
                 EditorGUILayout.PropertyField(rotatePivotProperty, new GUIContent("Rotate Pivot"));
+                EditorGUILayout.PropertyField(openAwayFromInteractorProperty, new GUIContent("Open Away From Player"));
                 EditorGUILayout.PropertyField(openLocalEulerAnglesProperty, new GUIContent("Open Local Euler Angles"));
                 EditorGUILayout.PropertyField(openLocalPositionOffsetProperty, new GUIContent("Open Local Position Offset"));
                 EditorGUILayout.PropertyField(moveDurationProperty, new GUIContent("Move Duration"));

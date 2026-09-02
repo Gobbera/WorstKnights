@@ -19,6 +19,7 @@ public class PlayerHealth : CombatHealth
     private HeadBobController headBobController;
     private Rigidbody rb;
     private HandEquipmentController handEquipmentController;
+    private PlayerRagdollController ragdollController;
     private IMeleeImpactReceiver meleeImpactReceiver;
     private Coroutine respawnRoutine;
     private bool suppressDamageKnockback;
@@ -35,6 +36,9 @@ public class PlayerHealth : CombatHealth
         headBobController = GetComponentInChildren<HeadBobController>(true);
         rb = GetComponent<Rigidbody>();
         handEquipmentController = GetComponent<HandEquipmentController>();
+        ragdollController = GetComponent<PlayerRagdollController>();
+        if (ragdollController == null)
+            ragdollController = gameObject.AddComponent<PlayerRagdollController>();
         ResolveMeleeImpactReceiver();
         base.Awake();
     }
@@ -229,6 +233,20 @@ public class PlayerHealth : CombatHealth
         }
 
         DropEquippedItemsOnDeath();
+        ApplyRagdollState(
+            active: true,
+            damageInfo.HitPoint,
+            damageInfo.HitDirection,
+            useDefaultImpulse: true,
+            impulse: 0f,
+            upward: 0f);
+        BroadcastRagdollState(
+            active: true,
+            damageInfo.HitPoint,
+            damageInfo.HitDirection,
+            useDefaultImpulse: true,
+            impulse: 0f,
+            upward: 0f);
         BroadcastLifeState();
 
         if (!respawnOnDeath)
@@ -252,8 +270,7 @@ public class PlayerHealth : CombatHealth
 
         if (rb != null)
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            ClearRootVelocityIfDynamic();
         }
 
         if (respawnDelay > 0f)
@@ -265,6 +282,14 @@ public class PlayerHealth : CombatHealth
 
     private void Respawn()
     {
+        ApplyRagdollState(
+            active: false,
+            Vector3.zero,
+            Vector3.zero,
+            useDefaultImpulse: false,
+            impulse: 0f,
+            upward: 0f);
+
         Transform spawnPoint = ResolveSpawnPoint();
         if (spawnPoint != null)
             transform.SetPositionAndRotation(spawnPoint.position + Vector3.up, spawnPoint.rotation);
@@ -273,8 +298,7 @@ public class PlayerHealth : CombatHealth
         {
             rb.position = transform.position;
             rb.rotation = transform.rotation;
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            ClearRootVelocityIfDynamic();
         }
 
         if (playerMovement != null)
@@ -285,10 +309,66 @@ public class PlayerHealth : CombatHealth
 
         RestoreFullHealth();
         SetInvulnerableFor(respawnInvulnerabilityDuration);
+        BroadcastRagdollState(
+            active: false,
+            Vector3.zero,
+            Vector3.zero,
+            useDefaultImpulse: false,
+            impulse: 0f,
+            upward: 0f);
         BroadcastLifeState();
 
         if (playerController != null)
             playerController.enabled = true;
+    }
+
+    protected override void OnReplicatedStateApplied()
+    {
+        if (IsAlive)
+        {
+            ApplyRagdollState(
+                active: false,
+                Vector3.zero,
+                Vector3.zero,
+                useDefaultImpulse: false,
+                impulse: 0f,
+                upward: 0f);
+            return;
+        }
+
+        ApplyRagdollState(
+            active: true,
+            transform.position + Vector3.up,
+            -transform.forward,
+            useDefaultImpulse: true,
+            impulse: 0f,
+            upward: 0f);
+    }
+
+    public void RequestDebugRagdollToggle(Vector3 hitPoint, Vector3 hitDirection, float impulse, float upward)
+    {
+        if (!IsLocallyOwned)
+            return;
+
+        EnsureRagdollController();
+        if (ragdollController == null)
+            return;
+
+        bool shouldActivate = !ragdollController.IsRagdollActive;
+        ApplyRagdollState(
+            shouldActivate,
+            hitPoint,
+            hitDirection,
+            useDefaultImpulse: false,
+            impulse,
+            upward);
+        BroadcastRagdollState(
+            shouldActivate,
+            hitPoint,
+            hitDirection,
+            useDefaultImpulse: false,
+            impulse,
+            upward);
     }
 
     [PunRPC]
@@ -353,12 +433,113 @@ public class PlayerHealth : CombatHealth
         ApplyReplicatedState(replicatedHealth, replicatedIsAlive);
     }
 
+    [PunRPC]
+    private void RpcSetRagdollState(
+        bool active,
+        Vector3 hitPoint,
+        Vector3 hitDirection,
+        Vector3 rootPosition,
+        Quaternion rootRotation,
+        bool useDefaultImpulse,
+        float impulse,
+        float upward)
+    {
+        if (IsLocallyOwned)
+            return;
+
+        ApplyNetworkRootPose(rootPosition, rootRotation);
+        ApplyRagdollState(active, hitPoint, hitDirection, useDefaultImpulse, impulse, upward);
+    }
+
     private void BroadcastLifeState()
     {
         if (!IsLocallyOwned || photonView == null || !PhotonNetwork.InRoom)
             return;
 
         photonView.RPC(nameof(RpcSyncLifeState), RpcTarget.Others, CurrentHealth, IsAlive);
+    }
+
+    private void BroadcastRagdollState(
+        bool active,
+        Vector3 hitPoint,
+        Vector3 hitDirection,
+        bool useDefaultImpulse,
+        float impulse,
+        float upward)
+    {
+        if (!IsLocallyOwned || photonView == null || !PhotonNetwork.InRoom)
+            return;
+
+        photonView.RPC(
+            nameof(RpcSetRagdollState),
+            RpcTarget.Others,
+            active,
+            hitPoint,
+            hitDirection,
+            transform.position,
+            transform.rotation,
+            useDefaultImpulse,
+            impulse,
+            upward);
+    }
+
+    private void ApplyRagdollState(
+        bool active,
+        Vector3 hitPoint,
+        Vector3 hitDirection,
+        bool useDefaultImpulse,
+        float impulse,
+        float upward)
+    {
+        EnsureRagdollController();
+        if (ragdollController == null)
+            return;
+
+        if (active)
+        {
+            if (ragdollController.IsRagdollActive)
+                return;
+
+            if (useDefaultImpulse)
+            {
+                ragdollController.ActivateRagdoll(new DamageInfo(
+                    0f,
+                    null,
+                    CombatAlignment.Neutral,
+                    hitPoint,
+                    hitDirection));
+                return;
+            }
+
+            ragdollController.ActivateRagdoll(hitPoint, hitDirection, impulse, upward);
+            return;
+        }
+
+        if (!ragdollController.IsRagdollActive)
+            return;
+
+        ragdollController.SetAnimatedState();
+    }
+
+    private void ApplyNetworkRootPose(Vector3 rootPosition, Quaternion rootRotation)
+    {
+        transform.SetPositionAndRotation(rootPosition, rootRotation);
+
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
+
+        if (rb == null)
+            return;
+
+        rb.position = rootPosition;
+        rb.rotation = rootRotation;
+        ClearRootVelocityIfDynamic();
+    }
+
+    private void EnsureRagdollController()
+    {
+        if (ragdollController == null)
+            ragdollController = GetComponent<PlayerRagdollController>();
     }
 
     private void ApplyDamageAndBroadcast(DamageInfo damageInfo, bool suppressKnockback = false, bool ignoreDamageImmunity = false)
@@ -406,6 +587,15 @@ public class PlayerHealth : CombatHealth
     {
         handEquipmentController ??= GetComponent<HandEquipmentController>();
         handEquipmentController?.DropAllEquippedItemsOnDeath();
+    }
+
+    private void ClearRootVelocityIfDynamic()
+    {
+        if (rb == null || rb.isKinematic)
+            return;
+
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
     }
 
     private void EmitEnemyImpactReaction(DamageInfo damageInfo)

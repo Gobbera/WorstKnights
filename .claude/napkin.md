@@ -38,41 +38,50 @@
    Do instead: when a user adds scene objects in the editor but they are not yet in the `.unity` YAML on disk, prefer a runtime/bootstrap attachment path or ask them to save the scene before patching references directly.
 
 ## Domain Behavior Guardrails
-1. **[2026-07-13] New gameplay scenes must be registered in both scene bootstraps and Build Settings**
+1. **[2026-09-01] Rotating door hinges need closed-pose pivot snapshots**
+   Do instead: capture the rotate pivot in the moving part's parent space while closed and evaluate the hinge pose from that snapshot each frame, especially when `Pivot` is a child of the moving part.
+
+2. **[2026-07-13] New gameplay scenes must be registered in both scene bootstraps and Build Settings**
    Do instead: when cloning or adding a gameplay map, update every hardcoded gameplay-scene check such as `RoomManager`/enemy bootstraps and add the scene to `ProjectSettings/EditorBuildSettings.asset`, otherwise direct Play and menu/room loading diverge.
 
-2. **[2026-07-23] Menu-to-gameplay transitions must not depend on raw scene asset paths or immediate Photon readiness**
+3. **[2026-07-23] Menu-to-gameplay transitions must not depend on raw scene asset paths or immediate Photon readiness**
    Do instead: load gameplay scenes by validated build index/name from `RoomList`, and let `RoomManager` resume room join from callbacks like `OnJoinedLobby` when the menu changes scene before Photon finishes becoming ready.
 
-3. **[2026-07-23] Scene-fixed interactables should degrade from PhotonView sync to room-state sync**
+4. **[2026-07-23] Scene-fixed interactables should degrade from PhotonView sync to room-state sync**
    Do instead: keep doors and destructibles usable offline/local by default, use RPCs when a valid `PhotonView` exists, and fall back to scene-stable room properties plus master-authority requests when the object is a fixed scene actor without manual `PhotonView` setup.
 
-4. **[2026-07-14] ProBuilder stairs and walls should not ship with raw MeshCollider gameplay collision**
-   Do instead: for movement-test maps, generate helper ramp colliders for straight ProBuilder stairs and helper box colliders for snaggy walls, then disable the original MeshCollider so the player capsule reads simplified collision.
+5. **[2026-07-14] Stairs and walls should not ship with raw MeshCollider gameplay collision**
+   Do instead: for movement-test maps, use `Tools/Level/Collision/Generate Stair Ramp Helpers` for straight ProBuilder stairs, `Generate Mesh Stair Ramp Helpers` for imported stair meshes, and helper box colliders for snaggy walls, then disable any original MeshCollider so the player capsule reads simplified collision.
 
-5. **[2026-07-15] Slope crest stability depends on surface-normal snap plus a short post-slope adhesion window**
+6. **[2026-08-25] Walkable Rigidbody slopes need tangent-gravity compensation**
+   Do instead: keep low-friction player capsules from sliding on slopes below `maxSlopeAngle` by canceling only `Physics.gravity` projected onto the walkable ground plane; leave steeper `IsSlidingSlope` surfaces uncompensated.
+
+7. **[2026-07-15] Slope crest stability depends on surface-normal snap plus a short post-slope adhesion window**
    Do instead: keep `PlayerMovement` ground snap relative to the contacted surface normal instead of world `Y`, and preserve a brief downward adhesion probe after walkable slopes or step assists so sprinting off the last stair/ramp segment stays grounded without suppressing real jumps.
 
-6. **[2026-05-08] Gameplay room bootstrap lives in code, not as a fixed scene object**
+8. **[2026-05-08] Gameplay room bootstrap lives in code, not as a fixed scene object**
    Do instead: when connection or spawn fails in `FieldTestCharacter`, inspect `RoomManager.BootstrapGameplayRoomManager()` and scene-name/path checks before hunting for a missing manager in the hierarchy.
 
-7. **[2026-05-26] World pickup items should be authored on prefab assets, not inferred by runtime name scans**
+9. **[2026-05-26] World pickup items should be authored on prefab assets, not inferred by runtime name scans**
    Do instead: attach `WorldPickupItem` on the prefab root, bind the correct `ItemDefinition`, and save an explicit trigger collider on the asset so scene instances inherit stable pickup behavior.
 
-8. **[2026-05-21] Menu lobby refresh must handle stale Photon connections**
+10. **[2026-05-21] Menu lobby refresh must handle stale Photon connections**
    Do instead: when re-entering the menu, if the client is still connected but outside a room, join the lobby directly or disconnect first; never wait on `!PhotonNetwork.IsConnected` unless this scene actually triggered a disconnect.
 
-9. **[2026-04-07] Player probes and state decisions must stay aligned with the real capsule**
+## Movement & Actions
+1. **[2026-04-07] Player probes and state decisions must stay aligned with the real capsule**
    Do instead: derive casts from the `CapsuleCollider`, refresh grounding before controller state decisions that can set `MovementState.air`, and keep the player capsule on a low-friction physics material.
 
-10. **[2026-04-13] Free-look yaw splits must keep movement orientation on camera yaw**
-   Do instead: rotate the `Orientation` child with the look/head yaw and let the body root catch up separately so idle free-look does not break camera-relative locomotion.
-
-## Movement & Actions
-1. **[2026-07-29] External conveyor pushes must survive player speed control**
+2. **[2026-07-29] External conveyor pushes must survive player speed control**
    Do instead: accumulate conveyor velocity in `PlayerMovement.VolumeModifiers` and apply it in `FixedUpdate` after `SpeedControl`, so the player motor does not clamp or cancel the belt push.
 
-2. **[2026-08-12] Crouch kick must stand before firing**
+3. **[2026-09-01] Player ragdoll ground collision depends on usable bone colliders**
+   Do instead: keep bone Rigidbodies kinematic/gravityless and ragdoll colliders disabled in `Awake`; when `PlayerRagdollController` disables the root Player colliders, make simulated bone colliders solid and large enough in world scale, especially legs/feet, and on recovery force Animator `Rebind()`/`Update(0)` plus `MovementAnimationController.ResetAfterRagdoll()`.
+
+4. **[2026-08-31] Knight feet are skinned to leg/end bones, not named foot bones**
+   Do instead: debug foot deformation from `Legs`/`Lower Body` renderers and `Leg_Lower.*(_end)` bones; do not simulate `_end`/IK/Target bones as independent ragdoll bodies, use foot colliders under the lower-leg Rigidbody instead, then tune collider world size plus joint projection/preprocessing.
+
+5. **[2026-08-12] Crouch kick must stand before firing**
    Do instead: when kick starts from `MovementState.crouching`, validate kick availability, stand/queue the kick briefly, suppress crouch while queued or active, then let held crouch re-enter after `kickActionDuration`.
 
 ## UI & Emotes
@@ -223,35 +232,35 @@
    Do instead: route fall damage, PvP hits, and future owner-local damage through a helper that broadcasts `PlayerHealth` state after `ApplyDamage`, instead of relying only on death or enemy-only RPC paths.
 
 ## Camera & Ownership
-1. **[2026-08-20] FPS hands/items default to a true URP overlay camera**
+1. **[2026-08-31] Local ragdoll view must leave first-person hierarchy**
+   Do instead: while owner ragdoll is active, hide FPS-only renderers, switch to a detached orbital `TP_Camera` that follows the ragdoll body, disable camera `MouseLook` during physics, then restore `FP_Camera`/`Hands Camera` and `PlayerPerspectiveVisibility` on recovery.
+
+2. **[2026-08-31] Close skinned character parts can vanish from renderer bounds**
+   Do instead: for characters near the camera, attach `SkinnedMeshCullingStabilizer` or set `SkinnedMeshRenderer.updateWhenOffscreen`, disable dynamic occlusion, and enlarge local bounds; only use FP overlay-layer fixes for owner-only first-person meshes.
+
+3. **[2026-08-20] FPS hands/items default to a true URP overlay camera**
    Do instead: keep `FP_Camera` as Base without `FirstPersonView`, keep `Hands Camera` as Overlay rendering only `FirstPersonView` with `clearDepth=true`, and let `WallRenderFeature` skip itself in this mode to avoid duplicate first-person draws.
 
-2. **[2026-08-07] Wall-only first-person bypass is now a fallback mode**
+4. **[2026-08-07] Wall-only first-person bypass is now a fallback mode**
    Do instead: use `PlayerSetup.firstPersonOverlayDepthMode=WallLayerStencilBypass` only when hands should preserve scene depth except against objects on the `Wall` layer; otherwise keep `AlwaysOnTop`.
 
-3. **[2026-08-20] Player low-light assist is owner-local runtime lighting**
+5. **[2026-08-20] Player low-light assist is owner-local runtime lighting**
    Do instead: keep `PlayerVisibilityAssistLight` on `Assets/Resources/Player.prefab`, let it create its own weak point light on the local `FP_Camera`, and suppress it from `HandEquipmentController.HasActiveEquippedLightSource()` rather than serializing/syncing a world light.
 
-4. **[2026-08-07] Layer temporary attack FOV over live movement FOV**
+6. **[2026-08-07] Layer temporary attack FOV over live movement FOV**
    Do instead: let locomotion FOV update first and have attack feedback resolve the current locomotion FOV each frame as its base, otherwise sprint-to-attack can snap back to a stale sprint FOV when the attack relaxes.
 
-5. **[2026-08-04] Player look pose must target FP camera input and TP model bones explicitly**
+7. **[2026-08-04] Player look pose must target FP camera input and TP model bones explicitly**
    Do instead: resolve `MouseLook` from the GameObject named `FP_Camera`, resolve procedural bones from the TP `Model` animator, and never let `FPS_Model` or inactive `TP_Camera` satisfy look-pose/camera marker searches.
 
-6. **[2026-08-05] Attack aim and head look need complementary pitch handoff**
+8. **[2026-08-05] Attack aim and head look need complementary pitch handoff**
    Do instead: while `Upper Body Attack` pitch releases, feed normal head-look the remaining camera-limited pitch so spine/chest do not hold the attack pose and then correct late.
 
-7. **[2026-07-30] First-person body separation must hide renderers, not rig roots**
-   Do instead: use the simple `PlayerPerspectiveVisibility` Elements list on `Assets/Resources/Player.prefab` for all owner-only/remote-only mesh visibility; keep `PlayerSetup` out of mesh hiding and keep animated roots like `TP_Model`/`Knight` active so bones, sockets, and owner-only children such as `Separated_UpperBody` still work.
+9. **[2026-09-01] Perspective visibility must account for the global `FirstPersonView` overlay**
+   Do instead: use the `PlayerPerspectiveVisibility` Elements list on `Assets/Resources/Player.prefab`, resolve final renderer visibility by target specificity, and force-hide owner-only roots/layer renderers such as `Separated_UpperBody` on remote player instances so the local Hands Camera cannot draw them.
 
-8. **[2026-07-03] First-person camera height is finalized by `HeadBobController`**
+10. **[2026-07-03] First-person camera height is finalized by `HeadBobController`**
    Do instead: when crouch changes the capsule or model height but the view stays fixed, adjust the camera's base local position in `HeadBobController` rather than only touching `PlayerMovement` or collider scaling.
-
-9. **[2026-07-07] First-person hit shake must layer into `HeadBobController`**
-   Do instead: apply damage camera impact through `HeadBobController` after bob, landing, and crouch offsets are composed, instead of driving a competing camera transform from combat scripts.
-
-10. **[2026-04-21] First-person camera effects must stay owner-local and resolve the active camera by marker**
-   Do instead: apply sway, FOV, recoil, and similar offsets only on the owning client, and target the enabled `FP_Camera` child selected by setup code instead of assuming a single camera child.
 
 ## Rendering & Materials
 1. **[2026-08-21] Runtime liquid state must be renderer-local**
@@ -267,7 +276,7 @@
    Do instead: run `Tools/Diagnostics/Scan Serialized Invalid Values`, keep `Tools/Diagnostics/Monitor Invalid Scene Values` enabled before reproducing with `Player.prefab` open, inspect any `PrefabStage(...)` path from the post-play/log-triggered scan, remove serialized `m_AABB` NaN overrides, and rebuild/remove corrupted `Cloth` components when `SkinnedMeshRenderer.localBounds` wakes as NaN.
 
 5. **[2026-08-20] Auto texture tiling should stay renderer-local**
-   Do instead: keep `_Texture_Tiling` changes in `MaterialPropertyBlock` on a specific renderer; editing the saved `.mat` vector changes every mesh using that shared material.
+   Do instead: keep `_Texture_Tiling`, `_Texture_Offset`, and `_Texture_Rotation` changes in `MaterialPropertyBlock` on a specific renderer, and keep both WK toon Shader Graphs wired through the same Tiling And Offset/Rotate UV path; editing the saved `.mat` vector changes every mesh using that shared material.
 
 ## User Directives
 1. **[2026-05-26] Large gameplay systems should start from a saved checkpoint plus a staged implementation doc**

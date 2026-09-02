@@ -103,6 +103,7 @@ public partial class PlayerMovement
             rb.AddForce(accelerationForce, ForceMode.Acceleration);
         }
 
+        ApplyWalkableSlopeGravityCompensation();
         ApplyGroundSnapAcceleration(surfaceState.GroundNormal);
     }
 
@@ -453,6 +454,22 @@ public partial class PlayerMovement
             return;
 
         rb.AddForce(-groundNormal * config.groundSnapAcceleration, ForceMode.Acceleration);
+    }
+
+    private void ApplyWalkableSlopeGravityCompensation()
+    {
+        if (rb == null || config == null || !surfaceState.HasGround || exitingSlope || IsJumpGroundSuppressed())
+            return;
+
+        float groundAngle = Vector3.Angle(Vector3.up, surfaceState.GroundNormal);
+        if (groundAngle <= 0.001f || groundAngle > config.maxSlopeAngle)
+            return;
+
+        Vector3 slopeGravity = Vector3.ProjectOnPlane(Physics.gravity, surfaceState.GroundNormal);
+        if (slopeGravity.sqrMagnitude <= 0.0001f)
+            return;
+
+        rb.AddForce(-slopeGravity, ForceMode.Acceleration);
     }
 
     private bool ApplyRecentGroundAdhesion()

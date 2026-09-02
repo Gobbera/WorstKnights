@@ -240,6 +240,53 @@ public partial class MovementAnimationController : MonoBehaviour
             BeginAirbornePhase(isJumpQueued);
     }
 
+    public void ResetAfterRagdoll()
+    {
+        if (animator == null)
+            animator = GetComponent<Animator>();
+
+        if (playerMovement == null)
+            playerMovement = GetComponentInParent<PlayerMovement>();
+
+        if (animator == null)
+            return;
+
+        CacheAnimatorParameters();
+        CacheAnimatorLayerIndices();
+
+        hasInitializedAnimatorState = false;
+        hasAirbornePhase = false;
+        pendingJumpAirborneStart = false;
+        airborneJumpStarted = false;
+        airborneTime = 0f;
+        idleTurnAccumulatedYaw = 0f;
+        idleTurnCooldownTimer = 0f;
+        horizontalVelocity = 0f;
+        verticalVelocity = 0f;
+        movementMagnitudeVelocity = 0f;
+        lastIdleTurnYaw = transform.eulerAngles.y;
+        hasIdleTurnYawSample = true;
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.AttackTrigger, "Attack");
+        ResetTriggerIfExists(MovementAnimatorSemantic.KickTrigger, "Kick");
+        ResetTriggerIfExists(MovementAnimatorSemantic.JumpTrigger, "Jump");
+        ResetTriggerIfExists(MovementAnimatorSemantic.LandTrigger, "Land");
+        ResetTriggerIfExists(MovementAnimatorSemantic.ThumbsUpTrigger, "ThumbsUp");
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchEnterTrigger, "CrouchEnter");
+        ResetTriggerIfExists(MovementAnimatorSemantic.CrouchExitTrigger, "CrouchExit");
+        ResetTriggerIfExists(MovementAnimatorSemantic.IdleTurnLeftTrigger, "IdleTurnLeft");
+        ResetTriggerIfExists(MovementAnimatorSemantic.IdleTurnRightTrigger, "IdleTurnRight");
+        ResetKickAnimationLayer();
+        ResetUpperBodyAttackAnimationLayer();
+        TryPlayStateOnLayer(emoteLayerIndex, EmoteLayerEmptyStatePath, 0f);
+        SetLayerWeightIfNeeded(emoteLayerIndex, 0f);
+
+        if (playerMovement == null)
+            return;
+
+        InitializeRuntimeState(playerMovement.IsGrounded, playerMovement.IsJumpQueued);
+    }
+
     public void PlayCrouchEnterAnimation()
     {
         if (!enableCrouchTransitionAnimations)

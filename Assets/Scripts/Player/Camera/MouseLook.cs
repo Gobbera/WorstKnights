@@ -45,8 +45,22 @@ public class MouseLook : MonoBehaviour
 
     private void Awake()
     {
-        instance = this;
         CacheReferences();
+        if (HasLocalAuthority())
+            instance = this;
+    }
+
+    private void OnEnable()
+    {
+        CacheReferences();
+        if (HasLocalAuthority())
+            instance = this;
+    }
+
+    private void OnDisable()
+    {
+        if (instance == this)
+            instance = null;
     }
 
     private void Start()

@@ -378,6 +378,8 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         if (IsMovementControlLocked)
         {
             ClearMovementInput();
+            ApplyWalkableSlopeGravityCompensation();
+            ApplyGroundSnapAcceleration(surfaceState.GroundNormal);
             return;
         }
 

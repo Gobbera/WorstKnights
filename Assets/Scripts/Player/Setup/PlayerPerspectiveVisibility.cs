@@ -41,20 +41,17 @@ public sealed class PlayerPerspectiveVisibilityElement
         if (owner == null || results == null)
             return;
 
-        results.Clear();
-        if (mesh != null)
-            owner.CollectRenderersFromTarget(mesh, includeChildren, results);
+        owner.ClearVisibilityDecisions();
+        Queue(owner, isOwner, results);
+        owner.ApplyQueuedVisibility();
+    }
 
-        if (results.Count == 0 && !string.IsNullOrWhiteSpace(fallbackName))
-        {
-            Transform fallbackTransform = owner.ResolveTransformByName(fallbackName);
-            if (fallbackTransform != null)
-                owner.CollectRenderersFromTransform(fallbackTransform, includeChildren, results);
-        }
+    public void Queue(PlayerPerspectiveVisibility owner, bool isOwner, List<Renderer> results)
+    {
+        if (owner == null || results == null)
+            return;
 
-        bool shouldShow = ShouldShow(isOwner);
-        for (int i = 0; i < results.Count; i++)
-            owner.ApplyRendererVisibility(results[i], shouldShow);
+        owner.QueueTargetVisibility(mesh, includeChildren, fallbackName, visibility, isOwner, results);
     }
 
     private bool ShouldShow(bool isOwner)
@@ -105,6 +102,18 @@ public sealed class PlayerPerspectiveVisibilityTarget
         Transform resolvedFallback = owner.ResolveTransformByName(fallbackName);
         if (resolvedFallback != null)
             owner.CollectRenderersFromTransform(resolvedFallback, includeChildren, results);
+    }
+
+    public void QueueVisibility(
+        PlayerPerspectiveVisibility owner,
+        PlayerPerspectiveVisibilityMode visibility,
+        bool isOwner,
+        List<Renderer> results)
+    {
+        if (owner == null || results == null)
+            return;
+
+        owner.QueueTargetVisibility(target, includeChildren, fallbackName, visibility, isOwner, results);
     }
 }
 
@@ -177,20 +186,76 @@ public sealed class PlayerPerspectiveVisibilityRule
 
         owner.CollectRenderersFromTransform(resolvedRoot, includeChildren, results);
     }
+
+    public void QueueVisibility(PlayerPerspectiveVisibility owner, bool isOwner, List<Renderer> results)
+    {
+        if (owner == null || results == null)
+            return;
+
+        if (targets != null)
+        {
+            for (int i = 0; i < targets.Length; i++)
+            {
+                PlayerPerspectiveVisibilityTarget targetRule = targets[i];
+                if (targetRule != null)
+                    targetRule.QueueVisibility(owner, visibility, isOwner, results);
+            }
+        }
+
+        bool shouldShow = ShouldShow(isOwner);
+        if (renderers != null)
+        {
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer targetRenderer = renderers[i];
+                owner.QueueRendererVisibility(
+                    targetRenderer,
+                    shouldShow,
+                    owner.GetDirectRendererVisibilityPriority(targetRenderer),
+                    visibility);
+            }
+        }
+
+        Transform resolvedRoot = root != null ? root : owner.ResolveTransformByName(fallbackRootName);
+        if (resolvedRoot != null)
+            owner.QueueTransformVisibility(resolvedRoot, includeChildren, visibility, isOwner, results);
+    }
 }
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PhotonView))]
 public sealed class PlayerPerspectiveVisibility : MonoBehaviour
 {
+    private const int TransformDepthPriorityStep = 10;
+    private const int DirectTargetPriorityBonus = 5;
+    private const int ForceHiddenVisibilityPriority = int.MaxValue;
+    private const string FirstPersonViewLayerName = "FirstPersonView";
+
+    private static readonly string[] RemoteHiddenFirstPersonRootNames =
+    {
+        "FPS_Model",
+        "Separated_UpperBody",
+        "Separeted_UpperBody"
+    };
+
     [SerializeField] private PhotonView photonView;
     [SerializeField] private bool applyOnStart = true;
+    [SerializeField] private bool forceHideFirstPersonRootsForRemotePlayers = true;
+    [SerializeField] private bool forceHideFirstPersonLayerForRemotePlayers = true;
     [SerializeField] private PlayerPerspectiveVisibilityElement[] elements = CreateDefaultElements();
     [SerializeField, HideInInspector] private PlayerPerspectiveVisibilityRule[] visibilityRules = CreateDefaultVisibilityRules();
 
     private readonly Dictionary<Renderer, bool> originalRendererStates = new Dictionary<Renderer, bool>();
+    private readonly Dictionary<Renderer, VisibilityDecision> visibilityDecisions = new Dictionary<Renderer, VisibilityDecision>();
     private readonly List<Renderer> ruleRenderers = new List<Renderer>();
     private Transform[] cachedTransforms = Array.Empty<Transform>();
+
+    private struct VisibilityDecision
+    {
+        public bool ShouldShow;
+        public int Priority;
+        public PlayerPerspectiveVisibilityMode Mode;
+    }
 
     private void Awake()
     {
@@ -225,6 +290,7 @@ public sealed class PlayerPerspectiveVisibility : MonoBehaviour
     public void Apply(bool isOwner)
     {
         EnsureElementsOrRules();
+        ClearVisibilityDecisions();
 
         if (elements != null && elements.Length > 0)
         {
@@ -232,9 +298,11 @@ public sealed class PlayerPerspectiveVisibility : MonoBehaviour
             {
                 PlayerPerspectiveVisibilityElement element = elements[i];
                 if (element != null)
-                    element.Apply(this, isOwner, ruleRenderers);
+                    element.Queue(this, isOwner, ruleRenderers);
             }
 
+            QueueRemoteFirstPersonVisibility(isOwner);
+            ApplyQueuedVisibility();
             return;
         }
 
@@ -244,13 +312,11 @@ public sealed class PlayerPerspectiveVisibility : MonoBehaviour
             if (rule == null)
                 continue;
 
-            ruleRenderers.Clear();
-            rule.CollectRenderers(this, ruleRenderers);
-
-            bool shouldShow = rule.ShouldShow(isOwner);
-            for (int rendererIndex = 0; rendererIndex < ruleRenderers.Count; rendererIndex++)
-                ApplyRendererVisibility(ruleRenderers[rendererIndex], shouldShow);
+            rule.QueueVisibility(this, isOwner, ruleRenderers);
         }
+
+        QueueRemoteFirstPersonVisibility(isOwner);
+        ApplyQueuedVisibility();
     }
 
     public Transform ResolveTransformByName(string objectName)
@@ -342,6 +408,169 @@ public sealed class PlayerPerspectiveVisibility : MonoBehaviour
         results.Add(targetRenderer);
     }
 
+    public void QueueTargetVisibility(
+        UnityEngine.Object target,
+        bool includeChildren,
+        string fallbackName,
+        PlayerPerspectiveVisibilityMode visibility,
+        bool isOwner,
+        List<Renderer> results)
+    {
+        if (results == null)
+            return;
+
+        results.Clear();
+        Transform targetRoot = ResolveTargetTransform(target);
+        if (target != null)
+            CollectRenderersFromTarget(target, includeChildren, results);
+
+        if (results.Count == 0 && !string.IsNullOrWhiteSpace(fallbackName))
+        {
+            targetRoot = ResolveTransformByName(fallbackName);
+            if (targetRoot != null)
+                CollectRenderersFromTransform(targetRoot, includeChildren, results);
+        }
+
+        bool shouldShow = ShouldShow(visibility, isOwner);
+        for (int i = 0; i < results.Count; i++)
+        {
+            Renderer targetRenderer = results[i];
+            QueueRendererVisibility(
+                targetRenderer,
+                shouldShow,
+                GetTargetVisibilityPriority(targetRenderer, targetRoot, target, includeChildren),
+                visibility);
+        }
+    }
+
+    public void QueueTransformVisibility(
+        Transform root,
+        bool includeChildren,
+        PlayerPerspectiveVisibilityMode visibility,
+        bool isOwner,
+        List<Renderer> results)
+    {
+        if (root == null || results == null)
+            return;
+
+        results.Clear();
+        CollectRenderersFromTransform(root, includeChildren, results);
+
+        bool shouldShow = ShouldShow(visibility, isOwner);
+        int priority = GetTransformVisibilityPriority(root, includeChildren);
+        for (int i = 0; i < results.Count; i++)
+            QueueRendererVisibility(results[i], shouldShow, priority, visibility);
+    }
+
+    public void QueueRendererVisibility(
+        Renderer targetRenderer,
+        bool shouldShow,
+        int priority,
+        PlayerPerspectiveVisibilityMode visibility)
+    {
+        if (targetRenderer == null)
+            return;
+
+        VisibilityDecision nextDecision = new VisibilityDecision
+        {
+            ShouldShow = shouldShow,
+            Priority = priority,
+            Mode = visibility
+        };
+
+        if (visibilityDecisions.TryGetValue(targetRenderer, out VisibilityDecision currentDecision)
+            && ShouldKeepCurrentDecision(currentDecision, nextDecision))
+        {
+            return;
+        }
+
+        visibilityDecisions[targetRenderer] = nextDecision;
+    }
+
+    private void QueueRemoteFirstPersonVisibility(bool isOwner)
+    {
+        if (isOwner)
+            return;
+
+        if (forceHideFirstPersonRootsForRemotePlayers)
+        {
+            for (int i = 0; i < RemoteHiddenFirstPersonRootNames.Length; i++)
+                QueueRemoteHiddenRootVisibility(ResolveTransformByName(RemoteHiddenFirstPersonRootNames[i]));
+        }
+
+        if (!forceHideFirstPersonLayerForRemotePlayers)
+            return;
+
+        int firstPersonLayer = LayerMask.NameToLayer(FirstPersonViewLayerName);
+        if (firstPersonLayer < 0)
+            return;
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer targetRenderer = renderers[i];
+            if (targetRenderer == null || !IsTransformOnLayerOrUnderLayer(targetRenderer.transform, firstPersonLayer))
+                continue;
+
+            QueueRendererVisibility(
+                targetRenderer,
+                false,
+                ForceHiddenVisibilityPriority,
+                PlayerPerspectiveVisibilityMode.Hidden);
+        }
+    }
+
+    private void QueueRemoteHiddenRootVisibility(Transform root)
+    {
+        if (root == null)
+            return;
+
+        ruleRenderers.Clear();
+        CollectRenderersFromTransform(root, true, ruleRenderers);
+        for (int i = 0; i < ruleRenderers.Count; i++)
+        {
+            QueueRendererVisibility(
+                ruleRenderers[i],
+                false,
+                ForceHiddenVisibilityPriority,
+                PlayerPerspectiveVisibilityMode.Hidden);
+        }
+    }
+
+    private bool IsTransformOnLayerOrUnderLayer(Transform target, int layer)
+    {
+        Transform cursor = target;
+        while (cursor != null && cursor != transform)
+        {
+            if (cursor.gameObject.layer == layer)
+                return true;
+
+            cursor = cursor.parent;
+        }
+
+        return false;
+    }
+
+    public int GetDirectRendererVisibilityPriority(Renderer targetRenderer)
+    {
+        return targetRenderer != null
+            ? GetTransformDepth(targetRenderer.transform) * TransformDepthPriorityStep + DirectTargetPriorityBonus
+            : 0;
+    }
+
+    public void ClearVisibilityDecisions()
+    {
+        visibilityDecisions.Clear();
+    }
+
+    public void ApplyQueuedVisibility()
+    {
+        foreach (KeyValuePair<Renderer, VisibilityDecision> entry in visibilityDecisions)
+            ApplyRendererVisibility(entry.Key, entry.Value.ShouldShow);
+
+        visibilityDecisions.Clear();
+    }
+
     private void ResolveReferences()
     {
         if (photonView == null)
@@ -383,6 +612,89 @@ public sealed class PlayerPerspectiveVisibility : MonoBehaviour
 
             AddUniqueRenderer(meshFilter.GetComponent<Renderer>(), results);
         }
+    }
+
+    private int GetTargetVisibilityPriority(
+        Renderer targetRenderer,
+        Transform targetRoot,
+        UnityEngine.Object target,
+        bool includeChildren)
+    {
+        if (targetRoot != null)
+            return GetTransformVisibilityPriority(targetRoot, includeChildren);
+
+        if (target is Mesh)
+            return GetDirectRendererVisibilityPriority(targetRenderer);
+
+        return 0;
+    }
+
+    private int GetTransformVisibilityPriority(Transform targetRoot, bool includeChildren)
+    {
+        if (targetRoot == null)
+            return 0;
+
+        return GetTransformDepth(targetRoot) * TransformDepthPriorityStep
+            + (includeChildren ? 0 : DirectTargetPriorityBonus);
+    }
+
+    private Transform ResolveTargetTransform(UnityEngine.Object target)
+    {
+        if (target is GameObject targetObject)
+            return targetObject.transform;
+
+        if (target is Component targetComponent)
+            return targetComponent.transform;
+
+        return null;
+    }
+
+    private int GetTransformDepth(Transform target)
+    {
+        int depth = 0;
+        Transform cursor = target;
+        while (cursor != null && cursor != transform)
+        {
+            depth++;
+            cursor = cursor.parent;
+        }
+
+        return depth;
+    }
+
+    private static bool ShouldShow(PlayerPerspectiveVisibilityMode visibility, bool isOwner)
+    {
+        switch (visibility)
+        {
+            case PlayerPerspectiveVisibilityMode.OwnerOnly:
+                return isOwner;
+            case PlayerPerspectiveVisibilityMode.RemoteOnly:
+                return !isOwner;
+            case PlayerPerspectiveVisibilityMode.Hidden:
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    private static bool ShouldKeepCurrentDecision(VisibilityDecision currentDecision, VisibilityDecision nextDecision)
+    {
+        if (currentDecision.Priority > nextDecision.Priority)
+            return true;
+
+        if (currentDecision.Priority < nextDecision.Priority)
+            return false;
+
+        if (!currentDecision.ShouldShow && nextDecision.ShouldShow)
+            return IsRestrictiveVisibilityMode(currentDecision.Mode)
+                || !IsRestrictiveVisibilityMode(nextDecision.Mode);
+
+        return false;
+    }
+
+    private static bool IsRestrictiveVisibilityMode(PlayerPerspectiveVisibilityMode visibility)
+    {
+        return visibility != PlayerPerspectiveVisibilityMode.Always;
     }
 
     private void EnsureElementsOrRules()

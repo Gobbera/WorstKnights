@@ -34,7 +34,7 @@ public static class ProBuilderCollisionTools
 
         if (updatedCount == 0)
         {
-            Debug.LogWarning("[ProBuilderCollisionTools] Nenhuma escada ProBuilder reta foi encontrada na selecao.");
+            Debug.LogWarning("[ProBuilderCollisionTools] Nenhuma escada ProBuilder reta foi encontrada na selecao. Para escadas importadas de FBX/Blender, use Generate Mesh Stair Ramp Helpers.");
             return;
         }
 
@@ -43,6 +43,35 @@ public static class ProBuilderCollisionTools
 
     [MenuItem("Tools/Level/Collision/Generate Stair Ramp Helpers", true)]
     private static bool ValidateGenerateStairRampHelpers()
+    {
+        return Selection.gameObjects != null && Selection.gameObjects.Length > 0;
+    }
+
+    [MenuItem("Tools/Level/Collision/Generate Mesh Stair Ramp Helpers")]
+    private static void GenerateMeshStairRampHelpers()
+    {
+        int updatedCount = 0;
+
+        foreach (GameObject candidate in EnumerateSelectionHierarchy())
+        {
+            if (TryGetProBuilderShape(candidate, out _))
+                continue;
+
+            if (TryCreateOrUpdateStairRamp(candidate, false))
+                updatedCount++;
+        }
+
+        if (updatedCount == 0)
+        {
+            Debug.LogWarning("[ProBuilderCollisionTools] Nenhuma malha importada elegivel foi encontrada na selecao. Selecione um objeto com MeshFilter e uma malha valida.");
+            return;
+        }
+
+        Debug.Log($"[ProBuilderCollisionTools] {updatedCount} helper(s) de rampa para malha importada criados/atualizados.");
+    }
+
+    [MenuItem("Tools/Level/Collision/Generate Mesh Stair Ramp Helpers", true)]
+    private static bool ValidateGenerateMeshStairRampHelpers()
     {
         return Selection.gameObjects != null && Selection.gameObjects.Length > 0;
     }
@@ -191,9 +220,9 @@ public static class ProBuilderCollisionTools
         }
     }
 
-    private static bool TryCreateOrUpdateStairRamp(GameObject source)
+    private static bool TryCreateOrUpdateStairRamp(GameObject source, bool requireMeshCollider = true)
     {
-        if (!TryGetMeshSetup(source, out MeshCollider meshCollider, out Mesh sharedMesh))
+        if (!TryGetMeshSetup(source, requireMeshCollider, out MeshCollider meshCollider, out Mesh sharedMesh))
             return false;
 
         if (!TryResolveStairRamp(source, sharedMesh, out Vector3 localCenter, out Quaternion localRotation, out Vector3 colliderSize))
@@ -484,11 +513,23 @@ public static class ProBuilderCollisionTools
 
     private static bool TryGetMeshSetup(GameObject source, out MeshCollider meshCollider, out Mesh sharedMesh)
     {
-        meshCollider = source.GetComponent<MeshCollider>();
+        return TryGetMeshSetup(source, true, out meshCollider, out sharedMesh);
+    }
+
+    private static bool TryGetMeshSetup(GameObject source, bool requireMeshCollider, out MeshCollider meshCollider, out Mesh sharedMesh)
+    {
+        meshCollider = null;
         sharedMesh = null;
 
+        if (source == null)
+            return false;
+
+        meshCollider = source.GetComponent<MeshCollider>();
         MeshFilter meshFilter = source.GetComponent<MeshFilter>();
-        if (meshCollider == null || meshFilter == null || meshFilter.sharedMesh == null)
+        if (meshFilter == null || meshFilter.sharedMesh == null)
+            return false;
+
+        if (requireMeshCollider && meshCollider == null)
             return false;
 
         sharedMesh = meshFilter.sharedMesh;

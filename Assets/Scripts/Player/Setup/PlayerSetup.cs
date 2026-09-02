@@ -13,9 +13,18 @@ public class PlayerSetup : MonoBehaviourPun
     private const string FirstPersonCameraName = "FP_Camera";
     private const string FirstPersonHandsCameraName = "Hands Camera";
     private const string FirstPersonModelRootName = "FPS_Model";
+    private const string FirstPersonUpperBodyRootName = "Separated_UpperBody";
+    private const string LegacyFirstPersonUpperBodyRootName = "Separeted_UpperBody";
     private const string FirstPersonViewLayerName = "FirstPersonView";
     private const string WallLayerName = "Wall";
     private const float FirstPersonNearClipPlane = 0.01f;
+
+    private static readonly string[] FirstPersonVisualRootNames =
+    {
+        FirstPersonModelRootName,
+        FirstPersonUpperBodyRootName,
+        LegacyFirstPersonUpperBodyRootName
+    };
 
     private static readonly FieldInfo UniversalCameraClearDepthField =
         typeof(UniversalAdditionalCameraData).GetField("m_ClearDepth", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -32,6 +41,9 @@ public class PlayerSetup : MonoBehaviourPun
     [SerializeField] private string nickname;
     [SerializeField] private FirstPersonOverlayDepthMode firstPersonOverlayDepthMode = FirstPersonOverlayDepthMode.AlwaysOnTop;
     [SerializeField] private float firstPersonOverlayFarClipPlane = 25f;
+    [SerializeField] private bool disableFirstPersonCameraOcclusionCulling = true;
+    [SerializeField] private bool stabilizeFirstPersonSkinnedRenderers = true;
+    [SerializeField] private Vector3 firstPersonSkinnedMeshMinLocalBoundsSize = new Vector3(1.5f, 1.5f, 1.5f);
 
     private IPlayerInput playerInput;
     private PlayerHealth playerHealth;
@@ -98,6 +110,12 @@ public class PlayerSetup : MonoBehaviourPun
         if (GetComponent<PlayerKickAttack>() == null)
         {
             gameObject.AddComponent<PlayerKickAttack>();
+            addedRuntimeComponent = true;
+        }
+
+        if (GetComponent<PlayerRagdollController>() == null)
+        {
+            gameObject.AddComponent<PlayerRagdollController>();
             addedRuntimeComponent = true;
         }
 
@@ -283,12 +301,14 @@ public class PlayerSetup : MonoBehaviourPun
         int firstPersonMask = 1 << firstPersonLayer;
         bool useWallOnlyBypass = ShouldUseWallLayerStencilBypass();
         bool clearOverlayDepth = !useWallOnlyBypass;
-        ApplyLayerToFirstPersonModel(firstPersonLayer);
+        ConfigureFirstPersonVisualRoots(firstPersonLayer);
 
         if (fp_Camera != null)
         {
             fp_Camera.cullingMask &= ~firstPersonMask;
             fp_Camera.nearClipPlane = Mathf.Min(fp_Camera.nearClipPlane, FirstPersonNearClipPlane);
+            if (disableFirstPersonCameraOcclusionCulling)
+                fp_Camera.useOcclusionCulling = false;
         }
 
         if (firstPersonHandsCamera != null)
@@ -317,13 +337,58 @@ public class PlayerSetup : MonoBehaviourPun
             && LayerMask.NameToLayer(WallLayerName) >= 0;
     }
 
-    private void ApplyLayerToFirstPersonModel(int firstPersonLayer)
+    private void ConfigureFirstPersonVisualRoots(int firstPersonLayer)
     {
-        Transform firstPersonModelRoot = FindTransformByName(FirstPersonModelRootName);
-        if (firstPersonModelRoot == null)
+        HashSet<Transform> configuredRoots = new HashSet<Transform>();
+        for (int i = 0; i < FirstPersonVisualRootNames.Length; i++)
+        {
+            Transform visualRoot = FindTransformByName(FirstPersonVisualRootNames[i]);
+            if (visualRoot == null || !configuredRoots.Add(visualRoot))
+                continue;
+
+            SetLayerRecursively(visualRoot, firstPersonLayer);
+            StabilizeFirstPersonSkinnedRenderers(visualRoot);
+        }
+    }
+
+    private void StabilizeFirstPersonSkinnedRenderers(Transform visualRoot)
+    {
+        if (!stabilizeFirstPersonSkinnedRenderers || visualRoot == null)
             return;
 
-        SetLayerRecursively(firstPersonModelRoot, firstPersonLayer);
+        SkinnedMeshRenderer[] skinnedRenderers = visualRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+        for (int i = 0; i < skinnedRenderers.Length; i++)
+        {
+            SkinnedMeshRenderer skinnedRenderer = skinnedRenderers[i];
+            if (skinnedRenderer == null)
+                continue;
+
+            skinnedRenderer.updateWhenOffscreen = true;
+            EnsureFirstPersonSkinnedRendererBounds(skinnedRenderer);
+        }
+    }
+
+    private void EnsureFirstPersonSkinnedRendererBounds(SkinnedMeshRenderer skinnedRenderer)
+    {
+        Bounds bounds = skinnedRenderer.localBounds;
+        Vector3 minimumSize = new Vector3(
+            Mathf.Max(0f, firstPersonSkinnedMeshMinLocalBoundsSize.x),
+            Mathf.Max(0f, firstPersonSkinnedMeshMinLocalBoundsSize.y),
+            Mathf.Max(0f, firstPersonSkinnedMeshMinLocalBoundsSize.z));
+
+        if (!IsFiniteBounds(bounds))
+        {
+            skinnedRenderer.localBounds = new Bounds(Vector3.zero, minimumSize);
+            return;
+        }
+
+        Vector3 currentSize = bounds.size;
+        Vector3 targetSize = Vector3.Max(currentSize, minimumSize);
+        if ((targetSize - currentSize).sqrMagnitude <= 0.000001f)
+            return;
+
+        bounds.size = targetSize;
+        skinnedRenderer.localBounds = bounds;
     }
 
     private void ConfigureUniversalCameraStack(Camera baseCamera, Camera overlayCamera, bool clearOverlayDepth)
@@ -390,6 +455,21 @@ public class PlayerSetup : MonoBehaviourPun
         root.gameObject.layer = layer;
         for (int i = 0; i < root.childCount; i++)
             SetLayerRecursively(root.GetChild(i), layer);
+    }
+
+    private static bool IsFiniteBounds(Bounds bounds)
+    {
+        return IsFiniteVector(bounds.center) && IsFiniteVector(bounds.size);
+    }
+
+    private static bool IsFiniteVector(Vector3 value)
+    {
+        return IsFiniteFloat(value.x) && IsFiniteFloat(value.y) && IsFiniteFloat(value.z);
+    }
+
+    private static bool IsFiniteFloat(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value);
     }
 
     private void ApplyPerspectiveVisibility(bool isMine)

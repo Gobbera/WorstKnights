@@ -19,6 +19,8 @@ public sealed class AutoTextureTiling : MonoBehaviour
     }
 
     private const string DefaultTextureTilingProperty = "_Texture_Tiling";
+    private const string DefaultTextureOffsetProperty = "_Texture_Offset";
+    private const string DefaultTextureRotationProperty = "_Texture_Rotation";
     private const float MinimumSize = 0.0001f;
     private const float ChangeThreshold = 0.000001f;
 #if UNITY_EDITOR
@@ -31,13 +33,21 @@ public sealed class AutoTextureTiling : MonoBehaviour
     [SerializeField] private SurfacePlane surfacePlane = SurfacePlane.AutoLargestTwo;
     [SerializeField] private Vector2 textureWorldSize = Vector2.one;
     [SerializeField] private Vector2 tilingMultiplier = Vector2.one;
+    [SerializeField] private Vector2 textureOffset = Vector2.zero;
+    [SerializeField] private float textureRotationDegrees = 0f;
     [SerializeField] private string textureTilingProperty = DefaultTextureTilingProperty;
+    [SerializeField] private string textureOffsetProperty = DefaultTextureOffsetProperty;
+    [SerializeField] private string textureRotationProperty = DefaultTextureRotationProperty;
     [SerializeField] private bool updateInPlayMode = false;
 
     private readonly List<Renderer> renderers = new List<Renderer>();
     private MaterialPropertyBlock propertyBlock;
     private Vector2 lastAppliedTiling = new Vector2(float.NaN, float.NaN);
-    private int lastAppliedPropertyId;
+    private Vector2 lastAppliedOffset = new Vector2(float.NaN, float.NaN);
+    private float lastAppliedRotationDegrees = float.NaN;
+    private int lastAppliedTilingPropertyId;
+    private int lastAppliedOffsetPropertyId;
+    private int lastAppliedRotationPropertyId;
     private int lastAppliedRendererHash;
     private int lastAppliedRendererCount = -1;
 
@@ -66,6 +76,10 @@ public sealed class AutoTextureTiling : MonoBehaviour
         targetRenderer = GetSupportedRendererOnThisObject();
         textureWorldSize = Vector2.one;
         tilingMultiplier = Vector2.one;
+        textureOffset = Vector2.zero;
+        textureRotationDegrees = 0f;
+        textureOffsetProperty = DefaultTextureOffsetProperty;
+        textureRotationProperty = DefaultTextureRotationProperty;
         RefreshTiling();
     }
 
@@ -109,7 +123,7 @@ public sealed class AutoTextureTiling : MonoBehaviour
         if (!IsFinite(tiling))
             return;
 
-        ApplyTiling(tiling);
+        ApplyTextureTransform(tiling, textureOffset, textureRotationDegrees);
     }
 
     private void CollectRenderers()
@@ -402,17 +416,23 @@ public sealed class AutoTextureTiling : MonoBehaviour
         }
     }
 
-    private void ApplyTiling(Vector2 tiling)
+    private void ApplyTextureTransform(Vector2 tiling, Vector2 offset, float rotationDegrees)
     {
-        int propertyId = Shader.PropertyToID(textureTilingProperty);
+        int tilingPropertyId = Shader.PropertyToID(textureTilingProperty);
+        int offsetPropertyId = Shader.PropertyToID(textureOffsetProperty);
+        int rotationPropertyId = Shader.PropertyToID(textureRotationProperty);
         int rendererHash = CalculateRendererHash();
         if (propertyBlock == null)
             propertyBlock = new MaterialPropertyBlock();
 
-        if (lastAppliedPropertyId == propertyId &&
+        if (lastAppliedTilingPropertyId == tilingPropertyId &&
+            lastAppliedOffsetPropertyId == offsetPropertyId &&
+            lastAppliedRotationPropertyId == rotationPropertyId &&
             lastAppliedRendererHash == rendererHash &&
             lastAppliedRendererCount == renderers.Count &&
-            (lastAppliedTiling - tiling).sqrMagnitude < ChangeThreshold)
+            (lastAppliedTiling - tiling).sqrMagnitude < ChangeThreshold &&
+            (lastAppliedOffset - offset).sqrMagnitude < ChangeThreshold &&
+            Mathf.Abs(lastAppliedRotationDegrees - rotationDegrees) < ChangeThreshold)
         {
             return;
         }
@@ -424,14 +444,20 @@ public sealed class AutoTextureTiling : MonoBehaviour
                 continue;
 
             renderer.GetPropertyBlock(propertyBlock);
-            propertyBlock.SetVector(propertyId, new Vector4(tiling.x, tiling.y, 0f, 0f));
+            propertyBlock.SetVector(tilingPropertyId, new Vector4(tiling.x, tiling.y, 0f, 0f));
+            propertyBlock.SetVector(offsetPropertyId, new Vector4(offset.x, offset.y, 0f, 0f));
+            propertyBlock.SetFloat(rotationPropertyId, rotationDegrees);
             renderer.SetPropertyBlock(propertyBlock);
         }
 
-        lastAppliedPropertyId = propertyId;
+        lastAppliedTilingPropertyId = tilingPropertyId;
+        lastAppliedOffsetPropertyId = offsetPropertyId;
+        lastAppliedRotationPropertyId = rotationPropertyId;
         lastAppliedRendererHash = rendererHash;
         lastAppliedRendererCount = renderers.Count;
         lastAppliedTiling = tiling;
+        lastAppliedOffset = offset;
+        lastAppliedRotationDegrees = rotationDegrees;
     }
 
 #if UNITY_EDITOR
@@ -469,9 +495,18 @@ public sealed class AutoTextureTiling : MonoBehaviour
         textureWorldSize.y = SanitizePositive(textureWorldSize.y, 1f);
         tilingMultiplier.x = SanitizePositive(tilingMultiplier.x, 1f);
         tilingMultiplier.y = SanitizePositive(tilingMultiplier.y, 1f);
+        textureOffset.x = SanitizeFinite(textureOffset.x, 0f);
+        textureOffset.y = SanitizeFinite(textureOffset.y, 0f);
+        textureRotationDegrees = SanitizeFinite(textureRotationDegrees, 0f);
 
         if (string.IsNullOrWhiteSpace(textureTilingProperty))
             textureTilingProperty = DefaultTextureTilingProperty;
+
+        if (string.IsNullOrWhiteSpace(textureOffsetProperty))
+            textureOffsetProperty = DefaultTextureOffsetProperty;
+
+        if (string.IsNullOrWhiteSpace(textureRotationProperty))
+            textureRotationProperty = DefaultTextureRotationProperty;
     }
 
     private static float SanitizePositive(float value, float fallback)
@@ -480,6 +515,11 @@ public sealed class AutoTextureTiling : MonoBehaviour
             return fallback;
 
         return Mathf.Max(MinimumSize, value);
+    }
+
+    private static float SanitizeFinite(float value, float fallback)
+    {
+        return IsFinite(value) ? value : fallback;
     }
 
     private static Vector3 GetSafeAxis(Vector3 axis, Vector3 fallback)
