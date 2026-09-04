@@ -23,79 +23,100 @@ public class PlayerRagdollController : MonoBehaviour
         "Separeted_UpperBody"
     };
 
-    [Header("References")]
-    [SerializeField] private Transform ragdollRoot;
-    [SerializeField] private Animator ragdollAnimator;
-    [SerializeField] private PlayerHealth playerHealth;
-    [SerializeField] private PlayerMovement playerMovement;
-    [SerializeField] private PlayerController playerController;
-    [SerializeField] private PlayerMeleeAttack meleeAttack;
-    [SerializeField] private PlayerKickAttack kickAttack;
-    [SerializeField] private HandEquipmentController handEquipmentController;
-    [SerializeField] private PlayerPerspectiveVisibility perspectiveVisibility;
-    [SerializeField] private PhotonView photonView;
+    [Header("Impact Ragdoll Tuning")]
+    [SerializeField] [InspectorName("Enable Impact Ragdoll")] private bool enableImpactRagdoll = true;
+    [SerializeField] [InspectorName("Wall Impact")] private bool enableWallImpactRagdoll = true;
+    [SerializeField] [InspectorName("Player Collision Impact")] private bool enablePlayerCollisionImpactRagdoll = true;
+    [SerializeField] [InspectorName("Dynamic Body Impact")] private bool enableDynamicBodyImpactRagdoll = true;
+    [SerializeField] [InspectorName("Impact Collision Mask")] private LayerMask impactCollisionMask = Physics.DefaultRaycastLayers;
+    [SerializeField] [InspectorName("Wall Min Speed")] [Min(0f)] private float minWallImpactSpeed = 5.2f;
+    [SerializeField] [InspectorName("Each Player Min Speed")] [Min(0f)] private float minPlayerCollisionSelfSpeed = 4.8f;
+    [SerializeField] [InspectorName("Player Relative Min Speed")] [Min(0f)] private float minPlayerCollisionRelativeSpeed = 7.5f;
+    [SerializeField] [InspectorName("Dynamic Body Min Speed")] [Min(0f)] private float minDynamicBodyImpactSpeed = 5f;
+    [SerializeField] [InspectorName("Dynamic Body Min Mass")] [Min(0f)] private float minDynamicBodyMass = 2f;
+    [SerializeField] [InspectorName("Impact Force Multiplier")] [Min(0f)] private float impactToImpulseMultiplier = 1.1f;
+    [SerializeField] [InspectorName("Max Impact Force")] [Min(0f)] private float maxImpactImpulse = 14f;
+    [SerializeField] [InspectorName("Recover After Grounded Seconds")] [Min(0f)] private float impactAutoRecoverAfterGroundedSeconds = 1.25f;
+    [SerializeField] [InspectorName("Log Impact Decisions")] private bool logImpactRagdoll;
 
-    [Header("Ragdoll")]
-    [SerializeField] private bool disableAnimatorWhileRagdoll = true;
-    [SerializeField] private bool dropActiveItemsOnRagdoll = true;
-    [SerializeField] private bool forceThirdPersonAnimatorAlwaysAnimate = true;
-    [SerializeField] private bool disableNestedAnimatorsWithoutMovementController = true;
-    [SerializeField] private bool disableRootCollidersWhileRagdoll = true;
-    [SerializeField] private bool ignoreRagdollSelfCollision = true;
-    [SerializeField] [Min(0f)] private float activationImpulse = 1.25f;
-    [SerializeField] [Min(0f)] private float upwardImpulse = 0.25f;
-
-    [Header("Ragdoll Collision")]
-    [SerializeField] private bool forceRagdollCollidersSolid = true;
-    [SerializeField] private bool normalizeSmallRagdollColliders = true;
-    [SerializeField] [Min(0.001f)] private float minRagdollColliderWorldRadius = 0.08f;
-    [SerializeField] [Min(0.001f)] private float minRagdollColliderWorldLength = 0.25f;
-    [SerializeField] [Min(0.001f)] private float minUsableRagdollColliderWorldExtent = 0.08f;
-    [SerializeField] [Min(1)] private int minUsableRagdollColliderCount = 3;
-    [SerializeField] private bool excludeEndIkAndTargetBodiesFromRagdoll;
-    [SerializeField] private bool relaxFootEndJoints = true;
-    [SerializeField] [Range(0f, 90f)] private float footEndJointSwingLimit = 25f;
-    [SerializeField] [Range(0f, 180f)] private float footEndJointTwistLimit = 45f;
-
-    [Header("Debug")]
-    [SerializeField] private bool enableDebugToggle = true;
-    [SerializeField] private KeyCode debugToggleKey = KeyCode.F9;
-    [SerializeField] private bool enableDebugThirdPersonCameraToggle = true;
-    [SerializeField] private KeyCode debugThirdPersonCameraKey = KeyCode.F8;
-    [SerializeField] [Min(0f)] private float debugActivationImpulse;
-    [SerializeField] [Min(0f)] private float debugUpwardImpulse;
-    [SerializeField] private bool logDebugToggle = true;
-
-    [Header("Local Ragdoll Camera")]
-    [SerializeField] private bool switchLocalViewToThirdPerson = true;
-    [SerializeField] private Camera firstPersonCamera;
-    [SerializeField] private Camera firstPersonHandsCamera;
-    [SerializeField] private Camera thirdPersonCamera;
-    [SerializeField] private Transform ragdollCameraTarget;
-    [SerializeField] private bool detachThirdPersonCameraDuringRagdoll = true;
-    [SerializeField] private Vector3 thirdPersonRagdollOffset = new Vector3(0.02f, 1.8f, -5.15f);
-    [SerializeField] [Min(0f)] private float thirdPersonRagdollFollowSharpness = 14f;
-    [SerializeField] [Min(0f)] private float thirdPersonRagdollLookHeight = 0.65f;
-    [SerializeField] private bool allowThirdPersonRagdollCameraInput = true;
-    [SerializeField] [Min(0f)] private float thirdPersonRagdollMouseSensitivity = 0.17f;
-    [SerializeField] private bool invertThirdPersonRagdollMouseY;
-    [SerializeField] [Range(-85f, 85f)] private float thirdPersonRagdollMinPitch = -20f;
-    [SerializeField] [Range(-85f, 85f)] private float thirdPersonRagdollMaxPitch = 65f;
-    [SerializeField] [Min(0.1f)] private float thirdPersonRagdollMinDistance = 1.75f;
-    [SerializeField] [Min(0.1f)] private float thirdPersonRagdollMaxDistance = 7.5f;
-    [SerializeField] [Min(0f)] private float thirdPersonRagdollZoomSpeed = 2.5f;
-    [SerializeField] [Min(0f)] private float thirdPersonRagdollZoomSharpness = 16f;
-
-    [Header("Ragdoll Stability")]
-    [SerializeField] [Min(0f)] private float maxInheritedVelocity = 8f;
-    [SerializeField] private bool stabilizeCharacterJoints = true;
-    [SerializeField] [Min(0f)] private float jointProjectionDistance = 0.08f;
-    [SerializeField] [Range(1f, 180f)] private float jointProjectionAngle = 20f;
-    [SerializeField] private bool enableJointPreprocessing = true;
-    [SerializeField] [Min(0f)] private float maxDepenetrationVelocity = 2.5f;
-    [SerializeField] [Min(0f)] private float maxRagdollAngularVelocity = 8f;
-    [SerializeField] [Min(1)] private int ragdollSolverIterations = 12;
-    [SerializeField] [Min(1)] private int ragdollSolverVelocityIterations = 4;
+    [SerializeField, HideInInspector] private Transform ragdollRoot;
+    [SerializeField, HideInInspector] private Animator ragdollAnimator;
+    [SerializeField, HideInInspector] private PlayerHealth playerHealth;
+    [SerializeField, HideInInspector] private PlayerMovement playerMovement;
+    [SerializeField, HideInInspector] private PlayerController playerController;
+    [SerializeField, HideInInspector] private PlayerMeleeAttack meleeAttack;
+    [SerializeField, HideInInspector] private PlayerKickAttack kickAttack;
+    [SerializeField, HideInInspector] private HandEquipmentController handEquipmentController;
+    [SerializeField, HideInInspector] private PlayerPerspectiveVisibility perspectiveVisibility;
+    [SerializeField, HideInInspector] private PhotonView photonView;
+    [SerializeField, HideInInspector] private bool disableAnimatorWhileRagdoll = true;
+    [SerializeField, HideInInspector] private bool dropActiveItemsOnRagdoll = true;
+    [SerializeField, HideInInspector] private bool forceThirdPersonAnimatorAlwaysAnimate = true;
+    [SerializeField, HideInInspector] private bool disableNestedAnimatorsWithoutMovementController = true;
+    [SerializeField, HideInInspector] private bool disableRootCollidersWhileRagdoll = true;
+    [SerializeField, HideInInspector] private bool ignoreRagdollSelfCollision = true;
+    [SerializeField, HideInInspector, Min(0f)] private float activationImpulse = 1.25f;
+    [SerializeField, HideInInspector, Min(0f)] private float upwardImpulse = 0.25f;
+    [SerializeField, HideInInspector] private bool forceRagdollCollidersSolid = true;
+    [SerializeField, HideInInspector] private bool normalizeSmallRagdollColliders = true;
+    [SerializeField, HideInInspector, Min(0.001f)] private float minRagdollColliderWorldRadius = 0.08f;
+    [SerializeField, HideInInspector, Min(0.001f)] private float minRagdollColliderWorldLength = 0.25f;
+    [SerializeField, HideInInspector, Min(0.001f)] private float minUsableRagdollColliderWorldExtent = 0.08f;
+    [SerializeField, HideInInspector, Min(1)] private int minUsableRagdollColliderCount = 3;
+    [SerializeField, HideInInspector] private bool excludeEndIkAndTargetBodiesFromRagdoll;
+    [SerializeField, HideInInspector] private bool relaxFootEndJoints = true;
+    [SerializeField, HideInInspector, Range(0f, 90f)] private float footEndJointSwingLimit = 25f;
+    [SerializeField, HideInInspector, Range(0f, 180f)] private float footEndJointTwistLimit = 45f;
+    [SerializeField, HideInInspector] private bool allowRemoteImpactRagdollRequests = true;
+    [SerializeField, HideInInspector] private bool evaluateImpactRagdollOnCollisionStay;
+    [SerializeField, HideInInspector] private bool ignoreDestructibleDebrisImpact = true;
+    [SerializeField, HideInInspector, Min(0f)] private float impactCooldown = 1f;
+    [SerializeField, HideInInspector, Range(0f, 1f)] private float minWallApproachAlignment = 0.35f;
+    [SerializeField, HideInInspector, Range(0f, 89f)] private float groundLikeContactMaxAngle = 55f;
+    [SerializeField, HideInInspector, Min(0.01f)] private float dynamicBodyMassReference = 5f;
+    [SerializeField, HideInInspector, Min(0f)] private float playerImpactIntensityMultiplier = 1f;
+    [SerializeField, HideInInspector, Min(0f)] private float wallImpactIntensityMultiplier = 0.9f;
+    [SerializeField, HideInInspector, Min(0f)] private float dynamicBodyImpactIntensityMultiplier = 1f;
+    [SerializeField, HideInInspector, Min(0f)] private float impactUpwardImpulseMultiplier = 0.12f;
+    [SerializeField, HideInInspector, Min(0f)] private float maxImpactUpwardImpulse = 3f;
+    [SerializeField, HideInInspector] private LayerMask ragdollRecoveryGroundMask = Physics.DefaultRaycastLayers;
+    [SerializeField, HideInInspector, Range(0f, 89f)] private float ragdollRecoveryMaxGroundAngle = 55f;
+    [SerializeField, HideInInspector, Min(0f)] private float ragdollRecoveryGroundProbeLift = 0.08f;
+    [SerializeField, HideInInspector, Min(0f)] private float ragdollRecoveryGroundProbeDistance = 0.12f;
+    [SerializeField, HideInInspector] private bool enableDebugToggle = true;
+    [SerializeField, HideInInspector] private KeyCode debugToggleKey = KeyCode.F9;
+    [SerializeField, HideInInspector] private bool enableDebugThirdPersonCameraToggle = true;
+    [SerializeField, HideInInspector] private KeyCode debugThirdPersonCameraKey = KeyCode.F8;
+    [SerializeField, HideInInspector, Min(0f)] private float debugActivationImpulse;
+    [SerializeField, HideInInspector, Min(0f)] private float debugUpwardImpulse;
+    [SerializeField, HideInInspector] private bool logDebugToggle = true;
+    [SerializeField, HideInInspector] private bool switchLocalViewToThirdPerson = true;
+    [SerializeField, HideInInspector] private Camera firstPersonCamera;
+    [SerializeField, HideInInspector] private Camera firstPersonHandsCamera;
+    [SerializeField, HideInInspector] private Camera thirdPersonCamera;
+    [SerializeField, HideInInspector] private Transform ragdollCameraTarget;
+    [SerializeField, HideInInspector] private bool detachThirdPersonCameraDuringRagdoll = true;
+    [SerializeField, HideInInspector] private Vector3 thirdPersonRagdollOffset = new Vector3(0.02f, 1.8f, -5.15f);
+    [SerializeField, HideInInspector, Min(0f)] private float thirdPersonRagdollFollowSharpness = 14f;
+    [SerializeField, HideInInspector, Min(0f)] private float thirdPersonRagdollLookHeight = 0.65f;
+    [SerializeField, HideInInspector] private bool allowThirdPersonRagdollCameraInput = true;
+    [SerializeField, HideInInspector, Min(0f)] private float thirdPersonRagdollMouseSensitivity = 0.17f;
+    [SerializeField, HideInInspector] private bool invertThirdPersonRagdollMouseY;
+    [SerializeField, HideInInspector, Range(-85f, 85f)] private float thirdPersonRagdollMinPitch = -20f;
+    [SerializeField, HideInInspector, Range(-85f, 85f)] private float thirdPersonRagdollMaxPitch = 65f;
+    [SerializeField, HideInInspector, Min(0.1f)] private float thirdPersonRagdollMinDistance = 1.75f;
+    [SerializeField, HideInInspector, Min(0.1f)] private float thirdPersonRagdollMaxDistance = 7.5f;
+    [SerializeField, HideInInspector, Min(0f)] private float thirdPersonRagdollZoomSpeed = 2.5f;
+    [SerializeField, HideInInspector, Min(0f)] private float thirdPersonRagdollZoomSharpness = 16f;
+    [SerializeField, HideInInspector, Min(0f)] private float maxInheritedVelocity = 8f;
+    [SerializeField, HideInInspector] private bool stabilizeCharacterJoints = true;
+    [SerializeField, HideInInspector, Min(0f)] private float jointProjectionDistance = 0.08f;
+    [SerializeField, HideInInspector, Range(1f, 180f)] private float jointProjectionAngle = 20f;
+    [SerializeField, HideInInspector] private bool enableJointPreprocessing = true;
+    [SerializeField, HideInInspector, Min(0f)] private float maxDepenetrationVelocity = 2.5f;
+    [SerializeField, HideInInspector, Min(0f)] private float maxRagdollAngularVelocity = 8f;
+    [SerializeField, HideInInspector, Min(1)] private int ragdollSolverIterations = 12;
+    [SerializeField, HideInInspector, Min(1)] private int ragdollSolverVelocityIterations = 4;
 
     private readonly List<Rigidbody> ragdollBodies = new List<Rigidbody>();
     private readonly List<Collider> ragdollColliders = new List<Collider>();
@@ -111,6 +132,7 @@ public class PlayerRagdollController : MonoBehaviour
     private readonly List<CharacterJoint> ragdollCharacterJoints = new List<CharacterJoint>();
     private readonly List<Collider> rootColliders = new List<Collider>();
     private readonly List<bool> rootColliderInitialStates = new List<bool>();
+    private readonly RaycastHit[] ragdollGroundProbeHits = new RaycastHit[16];
     private readonly Dictionary<Renderer, bool> preRagdollRendererStates = new Dictionary<Renderer, bool>();
     private readonly Dictionary<Renderer, bool> preRagdollFirstPersonRendererStates = new Dictionary<Renderer, bool>();
     private readonly Dictionary<Collider, bool> preRagdollColliderTriggerStates = new Dictionary<Collider, bool>();
@@ -140,6 +162,7 @@ public class PlayerRagdollController : MonoBehaviour
     private bool previousMeleeAttackEnabled = true;
     private bool previousKickAttackEnabled = true;
     private bool hasCachedParts;
+    private float nextImpactRagdollAllowedTime;
     private Coroutine animationRecoveryCoroutine;
 
     private struct CameraActivationState
@@ -234,6 +257,17 @@ public class PlayerRagdollController : MonoBehaviour
 
         UpdateLocalRagdollCameraInput();
         UpdateLocalRagdollCamera(immediate: false);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        TryTriggerImpactRagdoll(collision);
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (evaluateImpactRagdollOnCollisionStay)
+            TryTriggerImpactRagdoll(collision);
     }
 
     public void ActivateRagdoll(DamageInfo damageInfo)
@@ -374,6 +408,530 @@ public class PlayerRagdollController : MonoBehaviour
 
         if (wasRagdollActive)
             RestoreAnimationControlAfterRagdoll();
+    }
+
+    public bool TryTriggerExternalImpactRagdoll(Vector3 hitPoint, Vector3 hitDirection, float impactIntensity)
+    {
+        return TryRequestImpactRagdoll(hitPoint, hitDirection, impactIntensity, "External");
+    }
+
+    public bool HasRagdollGroundContact()
+    {
+        if (!ragdollActive)
+            return false;
+
+        CacheRagdollParts();
+
+        int groundMask = ragdollRecoveryGroundMask.value;
+        if (ignoreDestructibleDebrisImpact)
+            groundMask = DestructibleDebrisCollision.ExcludeDebrisLayer(groundMask);
+
+        if (groundMask == 0)
+            return false;
+
+        float lift = Mathf.Max(0.001f, ragdollRecoveryGroundProbeLift);
+        float probeDistance = Mathf.Max(0.001f, ragdollRecoveryGroundProbeDistance);
+        float rayDistance = lift + probeDistance;
+        float maxGroundAngle = Mathf.Clamp(ragdollRecoveryMaxGroundAngle, 0f, 89f);
+
+        for (int i = 0; i < ragdollColliders.Count; i++)
+        {
+            Collider ragdollCollider = ragdollColliders[i];
+            if (ragdollCollider == null || !ragdollCollider.enabled || ragdollCollider.isTrigger)
+                continue;
+
+            Bounds bounds = ragdollCollider.bounds;
+            if (bounds.extents.sqrMagnitude <= 0.000001f)
+                continue;
+
+            Vector3 origin = new Vector3(bounds.center.x, bounds.min.y + lift, bounds.center.z);
+            int hitCount = Physics.RaycastNonAlloc(
+                origin,
+                Vector3.down,
+                ragdollGroundProbeHits,
+                rayDistance,
+                groundMask,
+                QueryTriggerInteraction.Ignore);
+
+            for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
+            {
+                Collider hitCollider = ragdollGroundProbeHits[hitIndex].collider;
+                if (hitCollider == null)
+                    continue;
+
+                Transform hitTransform = hitCollider.transform;
+                if (hitTransform != null && hitTransform.IsChildOf(transform))
+                    continue;
+
+                if (Vector3.Angle(ragdollGroundProbeHits[hitIndex].normal, Vector3.up) <= maxGroundAngle)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void TryTriggerImpactRagdoll(Collision collision)
+    {
+        if (!CanEvaluateImpactRagdoll(collision, out string rejectReason))
+        {
+            LogImpactDecision($"skipped before thresholds: {rejectReason}", collision);
+            return;
+        }
+
+        if (!TryBuildImpactRagdoll(
+                collision,
+                out Vector3 hitPoint,
+                out Vector3 hitDirection,
+                out float impactIntensity,
+                out string sourceLabel,
+                out PlayerRagdollController otherPlayerRagdoll))
+        {
+            LogImpactDecision("skipped: no impact source reached its thresholds", collision);
+            return;
+        }
+
+        bool requested = TryRequestImpactRagdoll(hitPoint, hitDirection, impactIntensity, sourceLabel);
+        if (!requested)
+        {
+            LogImpactDecision($"skipped: request rejected for {sourceLabel}", collision);
+            return;
+        }
+
+        if (requested && HasAuthority() && otherPlayerRagdoll != null)
+            otherPlayerRagdoll.TryTriggerExternalImpactRagdoll(hitPoint, -hitDirection, impactIntensity);
+    }
+
+    private bool CanEvaluateImpactRagdoll(Collision collision, out string rejectReason)
+    {
+        rejectReason = null;
+
+        if (!enableImpactRagdoll)
+        {
+            rejectReason = "impact ragdoll disabled";
+            return false;
+        }
+
+        if (collision == null)
+        {
+            rejectReason = "missing collision";
+            return false;
+        }
+
+        if (ragdollActive)
+        {
+            rejectReason = "already in ragdoll";
+            return false;
+        }
+
+        if (Time.time < nextImpactRagdollAllowedTime)
+        {
+            rejectReason = "impact cooldown active";
+            return false;
+        }
+
+        CacheReferences();
+
+        if (playerHealth == null || !playerHealth.IsAlive)
+        {
+            rejectReason = "player health missing or dead";
+            return false;
+        }
+
+        if (!HasAuthority() && !allowRemoteImpactRagdollRequests)
+        {
+            rejectReason = "remote impact requests disabled";
+            return false;
+        }
+
+        Collider otherCollider = ResolveOtherCollider(collision);
+        if (otherCollider == null)
+        {
+            rejectReason = "other collider could not be resolved";
+            return false;
+        }
+
+        Transform otherTransform = otherCollider.transform;
+        if (otherTransform != null && otherTransform.IsChildOf(transform))
+        {
+            rejectReason = "self collision";
+            return false;
+        }
+
+        if (!IsImpactLayerAllowed(otherCollider.gameObject.layer))
+        {
+            rejectReason = $"layer {LayerMask.LayerToName(otherCollider.gameObject.layer)} not in Impact Collision Mask";
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryBuildImpactRagdoll(
+        Collision collision,
+        out Vector3 hitPoint,
+        out Vector3 hitDirection,
+        out float impactIntensity,
+        out string sourceLabel,
+        out PlayerRagdollController otherPlayerRagdoll)
+    {
+        if (TryBuildPlayerCollisionImpact(
+                collision,
+                out hitPoint,
+                out hitDirection,
+                out impactIntensity,
+                out sourceLabel,
+                out otherPlayerRagdoll))
+        {
+            return true;
+        }
+
+        otherPlayerRagdoll = null;
+        if (TryGetOtherPlayer(collision, out _, out _, out _))
+            return false;
+
+        Rigidbody otherBody = ResolveOtherRigidbody(collision);
+        if (otherBody != null && !otherBody.isKinematic)
+        {
+            return TryBuildDynamicBodyImpact(
+                collision,
+                otherBody,
+                out hitPoint,
+                out hitDirection,
+                out impactIntensity,
+                out sourceLabel);
+        }
+
+        return TryBuildWallImpact(collision, out hitPoint, out hitDirection, out impactIntensity, out sourceLabel);
+    }
+
+    private bool TryBuildPlayerCollisionImpact(
+        Collision collision,
+        out Vector3 hitPoint,
+        out Vector3 hitDirection,
+        out float impactIntensity,
+        out string sourceLabel,
+        out PlayerRagdollController otherPlayerRagdoll)
+    {
+        hitPoint = Vector3.zero;
+        hitDirection = Vector3.zero;
+        impactIntensity = 0f;
+        sourceLabel = null;
+        otherPlayerRagdoll = null;
+
+        if (!enablePlayerCollisionImpactRagdoll)
+            return false;
+
+        if (!TryGetOtherPlayer(collision, out PlayerHealth otherHealth, out PlayerMovement otherMovement, out otherPlayerRagdoll))
+            return false;
+
+        if (!otherHealth.IsAlive)
+            return false;
+
+        Vector3 selfVelocity = ResolvePlayerPlanarVelocity(playerMovement, rootBody);
+        Vector3 otherVelocity = ResolvePlayerPlanarVelocity(otherMovement, ResolveOtherRigidbody(collision));
+        float selfSpeed = selfVelocity.magnitude;
+        float otherSpeed = otherVelocity.magnitude;
+        float relativeSpeed = (selfVelocity - otherVelocity).magnitude;
+        float requiredPlayerSpeed = Mathf.Max(0f, minPlayerCollisionSelfSpeed);
+
+        if (selfSpeed < requiredPlayerSpeed
+            || otherSpeed < requiredPlayerSpeed
+            || relativeSpeed < minPlayerCollisionRelativeSpeed)
+        {
+            return false;
+        }
+
+        hitPoint = ResolveCollisionPoint(collision);
+        hitDirection = otherVelocity - selfVelocity;
+        if (hitDirection.sqrMagnitude <= 0.0001f)
+            hitDirection = transform.position - otherHealth.transform.position;
+
+        impactIntensity = relativeSpeed * playerImpactIntensityMultiplier;
+        sourceLabel = "Player Collision";
+        return impactIntensity > 0f;
+    }
+
+    private bool TryBuildDynamicBodyImpact(
+        Collision collision,
+        Rigidbody otherBody,
+        out Vector3 hitPoint,
+        out Vector3 hitDirection,
+        out float impactIntensity,
+        out string sourceLabel)
+    {
+        hitPoint = Vector3.zero;
+        hitDirection = Vector3.zero;
+        impactIntensity = 0f;
+        sourceLabel = null;
+
+        if (!enableDynamicBodyImpactRagdoll || !HasAuthority())
+            return false;
+
+        if (otherBody == null || otherBody == rootBody || otherBody.transform.IsChildOf(transform))
+            return false;
+
+        float otherMass = Mathf.Max(0f, otherBody.mass);
+        if (otherMass < minDynamicBodyMass)
+            return false;
+
+        Vector3 selfVelocity = rootBody != null ? rootBody.linearVelocity : Vector3.zero;
+        Vector3 otherVelocity = otherBody.linearVelocity;
+        Vector3 relativeVelocity = collision != null && collision.relativeVelocity.sqrMagnitude > 0.0001f
+            ? collision.relativeVelocity
+            : otherVelocity - selfVelocity;
+        float relativeSpeed = relativeVelocity.magnitude;
+        if (relativeSpeed < minDynamicBodyImpactSpeed)
+            return false;
+
+        float massReference = Mathf.Max(0.01f, dynamicBodyMassReference);
+        float massFactor = Mathf.Sqrt(Mathf.Max(1f, otherMass / massReference));
+
+        hitPoint = ResolveCollisionPoint(collision);
+        hitDirection = relativeVelocity.sqrMagnitude > 0.0001f ? relativeVelocity : -selfVelocity;
+        impactIntensity = relativeSpeed * dynamicBodyImpactIntensityMultiplier * massFactor;
+        sourceLabel = "Dynamic Body";
+        return impactIntensity > 0f;
+    }
+
+    private bool TryBuildWallImpact(
+        Collision collision,
+        out Vector3 hitPoint,
+        out Vector3 hitDirection,
+        out float impactIntensity,
+        out string sourceLabel)
+    {
+        hitPoint = Vector3.zero;
+        hitDirection = Vector3.zero;
+        impactIntensity = 0f;
+        sourceLabel = null;
+
+        if (!enableWallImpactRagdoll || !HasAuthority())
+            return false;
+
+        Vector3 planarNormal = ResolvePlanarContactNormal(collision);
+        if (planarNormal.sqrMagnitude <= 0.0001f)
+            return false;
+
+        Vector3 selfVelocity = ResolvePlayerPlanarVelocity(playerMovement, rootBody);
+        Vector3 impactVelocity = ResolvePlanarImpactVelocity(collision, selfVelocity);
+        float impactSpeed = impactVelocity.magnitude;
+        if (impactSpeed < minWallImpactSpeed)
+            return false;
+
+        float approachAlignment = Mathf.Abs(Vector3.Dot(impactVelocity.normalized, planarNormal.normalized));
+        if (approachAlignment < minWallApproachAlignment)
+            return false;
+
+        hitPoint = ResolveCollisionPoint(collision);
+        hitDirection = ResolveDirectionAwayFromContact(hitPoint, planarNormal, impactVelocity);
+        impactIntensity = impactSpeed * wallImpactIntensityMultiplier;
+        sourceLabel = "Wall";
+        return impactIntensity > 0f;
+    }
+
+    private bool TryRequestImpactRagdoll(Vector3 hitPoint, Vector3 hitDirection, float impactIntensity, string sourceLabel)
+    {
+        if (!enableImpactRagdoll || impactIntensity <= 0f || ragdollActive || Time.time < nextImpactRagdollAllowedTime)
+            return false;
+
+        if (!HasAuthority() && !allowRemoteImpactRagdollRequests)
+            return false;
+
+        CacheReferences();
+
+        if (playerHealth == null || !playerHealth.IsAlive)
+            return false;
+
+        float impulse = ApplyMaxValue(impactIntensity * impactToImpulseMultiplier, maxImpactImpulse);
+        float upward = ApplyMaxValue(impactIntensity * impactUpwardImpulseMultiplier, maxImpactUpwardImpulse);
+        bool requested = playerHealth.RequestImpactRagdoll(
+            hitPoint,
+            hitDirection,
+            impulse,
+            upward,
+            impactAutoRecoverAfterGroundedSeconds);
+
+        if (!requested)
+            return false;
+
+        nextImpactRagdollAllowedTime = Time.time + Mathf.Max(0f, impactCooldown);
+
+        if (logImpactRagdoll)
+        {
+            Debug.Log(
+                $"PlayerRagdollController: impact ragdoll requested from {sourceLabel}. intensity={impactIntensity:0.###}, impulse={impulse:0.###}, upward={upward:0.###}.",
+                gameObject);
+        }
+
+        return true;
+    }
+
+    private void LogImpactDecision(string message, Collision collision)
+    {
+        if (!logImpactRagdoll)
+            return;
+
+        Collider otherCollider = ResolveOtherCollider(collision);
+        string otherName = otherCollider != null ? otherCollider.name : "none";
+        string otherLayer = otherCollider != null ? LayerMask.LayerToName(otherCollider.gameObject.layer) : "none";
+        float relativeSpeed = collision != null ? collision.relativeVelocity.magnitude : 0f;
+        float planarRelativeSpeed = collision != null
+            ? Vector3.ProjectOnPlane(collision.relativeVelocity, Vector3.up).magnitude
+            : 0f;
+
+        Debug.Log(
+            $"PlayerRagdollController: impact {message}. other={otherName}, layer={otherLayer}, relativeSpeed={relativeSpeed:0.###}, planarRelativeSpeed={planarRelativeSpeed:0.###}.",
+            gameObject);
+    }
+
+    private bool TryGetOtherPlayer(
+        Collision collision,
+        out PlayerHealth otherHealth,
+        out PlayerMovement otherMovement,
+        out PlayerRagdollController otherRagdoll)
+    {
+        otherHealth = null;
+        otherMovement = null;
+        otherRagdoll = null;
+
+        Collider otherCollider = ResolveOtherCollider(collision);
+        if (otherCollider == null)
+            return false;
+
+        otherHealth = otherCollider.GetComponentInParent<PlayerHealth>();
+        if (otherHealth == null || otherHealth == playerHealth)
+            return false;
+
+        otherMovement = otherHealth.GetComponent<PlayerMovement>();
+        otherRagdoll = otherHealth.GetComponent<PlayerRagdollController>();
+        return true;
+    }
+
+    private bool HasGroundLikeContact(Collision collision)
+    {
+        int contactCount = collision != null ? collision.contactCount : 0;
+        float maxAngle = Mathf.Clamp(groundLikeContactMaxAngle, 0f, 89f);
+
+        for (int i = 0; i < contactCount; i++)
+        {
+            ContactPoint contact = collision.GetContact(i);
+            float normalAngle = Vector3.Angle(contact.normal, Vector3.up);
+            float oppositeAngle = Vector3.Angle(-contact.normal, Vector3.up);
+            if (Mathf.Min(normalAngle, oppositeAngle) <= maxAngle)
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsImpactLayerAllowed(int layer)
+    {
+        int mask = impactCollisionMask.value;
+        if (ignoreDestructibleDebrisImpact)
+            mask = DestructibleDebrisCollision.ExcludeDebrisLayer(mask);
+
+        return (mask & (1 << layer)) != 0;
+    }
+
+    private Rigidbody ResolveOtherRigidbody(Collision collision)
+    {
+        Collider otherCollider = ResolveOtherCollider(collision);
+        if (otherCollider != null && otherCollider.attachedRigidbody != null)
+            return otherCollider.attachedRigidbody;
+
+        return collision != null ? collision.rigidbody : null;
+    }
+
+    private Collider ResolveOtherCollider(Collision collision)
+    {
+        if (collision == null)
+            return null;
+
+        Collider candidate = collision.collider;
+        if (candidate != null && (candidate.transform == null || !candidate.transform.IsChildOf(transform)))
+            return candidate;
+
+        return null;
+    }
+
+    private Vector3 ResolvePlanarContactNormal(Collision collision)
+    {
+        Vector3 bestNormal = Vector3.zero;
+        float bestMagnitude = 0f;
+        int contactCount = collision != null ? collision.contactCount : 0;
+
+        for (int i = 0; i < contactCount; i++)
+        {
+            Vector3 planarNormal = Vector3.ProjectOnPlane(collision.GetContact(i).normal, Vector3.up);
+            float magnitude = planarNormal.sqrMagnitude;
+            if (magnitude <= bestMagnitude)
+                continue;
+
+            bestMagnitude = magnitude;
+            bestNormal = planarNormal;
+        }
+
+        return bestNormal;
+    }
+
+    private Vector3 ResolveCollisionPoint(Collision collision)
+    {
+        int contactCount = collision != null ? collision.contactCount : 0;
+        if (contactCount > 0)
+        {
+            Vector3 point = Vector3.zero;
+            for (int i = 0; i < contactCount; i++)
+                point += collision.GetContact(i).point;
+
+            return point / contactCount;
+        }
+
+        Collider otherCollider = ResolveOtherCollider(collision);
+        return otherCollider != null ? otherCollider.ClosestPoint(transform.position) : transform.position + Vector3.up;
+    }
+
+    private Vector3 ResolvePlanarImpactVelocity(Collision collision, Vector3 fallbackVelocity)
+    {
+        Vector3 relativeVelocity = collision != null ? collision.relativeVelocity : Vector3.zero;
+        Vector3 planarRelativeVelocity = Vector3.ProjectOnPlane(relativeVelocity, Vector3.up);
+        if (planarRelativeVelocity.sqrMagnitude > 0.0001f)
+            return planarRelativeVelocity;
+
+        return Vector3.ProjectOnPlane(fallbackVelocity, Vector3.up);
+    }
+
+    private Vector3 ResolveDirectionAwayFromContact(Vector3 hitPoint, Vector3 contactNormal, Vector3 impactVelocity)
+    {
+        Vector3 awayFromContact = Vector3.ProjectOnPlane(transform.position - hitPoint, Vector3.up);
+        if (awayFromContact.sqrMagnitude > 0.0001f)
+            return awayFromContact.normalized;
+
+        Vector3 planarNormal = Vector3.ProjectOnPlane(contactNormal, Vector3.up);
+        if (planarNormal.sqrMagnitude > 0.0001f)
+            return planarNormal.normalized;
+
+        Vector3 awayFromImpact = -Vector3.ProjectOnPlane(impactVelocity, Vector3.up);
+        return awayFromImpact.sqrMagnitude > 0.0001f ? awayFromImpact.normalized : -transform.forward;
+    }
+
+    private static Vector3 ResolvePlayerPlanarVelocity(PlayerMovement movement, Rigidbody body)
+    {
+        if (movement != null)
+            return movement.PlanarVelocity;
+
+        if (body == null)
+            return Vector3.zero;
+
+        Vector3 velocity = body.linearVelocity;
+        velocity.y = 0f;
+        return velocity;
+    }
+
+    private static float ApplyMaxValue(float value, float maxValue)
+    {
+        value = Mathf.Max(0f, value);
+        return maxValue > 0f ? Mathf.Min(value, maxValue) : value;
     }
 
     private void CacheReferences()

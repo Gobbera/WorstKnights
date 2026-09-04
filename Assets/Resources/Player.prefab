@@ -16,6 +16,8 @@ GameObject:
   - component: {fileID: 8746545149096385156}
   - component: {fileID: 4548493642960687680}
   - component: {fileID: 6695486303663589364}
+  - component: {fileID: 3184000000000000211}
+  - component: {fileID: 3184000000000000212}
   - component: {fileID: 3184000000000000210}
   - component: {fileID: 2274615310629331365}
   - component: {fileID: 6052160110930876706}
@@ -199,7 +201,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
   ObservedComponentsFoldoutOpen: 1
   Group: 0
@@ -222,7 +224,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 50f654c32c61a7746a1b3af9d94c152b, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   config: {fileID: 11400000, guid: 8311c273eb3020f449265c451f0d9d6f, type: 2}
   orientation: {fileID: 4896104238836716592}
@@ -258,6 +260,154 @@ MonoBehaviour:
   chestPitchAxis: {x: 0, y: 0, z: 1}
   headPitchAxis: {x: 1, y: 0, z: 0}
   headYawAxis: {x: 0, y: 1, z: 0}
+--- !u!114 &3184000000000000211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 97267524914360842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e827d75ccec414ea43f2452cf3efb3b, type: 3}
+  m_Name: ""
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
+  maxHealth: 100
+  damageImmunityDuration: 0.1
+  damageKnockback:
+    enabled: 1
+    horizontalStrength: 1.75
+    damageStrengthMultiplier: 0.03
+    upwardStrength: 0
+    controlLockDuration: 0.08
+  respawnOnDeath: 1
+  respawnDelay: 1.25
+  respawnInvulnerabilityDuration: 1
+  enableRagdollFromStrongKnockback: 1
+  minStrongKnockbackForImpactRagdoll: 12
+  strongKnockbackImpactImpulseMultiplier: 0.75
+  strongKnockbackImpactUpwardMultiplier: 0.08
+  maxStrongKnockbackImpactImpulse: 12
+  maxStrongKnockbackImpactUpward: 2.5
+  strongKnockbackRecoverAfterGroundedSeconds: 1.25
+  enableHighFallRagdoll: 1
+  minFallHeightForRagdoll: 6
+  minFallDownSpeedForRagdoll: 10
+  highFallRecoverAfterGroundedSeconds: 1.5
+  highFallBaseImpactImpulse: 1
+  highFallDistanceImpulseMultiplier: 0.8
+  highFallDownSpeedImpulseMultiplier: 0.25
+  highFallUpwardImpulse: 0
+  maxHighFallImpactImpulse: 10
+  maxHighFallImpactUpward: 1
+--- !u!114 &3184000000000000212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 97267524914360842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2b17002058c49e6a455c55a9f078fba, type: 3}
+  m_Name: ""
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerRagdollController
+  ragdollRoot: {fileID: 5164466171579573174}
+  ragdollAnimator: {fileID: 2805368766037670630}
+  playerHealth: {fileID: 3184000000000000211}
+  playerMovement: {fileID: 6695486303663589364}
+  playerController: {fileID: 6052160110930876706}
+  meleeAttack: {fileID: 3184000000000000207}
+  kickAttack: {fileID: 3184000000000000203}
+  handEquipmentController: {fileID: 3184000000000000204}
+  perspectiveVisibility: {fileID: 3184000000000000206}
+  photonView: {fileID: 4548493642960687680}
+  disableAnimatorWhileRagdoll: 1
+  dropActiveItemsOnRagdoll: 1
+  forceThirdPersonAnimatorAlwaysAnimate: 1
+  disableNestedAnimatorsWithoutMovementController: 1
+  disableRootCollidersWhileRagdoll: 1
+  ignoreRagdollSelfCollision: 1
+  activationImpulse: 1.25
+  upwardImpulse: 0.25
+  forceRagdollCollidersSolid: 1
+  normalizeSmallRagdollColliders: 1
+  minRagdollColliderWorldRadius: 0.08
+  minRagdollColliderWorldLength: 0.25
+  minUsableRagdollColliderWorldExtent: 0.08
+  minUsableRagdollColliderCount: 3
+  excludeEndIkAndTargetBodiesFromRagdoll: 0
+  relaxFootEndJoints: 1
+  footEndJointSwingLimit: 25
+  footEndJointTwistLimit: 45
+  enableImpactRagdoll: 1
+  allowRemoteImpactRagdollRequests: 1
+  enablePlayerCollisionImpactRagdoll: 1
+  enableWallImpactRagdoll: 1
+  enableDynamicBodyImpactRagdoll: 1
+  evaluateImpactRagdollOnCollisionStay: 0
+  ignoreDestructibleDebrisImpact: 1
+  impactCollisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  impactCooldown: 1
+  impactAutoRecoverAfterGroundedSeconds: 1.25
+  minPlayerCollisionSelfSpeed: 4.8
+  minPlayerCollisionRelativeSpeed: 7.5
+  minWallImpactSpeed: 5.2
+  minWallApproachAlignment: 0.35
+  groundLikeContactMaxAngle: 55
+  minDynamicBodyImpactSpeed: 5
+  minDynamicBodyMass: 2
+  dynamicBodyMassReference: 5
+  playerImpactIntensityMultiplier: 1
+  wallImpactIntensityMultiplier: 0.9
+  dynamicBodyImpactIntensityMultiplier: 1
+  impactToImpulseMultiplier: 1.1
+  impactUpwardImpulseMultiplier: 0.12
+  maxImpactImpulse: 14
+  maxImpactUpwardImpulse: 3
+  logImpactRagdoll: 0
+  ragdollRecoveryGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  ragdollRecoveryMaxGroundAngle: 55
+  ragdollRecoveryGroundProbeLift: 0.08
+  ragdollRecoveryGroundProbeDistance: 0.12
+  enableDebugToggle: 1
+  debugToggleKey: 290
+  enableDebugThirdPersonCameraToggle: 1
+  debugThirdPersonCameraKey: 289
+  debugActivationImpulse: 0
+  debugUpwardImpulse: 0
+  logDebugToggle: 1
+  switchLocalViewToThirdPerson: 1
+  firstPersonCamera: {fileID: 8605576129968621690}
+  firstPersonHandsCamera: {fileID: 684246075122306891}
+  thirdPersonCamera: {fileID: 2458634356391046553}
+  ragdollCameraTarget: {fileID: 0}
+  detachThirdPersonCameraDuringRagdoll: 1
+  thirdPersonRagdollOffset: {x: 0.02, y: 1.8, z: -5.15}
+  thirdPersonRagdollFollowSharpness: 14
+  thirdPersonRagdollLookHeight: 0.65
+  allowThirdPersonRagdollCameraInput: 1
+  thirdPersonRagdollMouseSensitivity: 0.17
+  invertThirdPersonRagdollMouseY: 0
+  thirdPersonRagdollMinPitch: -20
+  thirdPersonRagdollMaxPitch: 65
+  thirdPersonRagdollMinDistance: 1.75
+  thirdPersonRagdollMaxDistance: 7.5
+  thirdPersonRagdollZoomSpeed: 2.5
+  thirdPersonRagdollZoomSharpness: 16
+  maxInheritedVelocity: 8
+  stabilizeCharacterJoints: 1
+  jointProjectionDistance: 0.08
+  jointProjectionAngle: 20
+  enableJointPreprocessing: 1
+  maxDepenetrationVelocity: 2.5
+  maxRagdollAngularVelocity: 8
+  ragdollSolverIterations: 12
+  ragdollSolverVelocityIterations: 4
 --- !u!114 &3184000000000000210
 MonoBehaviour:
   m_ObjectHideFlags: 0

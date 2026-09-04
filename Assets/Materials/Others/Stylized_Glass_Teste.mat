@@ -38,25 +38,25 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Inner_Rim_Power: 0.1
-    - _Inner_Rim_Smoothness: 0.32
+    - _Inner_Rim_Power: 0.11
+    - _Inner_Rim_Smoothness: 0.038
     - _LightSpecCutOff: 0.5
     - _LightSpecCutOffSmoothness: 0.5
     - _Light_Spec_Cut_Off: 1
-    - _Light_Spec_Cut_Off_Smoothness: 0.23
-    - _Outer_Rim_Smoothness: 0.66
+    - _Light_Spec_Cut_Off_Smoothness: 0.154
+    - _Outer_Rim_Smoothness: 0.754
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _Rim_Outer_Power: 20
+    - _Rim_Outer_Power: 18.17
     - _Rim_Power: 0
     - _ViewSpecOff: 0.5
-    - _View_Spec_Off: 0.9
+    - _View_Spec_Off: 0.898
     m_Colors:
-    - _Base_Color: {r: 0.7971698, g: 1, b: 1, a: 0}
-    - _Inner_Glow_Color: {r: 1, g: 0.97863775, b: 0.9764151, a: 0}
-    - _Outer_Rim_Color: {r: 1, g: 1, b: 1, a: 0}
+    - _Base_Color: {r: 0.8254717, g: 1, b: 1, a: 0}
+    - _Inner_Glow_Color: {r: 0.4716981, g: 0.4716981, b: 0.4716981, a: 0}
+    - _Outer_Rim_Color: {r: 0.740566, g: 1, b: 0.9925325, a: 0}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Specular_Color: {r: 0.8820755, g: 1, b: 0.9941096, a: 0}
+    - _Specular_Color: {r: 0.2830189, g: 0.2830189, b: 0.2830189, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &7727918746300824117

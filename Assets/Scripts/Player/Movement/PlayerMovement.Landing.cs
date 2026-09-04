@@ -75,24 +75,31 @@ public partial class PlayerMovement
         if (config == null || !config.enableFallImpact)
             return;
 
+        float fallDistance = GetFallDistance();
+        float downwardSpeed = Mathf.Abs(mostNegativeLandingVerticalSpeed);
         float harmfulFallDistance = GetHarmfulFallDistance();
         if (harmfulFallDistance <= 0f)
+        {
+            NotifyPlayerFallImpact(0f, fallDistance, downwardSpeed);
             return;
+        }
 
         float damage = harmfulFallDistance * Mathf.Max(0f, config.fallDamagePerMeter);
         float maxDamage = Mathf.Max(0f, config.maxFallDamage);
         if (maxDamage > 0f)
             damage = Mathf.Min(damage, maxDamage);
 
-        if (damage > 0.0001f)
-        {
-            if (playerHealth == null)
-                playerHealth = GetComponent<PlayerHealth>();
-
-            playerHealth?.ReceiveFallDamage(damage);
-        }
+        NotifyPlayerFallImpact(damage, fallDistance, downwardSpeed);
 
         ApplyFallMovementSlow();
+    }
+
+    private void NotifyPlayerFallImpact(float damage, float fallDistance, float downwardSpeed)
+    {
+        if (playerHealth == null)
+            playerHealth = GetComponent<PlayerHealth>();
+
+        playerHealth?.ReceiveFallDamage(damage, fallDistance, downwardSpeed);
     }
 
     private float GetHarmfulFallDistance()

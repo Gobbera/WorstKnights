@@ -78,10 +78,16 @@
 3. **[2026-09-01] Player ragdoll ground collision depends on usable bone colliders**
    Do instead: keep bone Rigidbodies kinematic/gravityless and ragdoll colliders disabled in `Awake`; when `PlayerRagdollController` disables the root Player colliders, make simulated bone colliders solid and large enough in world scale, especially legs/feet, and on recovery force Animator `Rebind()`/`Update(0)` plus `MovementAnimationController.ResetAfterRagdoll()`.
 
-4. **[2026-08-31] Knight feet are skinned to leg/end bones, not named foot bones**
+4. **[2026-09-02] Impact ragdoll recovery is owner-timed after grounded contact**
+   Do instead: route impact requests through `PlayerHealth.RequestImpactRagdoll`, let the owning player broadcast activation/recovery, and start the recovery timer only while `PlayerRagdollController.HasRagdollGroundContact()` is true.
+
+5. **[2026-09-02] Collision impact checks should use `Collision.relativeVelocity`**
+   Do instead: decide wall/object impact from the collision event's relative velocity and contact normals, because root Rigidbody velocity can already be reduced by the physics solver when `OnCollisionEnter` runs.
+
+6. **[2026-08-31] Knight feet are skinned to leg/end bones, not named foot bones**
    Do instead: debug foot deformation from `Legs`/`Lower Body` renderers and `Leg_Lower.*(_end)` bones; do not simulate `_end`/IK/Target bones as independent ragdoll bodies, use foot colliders under the lower-leg Rigidbody instead, then tune collider world size plus joint projection/preprocessing.
 
-5. **[2026-08-12] Crouch kick must stand before firing**
+7. **[2026-08-12] Crouch kick must stand before firing**
    Do instead: when kick starts from `MovementState.crouching`, validate kick availability, stand/queue the kick briefly, suppress crouch while queued or active, then let held crouch re-enter after `kickActionDuration`.
 
 ## UI & Emotes

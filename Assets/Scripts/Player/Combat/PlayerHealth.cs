@@ -13,6 +13,27 @@ public class PlayerHealth : CombatHealth
     [SerializeField] [Min(0f)] private float respawnDelay = 1.25f;
     [SerializeField] [Min(0f)] private float respawnInvulnerabilityDuration = 1f;
 
+    [Header("Strong Impact Ragdoll Tuning")]
+    [SerializeField] [InspectorName("Enable Strong Knockback Ragdoll")] private bool enableRagdollFromStrongKnockback = true;
+    [SerializeField] [InspectorName("Knockback Min Speed")] [Min(0f)] private float minStrongKnockbackForImpactRagdoll = 12f;
+    [SerializeField] [InspectorName("Recover After Grounded Seconds")] [Min(0f)] private float strongKnockbackRecoverAfterGroundedSeconds = 1.25f;
+    [SerializeField, HideInInspector, Min(0f)] private float strongKnockbackImpactImpulseMultiplier = 0.75f;
+    [SerializeField, HideInInspector, Min(0f)] private float strongKnockbackImpactUpwardMultiplier = 0.08f;
+    [SerializeField, HideInInspector, Min(0f)] private float maxStrongKnockbackImpactImpulse = 12f;
+    [SerializeField, HideInInspector, Min(0f)] private float maxStrongKnockbackImpactUpward = 2.5f;
+
+    [Header("High Fall Ragdoll Tuning")]
+    [SerializeField] [InspectorName("Enable High Fall Ragdoll")] private bool enableHighFallRagdoll = true;
+    [SerializeField] [InspectorName("Fall Min Height")] [Min(0f)] private float minFallHeightForRagdoll = 6f;
+    [SerializeField] [InspectorName("Fall Min Down Speed")] [Min(0f)] private float minFallDownSpeedForRagdoll = 10f;
+    [SerializeField] [InspectorName("Recover After Grounded Seconds")] [Min(0f)] private float highFallRecoverAfterGroundedSeconds = 1.5f;
+    [SerializeField, HideInInspector, Min(0f)] private float highFallBaseImpactImpulse = 1f;
+    [SerializeField, HideInInspector, Min(0f)] private float highFallDistanceImpulseMultiplier = 0.8f;
+    [SerializeField, HideInInspector, Min(0f)] private float highFallDownSpeedImpulseMultiplier = 0.25f;
+    [SerializeField, HideInInspector, Min(0f)] private float highFallUpwardImpulse = 0f;
+    [SerializeField, HideInInspector, Min(0f)] private float maxHighFallImpactImpulse = 10f;
+    [SerializeField, HideInInspector, Min(0f)] private float maxHighFallImpactUpward = 1f;
+
     private PhotonView photonView;
     private PlayerController playerController;
     private PlayerMovement playerMovement;
@@ -22,6 +43,7 @@ public class PlayerHealth : CombatHealth
     private PlayerRagdollController ragdollController;
     private IMeleeImpactReceiver meleeImpactReceiver;
     private Coroutine respawnRoutine;
+    private Coroutine impactRagdollRecoveryRoutine;
     private bool suppressDamageKnockback;
 
     public override CombatAlignment Alignment => CombatAlignment.Player;
@@ -116,12 +138,22 @@ public class PlayerHealth : CombatHealth
 
     public void ReceiveFallDamage(float amount)
     {
+        ReceiveFallDamage(amount, 0f, 0f);
+    }
+
+    public void ReceiveFallDamage(float amount, float fallDistance, float downwardSpeed)
+    {
         if (!CanApplyDamageLocally())
             return;
+
+        bool wasAlive = IsAlive;
 
         ApplyDamageAndBroadcast(
             new DamageInfo(amount, null, CombatAlignment.Neutral, transform.position, Vector3.zero, PlayerDamageAnimationType.None),
             suppressKnockback: true);
+
+        if (wasAlive && IsAlive)
+            TryStartImpactRagdollFromHighFall(fallDistance, downwardSpeed);
     }
 
     public void ReceiveEnvironmentalDamage(
@@ -226,6 +258,8 @@ public class PlayerHealth : CombatHealth
 
     protected override void OnDied(DamageInfo damageInfo)
     {
+        CancelImpactRagdollRecovery();
+
         if (RoomManager.instance != null)
         {
             RoomManager.instance.deaths++;
@@ -282,6 +316,8 @@ public class PlayerHealth : CombatHealth
 
     private void Respawn()
     {
+        CancelImpactRagdollRecovery();
+
         ApplyRagdollState(
             active: false,
             Vector3.zero,
@@ -354,6 +390,8 @@ public class PlayerHealth : CombatHealth
         if (ragdollController == null)
             return;
 
+        CancelImpactRagdollRecovery();
+
         bool shouldActivate = !ragdollController.IsRagdollActive;
         ApplyRagdollState(
             shouldActivate,
@@ -369,6 +407,31 @@ public class PlayerHealth : CombatHealth
             useDefaultImpulse: false,
             impulse,
             upward);
+    }
+
+    public bool RequestImpactRagdoll(
+        Vector3 hitPoint,
+        Vector3 hitDirection,
+        float impulse,
+        float upward,
+        float recoverAfterGroundedSeconds)
+    {
+        if (CanApplyDamageLocally())
+            return ApplyImpactRagdoll(hitPoint, hitDirection, impulse, upward, recoverAfterGroundedSeconds);
+
+        if (photonView == null || photonView.Owner == null)
+            return false;
+
+        photonView.RPC(
+            nameof(RpcRequestImpactRagdoll),
+            photonView.Owner,
+            hitPoint,
+            hitDirection,
+            impulse,
+            upward,
+            recoverAfterGroundedSeconds);
+
+        return true;
     }
 
     [PunRPC]
@@ -416,6 +479,20 @@ public class PlayerHealth : CombatHealth
                 (PlayerCameraImpactType)playerCameraImpact),
             velocityChange,
             controlLockDuration);
+    }
+
+    [PunRPC]
+    private void RpcRequestImpactRagdoll(
+        Vector3 hitPoint,
+        Vector3 hitDirection,
+        float impulse,
+        float upward,
+        float recoverAfterGroundedSeconds)
+    {
+        if (!CanApplyDamageLocally())
+            return;
+
+        ApplyImpactRagdoll(hitPoint, hitDirection, impulse, upward, recoverAfterGroundedSeconds);
     }
 
     [PunRPC]
@@ -491,6 +568,9 @@ public class PlayerHealth : CombatHealth
         float impulse,
         float upward)
     {
+        if (!active)
+            CancelImpactRagdollRecovery();
+
         EnsureRagdollController();
         if (ragdollController == null)
             return;
@@ -566,6 +646,7 @@ public class PlayerHealth : CombatHealth
             return;
 
         ApplyExplicitKnockback(velocityChange, controlLockDuration);
+        TryStartImpactRagdollFromStrongKnockback(damageInfo, velocityChange);
     }
 
     private void ApplyExplicitKnockback(Vector3 velocityChange, float controlLockDuration)
@@ -587,6 +668,185 @@ public class PlayerHealth : CombatHealth
     {
         handEquipmentController ??= GetComponent<HandEquipmentController>();
         handEquipmentController?.DropAllEquippedItemsOnDeath();
+    }
+
+    private bool ApplyImpactRagdoll(
+        Vector3 hitPoint,
+        Vector3 hitDirection,
+        float impulse,
+        float upward,
+        float recoverAfterGroundedSeconds)
+    {
+        if (!CanApplyDamageLocally() || !IsAlive)
+            return false;
+
+        EnsureRagdollController();
+        if (ragdollController == null)
+            return false;
+
+        if (ragdollController.IsRagdollActive)
+            return false;
+
+        ApplyRagdollState(
+            active: true,
+            hitPoint,
+            hitDirection,
+            useDefaultImpulse: false,
+            Mathf.Max(0f, impulse),
+            Mathf.Max(0f, upward));
+        BroadcastRagdollState(
+            active: true,
+            hitPoint,
+            hitDirection,
+            useDefaultImpulse: false,
+            Mathf.Max(0f, impulse),
+            Mathf.Max(0f, upward));
+        StartImpactRagdollRecovery(recoverAfterGroundedSeconds);
+        return true;
+    }
+
+    private void TryStartImpactRagdollFromStrongKnockback(DamageInfo damageInfo, Vector3 velocityChange)
+    {
+        if (!enableRagdollFromStrongKnockback || velocityChange.sqrMagnitude <= 0.0001f)
+            return;
+
+        float knockbackStrength = velocityChange.magnitude;
+        if (knockbackStrength < minStrongKnockbackForImpactRagdoll)
+            return;
+
+        Vector3 hitDirection = damageInfo.HitDirection.sqrMagnitude > 0.0001f
+            ? damageInfo.HitDirection
+            : velocityChange;
+        float impulse = ApplyMaxValue(
+            knockbackStrength * strongKnockbackImpactImpulseMultiplier,
+            maxStrongKnockbackImpactImpulse);
+        float upward = ApplyMaxValue(
+            Mathf.Max(0f, velocityChange.y) * strongKnockbackImpactUpwardMultiplier,
+            maxStrongKnockbackImpactUpward);
+
+        ApplyImpactRagdoll(
+            damageInfo.HitPoint,
+            hitDirection,
+            impulse,
+            upward,
+            strongKnockbackRecoverAfterGroundedSeconds);
+    }
+
+    private void TryStartImpactRagdollFromHighFall(float fallDistance, float downwardSpeed)
+    {
+        if (!enableHighFallRagdoll)
+            return;
+
+        fallDistance = Mathf.Max(0f, fallDistance);
+        downwardSpeed = Mathf.Max(0f, downwardSpeed);
+
+        if (fallDistance < minFallHeightForRagdoll && downwardSpeed < minFallDownSpeedForRagdoll)
+            return;
+
+        float heightExcess = Mathf.Max(0f, fallDistance - minFallHeightForRagdoll);
+        float speedExcess = Mathf.Max(0f, downwardSpeed - minFallDownSpeedForRagdoll);
+        float impulse = highFallBaseImpactImpulse
+            + heightExcess * highFallDistanceImpulseMultiplier
+            + speedExcess * highFallDownSpeedImpulseMultiplier;
+        impulse = ApplyMaxValue(impulse, maxHighFallImpactImpulse);
+        float upward = ApplyMaxValue(highFallUpwardImpulse, maxHighFallImpactUpward);
+
+        Vector3 hitDirection = rb != null
+            ? Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up)
+            : Vector3.zero;
+        if (hitDirection.sqrMagnitude <= 0.0001f)
+            hitDirection = -transform.forward;
+
+        ApplyImpactRagdoll(
+            transform.position,
+            hitDirection,
+            impulse,
+            upward,
+            highFallRecoverAfterGroundedSeconds);
+    }
+
+    private void StartImpactRagdollRecovery(float recoverAfterGroundedSeconds)
+    {
+        CancelImpactRagdollRecovery();
+
+        if (recoverAfterGroundedSeconds <= 0f)
+        {
+            ApplyRagdollState(
+                active: false,
+                Vector3.zero,
+                Vector3.zero,
+                useDefaultImpulse: false,
+                impulse: 0f,
+                upward: 0f);
+            BroadcastRagdollState(
+                active: false,
+                Vector3.zero,
+                Vector3.zero,
+                useDefaultImpulse: false,
+                impulse: 0f,
+                upward: 0f);
+            return;
+        }
+
+        impactRagdollRecoveryRoutine = StartCoroutine(ImpactRagdollRecoveryRoutine(recoverAfterGroundedSeconds));
+    }
+
+    private IEnumerator ImpactRagdollRecoveryRoutine(float recoverAfterGroundedSeconds)
+    {
+        float groundedTime = 0f;
+
+        while (ragdollController != null && ragdollController.IsRagdollActive)
+        {
+            yield return new WaitForFixedUpdate();
+
+            if (!IsAlive)
+            {
+                impactRagdollRecoveryRoutine = null;
+                yield break;
+            }
+
+            if (ragdollController.HasRagdollGroundContact())
+                groundedTime += Time.fixedDeltaTime;
+            else
+                groundedTime = 0f;
+
+            if (groundedTime < recoverAfterGroundedSeconds)
+                continue;
+
+            impactRagdollRecoveryRoutine = null;
+            ApplyRagdollState(
+                active: false,
+                Vector3.zero,
+                Vector3.zero,
+                useDefaultImpulse: false,
+                impulse: 0f,
+                upward: 0f);
+            BroadcastRagdollState(
+                active: false,
+                Vector3.zero,
+                Vector3.zero,
+                useDefaultImpulse: false,
+                impulse: 0f,
+                upward: 0f);
+            yield break;
+        }
+
+        impactRagdollRecoveryRoutine = null;
+    }
+
+    private void CancelImpactRagdollRecovery()
+    {
+        if (impactRagdollRecoveryRoutine == null)
+            return;
+
+        StopCoroutine(impactRagdollRecoveryRoutine);
+        impactRagdollRecoveryRoutine = null;
+    }
+
+    private static float ApplyMaxValue(float value, float maxValue)
+    {
+        value = Mathf.Max(0f, value);
+        return maxValue > 0f ? Mathf.Min(value, maxValue) : value;
     }
 
     private void ClearRootVelocityIfDynamic()
