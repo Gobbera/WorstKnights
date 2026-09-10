@@ -211,8 +211,9 @@ MonoBehaviour:
   flameRoot: {fileID: 8447990784430271002}
   flameLight: {fileID: 1643568536670461629}
   litOnAwake: 1
-  baseIntensity: 2.2
-  baseRange: 5
+  deactivateFlameRootWhenUnlit: 0
+  baseIntensity: 1
+  baseRange: 6
   baseColor: {r: 1, g: 0.54, b: 0.22, a: 1}
   enableFlicker: 1
   intensityVariation: 0.65
@@ -387,18 +388,18 @@ Light:
   serializedVersion: 13
   m_Type: 2
   m_Color: {r: 1, g: 0.54, b: 0.22, a: 1}
-  m_Intensity: 2.2
-  m_Range: 5
+  m_Intensity: 1
+  m_Range: 6
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
+    m_Bias: 10
+    m_NormalBias: 0
     m_NearPlane: 0.2
     m_CullingMatrixOverride:
       e00: 1

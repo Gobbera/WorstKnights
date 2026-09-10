@@ -216,8 +216,8 @@
 3. **[2026-08-13] Enemy attack commitment should be separate from hit reach**
    Do instead: tune enemy AI with a larger serialized attack-start radius and keep damage tied to weapon/contact hit windows, so backing out of exact melee range cannot force endless chase loops.
 
-4. **[2026-08-05] Player melee damage is timed by combo hitbox windows**
-   Do instead: tune `PlayerMeleeAttack.hitboxWindows` on `Assets/Resources/Player.prefab` for each combo step's damage start frame, active duration, target distance, and radius instead of changing one global instant-hit distance.
+4. **[2026-08-05] Player melee attack tuning lives per combo step**
+   Do instead: tune `PlayerMeleeAttack.attackConfigs` on `Assets/Resources/Player.prefab` for each combo step's hit timing, hitbox shape, swing audio/delay, impact VFX angle, and camera feedback instead of changing one global attack value.
 
 5. **[2026-05-21] Enemy death cleanup must be scheduled on every client, not only on the authority object**
    Do instead: when an enemy can die under Photon, schedule destruction through an `RPC` to all clients and also destroy on replicated death application, otherwise remote clients can keep a dead corpse in scene.
@@ -269,19 +269,25 @@
    Do instead: when crouch changes the capsule or model height but the view stays fixed, adjust the camera's base local position in `HeadBobController` rather than only touching `PlayerMovement` or collider scaling.
 
 ## Rendering & Materials
-1. **[2026-08-21] Runtime liquid state must be renderer-local**
+1. **[2026-09-08] WK toon shadows come from custom Unlit lighting**
+   Do instead: when WK toon shadows fail, verify `SG_WK_Base_Toon Shader` still has `m_CastShadows`, `m_ReceiveShadows`, and `m_KeepLightingVariants` enabled; for point/spot shadows, make `Assets/Shaders/Shaders/WK/Includes/Lighting.hlsl` call `GetAdditionalLight(i, positionWS, shadowMask)` so URP fills `light.shadowAttenuation`.
+
+2. **[2026-09-10] Torch shadow flicker usually starts at shadowed wall lights**
+   Do instead: debug torch flicker by disabling shadows on `Wall_Torch` first; keep hand torch shadows off, avoid animating range/position on any shadow-casting torch, and tune Additional Light shadow tier/atlas before changing toon shader code.
+
+3. **[2026-08-21] Runtime liquid state must be renderer-local**
    Do instead: drive per-instance liquid values such as `_WobbleX`, `_WobbleZ`, and `_FillAmount` through `MaterialPropertyBlock` on the target `Renderer`; never write them to `sharedMaterial` because every potion using the same material will inherit the motion/fill.
 
-2. **[2026-08-21] Liquid fill sliders must use renderer-relative bounds**
+4. **[2026-08-21] Liquid fill sliders must use renderer-relative bounds**
    Do instead: in `SG_Liquid_Effect`, remap `_Fill` through `Object.World Bounds Min/Max - Object.Position` rather than fixed `Y` ranges; keep wobble scripts writing both `_WobbleX` and legacy `_WoobleX` while the graph carries the typo.
 
-3. **[2026-08-20] WK toon fade should stay opaque/dithered**
+5. **[2026-08-20] WK toon fade should stay opaque/dithered**
    Do instead: drive WK toon object disappearance through `_FadeAlpha` plus Shader Graph dither/alpha clip, keep saved WK materials serialized with `_FadeAlpha: 1` and `_Cutoff: 0`, and keep `AlphaClipThreshold` at `0` so full fade alpha is fully opaque.
 
-4. **[2026-08-20] `Invalid AABB` can be a Prefab Stage post-play renderer/cache issue**
+6. **[2026-08-20] `Invalid AABB` can be a Prefab Stage post-play renderer/cache issue**
    Do instead: run `Tools/Diagnostics/Scan Serialized Invalid Values`, keep `Tools/Diagnostics/Monitor Invalid Scene Values` enabled before reproducing with `Player.prefab` open, inspect any `PrefabStage(...)` path from the post-play/log-triggered scan, remove serialized `m_AABB` NaN overrides, and rebuild/remove corrupted `Cloth` components when `SkinnedMeshRenderer.localBounds` wakes as NaN.
 
-5. **[2026-08-20] Auto texture tiling should stay renderer-local**
+7. **[2026-08-20] Auto texture tiling should stay renderer-local**
    Do instead: keep `_Texture_Tiling`, `_Texture_Offset`, and `_Texture_Rotation` changes in `MaterialPropertyBlock` on a specific renderer, and keep both WK toon Shader Graphs wired through the same Tiling And Offset/Rotate UV path; editing the saved `.mat` vector changes every mesh using that shared material.
 
 ## User Directives

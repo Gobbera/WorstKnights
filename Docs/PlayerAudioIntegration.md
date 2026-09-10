@@ -18,7 +18,7 @@ O `PlayerSetup` ainda mantem um fallback runtime caso algum player antigo aparec
 Fluxos ligados:
 
 - footsteps por locomocao
-- ataque por `AttackAnimationSequence`
+- swing de ataque por `PlayerMeleeAttack.Attack Configs`
 - jump por `JumpAnimationSequence`
 - land por `LandingAnimationSequence`
 
@@ -64,21 +64,29 @@ Estados ignorados:
 - `idle`
 - `air`
 
-## Como o ataque funciona hoje
+## Como o swing de ataque funciona hoje
 
-O controller guarda o ultimo valor conhecido de:
+`PlayerMeleeAttack` guarda uma lista de `Attack Configs`.
+Cada elemento representa um passo do combo e agrupa hitbox, VFX de impacto, feedback de camera e audio.
 
-- `AttackAnimationSequence`
+Campos de audio por ataque:
+
+- `Swing Audio Cue`: cue tocado quando aquele passo do combo dispara
+- `Swing Audio Delay`: atraso em segundos antes de tocar o cue, para alinhar com a animacao
+
+Quando `AttackAnimationSequence` muda, `PlayerMeleeAttack` resolve o `Attack Config` do `AttackComboStep`, agenda o swing pelo delay configurado, e toca pelo `AudioEmitter` do player no `AttackAudioAnchor`.
+
+O `PlayerAudioController` continua observando:
+
 - `JumpAnimationSequence`
 - `LandingAnimationSequence`
 
-Quando algum desses valores muda, ele toca o cue correspondente.
-
 Isso significa que:
 
-- o dono do player ouve o proprio ataque
-- os outros clientes ouvem o ataque do player remoto
-- tudo sem RPC extra de audio
+- o dono do player ouve o proprio swing
+- os outros clientes ouvem o swing do player remoto quando o `AttackAnimationSequence` replicado chega
+- tudo continua sem RPC extra de audio
+- o campo global `Attack` no `PlayerAudioProfile` deve ficar vazio quando o swing estiver configurado por ataque, para evitar duplicar som
 
 ## Authoring no editor
 
@@ -88,7 +96,7 @@ Para o player tocar som de verdade, faca isto:
    - `Player_Footstep_Walk`
    - `Player_Footstep_Sprint`
    - `Player_Footstep_Crouch`
-   - `Player_Attack`
+   - `Player_Swing_01`, `Player_Swing_02`, `Player_Swing_03` ou um cue compartilhado de swing
    - opcionalmente `Player_Jump`
    - opcionalmente `Player_Land`
 2. Crie um `PlayerAudioProfile` em:
@@ -97,6 +105,7 @@ Para o player tocar som de verdade, faca isto:
 4. Use o asset que ja existe em:
    - `Assets/Resources/Audio/PlayerAudioProfile_Default.asset`
 5. Arraste os cues criados para esse profile.
+6. Para swings, preencha os campos `Swing Audio Cue` e `Swing Audio Delay` em `PlayerMeleeAttack > Attack Configs`.
 
 O prefab ja aponta para esse asset por padrao.
 

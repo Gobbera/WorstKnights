@@ -8,7 +8,7 @@ void CalculateMainLight_float(float3 WorldPos, out float3 Direction, out float3 
     DistanceAtten = 1;
     ShadowAtten = 1;
 #else
-#if SHADOWS_SCREEN
+#if defined(_MAIN_LIGHT_SHADOWS_SCREEN) && !defined(_SURFACE_TYPE_TRANSPARENT)
     half4 clipPos = TransformWorldToHClip(WorldPos);
     half4 shadowCoord = ComputeScreenPos(clipPos);
 #else
@@ -32,11 +32,12 @@ void AddAdditionalLights_float(float Smoothness, float3 WorldPosition, float3 Wo
 #ifndef SHADERGRAPH_PREVIEW
     int pixelLightCount = GetAdditionalLightsCount();
     for (int i = 0; i < pixelLightCount; ++i) {
-        Light light = GetAdditionalLight(i, WorldPosition);
+        Light light = GetAdditionalLight(i, WorldPosition, half4(1, 1, 1, 1));
         half NdotL = saturate(dot(WorldNormal, light.direction));
         half atten = light.distanceAttenuation * light.shadowAttenuation;
         half thisDiffuse = atten * NdotL;
-        half thisSpecular = LightingSpecular(thisDiffuse, light.direction, WorldNormal, WorldView, 1, Smoothness);
+        half3 thisSpecularRgb = LightingSpecular(half3(thisDiffuse, thisDiffuse, thisDiffuse), light.direction, WorldNormal, WorldView, half4(1, 1, 1, 1), Smoothness);
+        half thisSpecular = max(max(thisSpecularRgb.r, thisSpecularRgb.g), thisSpecularRgb.b);
         Diffuse += thisDiffuse;
         Specular += thisSpecular;
         Color += light.color * (thisDiffuse + thisSpecular);

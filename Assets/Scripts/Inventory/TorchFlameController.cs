@@ -12,6 +12,7 @@ public sealed class TorchFlameController : MonoBehaviour
 
     [Header("State")]
     [SerializeField] private bool litOnAwake = true;
+    [SerializeField] private bool deactivateFlameRootWhenUnlit;
 
     [Header("Base Light")]
     [SerializeField] [Min(0f)] private float baseIntensity = 2.2f;
@@ -164,7 +165,7 @@ public sealed class TorchFlameController : MonoBehaviour
 
     private void ApplyState()
     {
-        bool rootActive = presentationVisible;
+        bool rootActive = presentationVisible && (!deactivateFlameRootWhenUnlit || isLit);
         if (flameRoot != null && flameRoot.activeSelf != rootActive)
             flameRoot.SetActive(rootActive);
 

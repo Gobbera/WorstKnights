@@ -36,6 +36,7 @@ Exemplos:
 - `ImpactReactionSignalBridge`: converte impacto melee em sinal
 - `TriggerVolumeReactionSignalBridge`: converte trigger em sinais
 - `CollisionReactionSignalBridge`: converte colisao fisica em sinais
+- `PlayerInteractionReactionSignalBridge`: converte interacao do jogador em sinal
 
 ## Ferramenta
 
@@ -207,6 +208,33 @@ Use para sinais disparados por colisao fisica.
 - com `Target Mode = Self Receiver`, o proprio objeto reage ao impacto
 - com `Target Mode = Other Receiver`, o objeto tenta disparar o receiver do alvo atingido
 - para `OnCollision...` funcionar, o Unity ainda precisa das condicoes normais de fisica para colisao
+
+### PlayerInteractionReactionSignalBridge
+
+Use para sinais disparados pelo sistema de interacao do jogador, normalmente quando `PlayerPickupInteractor` encontra um `IPlayerInteractable` e o jogador aperta a tecla de interacao (`E` por padrao).
+
+#### O que ele faz
+
+- implementa `IPlayerInteractable`, entao pode ser escolhido pelo raycast de interacao do jogador
+- pode encaminhar a interacao para outro `IPlayerInteractable` do mesmo objeto, parent ou children
+- emite o signal configurado depois que o alvo encaminhado aceita a interacao
+
+#### Parametros
+
+- `Interaction Priority`: prioridade usada pelo `PlayerPickupInteractor` para escolher este interactable. Mantenha acima do interactable alvo quando a bridge deve funcionar como proxy.
+- `Forward To Target Interactable`: quando ativo, a bridge chama outro `IPlayerInteractable` antes de emitir o signal.
+- `Target Interactable`: interactable alvo explicito. Se vazio, a bridge tenta resolver automaticamente outro `IPlayerInteractable` no objeto, parents ou children.
+- `Require Successful Target Interaction`: quando ativo, o signal so e emitido se o interactable alvo retornar sucesso.
+- `Emit Without Target Interactable`: permite usar a bridge como um interactable simples que apenas emite reaction.
+- `Interacted Signal Id`: signal enviado ao `ReactionSignalReceiver`.
+- `Feedback Origin`: origem opcional usada como posicao do signal.
+- `Direction From Interactor`: quando ativo, a direcao do signal aponta do jogador para a origem do feedback.
+
+#### Observacoes
+
+- Para sons como `Torch_Woosh`, use um signal como `Lit` e encaminhe para o interactable que realmente acende a tocha.
+- Se a reacao precisa acontecer somente em mudanca real de estado, faca o interactable alvo retornar sucesso apenas quando aquela mudanca aconteceu.
+- Esta bridge nao substitui uma bridge especifica de estado quando a mecanica precisa reagir a eventos que nao nasceram da interacao direta do jogador.
 
 ## Setup por tipo
 
@@ -392,6 +420,37 @@ Use em itens fisicos, flechas, projeteis, objetos arremessados ou qualquer objet
 - `Stay Emit Interval`
 - `Collision Mask`
 
+### Setup Player Interaction
+
+#### Quando usar
+
+Use em objetos interagiveis pelo `PlayerPickupInteractor`, como tochas de parede, alavancas simples, props que disparam feedback ao pressionar `E`, ou qualquer objeto que precise converter uma interacao aceita em som, particula ou evento.
+
+#### O que o setup adiciona
+
+- `ReactionSignalReceiver` se ainda nao existir
+- `ReactionSignalEmitter`
+- `PlayerInteractionReactionSignalBridge`
+- `Signal Entry` para `Interacted`
+
+#### Workflow
+
+1. Selecione o objeto interagivel.
+2. Abra a ferramenta.
+3. Clique em `Setup Player Interaction`.
+4. Se o objeto ja tiver outro `IPlayerInteractable`, mantenha `Forward To Target Interactable` ativo e confira se `Target Interactable` aponta para ele.
+5. Ajuste `Interacted Signal Id` para o nome desejado, como `Lit` em uma tocha.
+6. Configure a entry correspondente no `ReactionSignalReceiver`.
+
+#### Parametros que normalmente precisam revisao
+
+- `Interaction Priority`
+- `Target Interactable`
+- `Require Successful Target Interaction`
+- `Emit Without Target Interactable`
+- `Interacted Signal Id`
+- `Feedback Origin`
+
 ## Comparacao entre Setup Impact e Setup Collision
 
 ### Diferenca principal
@@ -511,6 +570,16 @@ Na pratica:
 - pode funcionar bem para feedback local
 - nao deve ser tratado como fonte autoritativa de evento compartilhado entre clientes
 
+#### Player Interaction
+
+`PlayerInteractionReactionSignalBridge` nao faz networking por conta propria.
+Ele reage ao cliente que executou a interacao pelo `PlayerPickupInteractor`.
+
+Na pratica:
+
+- funciona bem para feedback local imediato de uso
+- em multiplayer, outros clientes so vao ouvir/ver a reaction se a propria mecanica sincronizada tambem emitir um signal local neles ou se uma bridge especifica/broadcast for adicionada depois
+
 ### Audio e VFX em multiplayer
 
 O `ReactionSignalReceiver` toca audio via `GameAudioService` e instancia efeitos localmente.
@@ -567,12 +636,18 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 - origem: colisao fisica
 - sinais comuns: `Impact`
 
+### PlayerInteractionReactionSignalBridge
+
+- origem: interacao do jogador pelo `PlayerPickupInteractor`
+- sinais comuns: `Interacted`, ou um signal de dominio como `Lit` quando usado como proxy de um interactable existente
+
 ## Regra para novas integracoes
 
 Quando surgir uma nova mecanica, siga esta ordem:
 
 1. Se ela ja sabe exatamente quando um sinal deve acontecer, use `ReactionSignalEmitter`.
-2. Se ela nasce de trigger, use `TriggerVolumeReactionSignalBridge`.
-3. Se ela nasce de colisao, use `CollisionReactionSignalBridge`.
-4. Se ela depende de um sistema especifico, crie uma bridge pequena so para converter o evento em sinal.
-5. Atualize este documento com o novo setup ou com a nova bridge.
+2. Se ela nasce da tecla de interacao do jogador, use `PlayerInteractionReactionSignalBridge`.
+3. Se ela nasce de trigger, use `TriggerVolumeReactionSignalBridge`.
+4. Se ela nasce de colisao, use `CollisionReactionSignalBridge`.
+5. Se ela depende de um sistema especifico, crie uma bridge pequena so para converter o evento em sinal.
+6. Atualize este documento com o novo setup ou com a nova bridge.

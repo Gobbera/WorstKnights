@@ -96,6 +96,12 @@ public class ReactionSignalSetupToolWindow : EditorWindow
             "Adiciona ReactionSignalEmitter e CollisionReactionSignalBridge, com o sinal Impact.",
             ReactionSignalSetupUtility.CanSetupCollision(targetObject),
             () => ReactionSignalSetupUtility.SetupCollision(targetObject));
+
+        DrawSetupButton(
+            "Setup Player Interaction",
+            "Adiciona ReactionSignalEmitter e PlayerInteractionReactionSignalBridge, com o sinal Interacted.",
+            ReactionSignalSetupUtility.CanSetupPlayerInteraction(targetObject),
+            () => ReactionSignalSetupUtility.SetupPlayerInteraction(targetObject));
     }
 
     private static void DrawSetupButton(string label, string description, bool enabled, System.Action onClick)

@@ -201,7 +201,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
   ObservedComponentsFoldoutOpen: 1
   Group: 0
@@ -224,7 +224,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 50f654c32c61a7746a1b3af9d94c152b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   config: {fileID: 11400000, guid: 8311c273eb3020f449265c451f0d9d6f, type: 2}
   orientation: {fileID: 4896104238836716592}
@@ -270,7 +270,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0e827d75ccec414ea43f2452cf3efb3b, type: 3}
-  m_Name: ""
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxHealth: 100
   damageImmunityDuration: 0.1
@@ -285,11 +285,11 @@ MonoBehaviour:
   respawnInvulnerabilityDuration: 1
   enableRagdollFromStrongKnockback: 1
   minStrongKnockbackForImpactRagdoll: 12
+  strongKnockbackRecoverAfterGroundedSeconds: 1.25
   strongKnockbackImpactImpulseMultiplier: 0.75
   strongKnockbackImpactUpwardMultiplier: 0.08
   maxStrongKnockbackImpactImpulse: 12
   maxStrongKnockbackImpactUpward: 2.5
-  strongKnockbackRecoverAfterGroundedSeconds: 1.25
   enableHighFallRagdoll: 1
   minFallHeightForRagdoll: 6
   minFallDownSpeedForRagdoll: 10
@@ -310,8 +310,24 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e2b17002058c49e6a455c55a9f078fba, type: 3}
-  m_Name: ""
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerRagdollController
+  enableImpactRagdoll: 1
+  enableWallImpactRagdoll: 1
+  enablePlayerCollisionImpactRagdoll: 1
+  enableDynamicBodyImpactRagdoll: 1
+  impactCollisionMask:
+    serializedVersion: 2
+    m_Bits: 1915
+  minWallImpactSpeed: 5.2
+  minPlayerCollisionSelfSpeed: 4.8
+  minPlayerCollisionRelativeSpeed: 7.5
+  minDynamicBodyImpactSpeed: 5
+  minDynamicBodyMass: 2
+  impactToImpulseMultiplier: 1.1
+  maxImpactImpulse: 14
+  impactAutoRecoverAfterGroundedSeconds: 1.25
+  logImpactRagdoll: 0
   ragdollRoot: {fileID: 5164466171579573174}
   ragdollAnimator: {fileID: 2805368766037670630}
   playerHealth: {fileID: 3184000000000000211}
@@ -340,34 +356,18 @@ MonoBehaviour:
   relaxFootEndJoints: 1
   footEndJointSwingLimit: 25
   footEndJointTwistLimit: 45
-  enableImpactRagdoll: 1
   allowRemoteImpactRagdollRequests: 1
-  enablePlayerCollisionImpactRagdoll: 1
-  enableWallImpactRagdoll: 1
-  enableDynamicBodyImpactRagdoll: 1
   evaluateImpactRagdollOnCollisionStay: 0
   ignoreDestructibleDebrisImpact: 1
-  impactCollisionMask:
-    serializedVersion: 2
-    m_Bits: 4294967291
   impactCooldown: 1
-  impactAutoRecoverAfterGroundedSeconds: 1.25
-  minPlayerCollisionSelfSpeed: 4.8
-  minPlayerCollisionRelativeSpeed: 7.5
-  minWallImpactSpeed: 5.2
   minWallApproachAlignment: 0.35
   groundLikeContactMaxAngle: 55
-  minDynamicBodyImpactSpeed: 5
-  minDynamicBodyMass: 2
   dynamicBodyMassReference: 5
   playerImpactIntensityMultiplier: 1
   wallImpactIntensityMultiplier: 0.9
   dynamicBodyImpactIntensityMultiplier: 1
-  impactToImpulseMultiplier: 1.1
   impactUpwardImpulseMultiplier: 0.12
-  maxImpactImpulse: 14
   maxImpactUpwardImpulse: 3
-  logImpactRagdoll: 0
   ragdollRecoveryGroundMask:
     serializedVersion: 2
     m_Bits: 4294967291
@@ -424,7 +424,7 @@ MonoBehaviour:
   handEquipmentController: {fileID: 3184000000000000204}
   lightAnchor: {fileID: 5298891682522162122}
   assistLight: {fileID: 0}
-  assistEnabled: 1
+  assistEnabled: 0
   disableWhenEquippedLightSource: 1
   applyInspectorChangesInPlayMode: 1
   lightAnchorName: FP_Camera
@@ -740,13 +740,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMeleeAttack
   attackDamage: 25
-  hitboxWindows:
+  attackConfigs:
   - comboStep: 1
     damageStartFrame: 20
     framesPerSecond: 30
     activeDuration: 0.14
     targetDistance: 1.5
     hitRadius: 0.18
+    swingAudioCue: {fileID: 0}
+    swingAudioDelay: 0
     impactVfxAttackAngle: 145
     playerCameraImpactType: 1
     applyCameraFeedback: 1
@@ -762,6 +764,8 @@ MonoBehaviour:
     activeDuration: 0.14
     targetDistance: 1.5
     hitRadius: 0.18
+    swingAudioCue: {fileID: 0}
+    swingAudioDelay: 0
     impactVfxAttackAngle: 90
     playerCameraImpactType: 1
     applyCameraFeedback: 1
@@ -777,6 +781,8 @@ MonoBehaviour:
     activeDuration: 0.18
     targetDistance: 1.5
     hitRadius: 0.18
+    swingAudioCue: {fileID: 0}
+    swingAudioDelay: 0
     impactVfxAttackAngle: 180
     playerCameraImpactType: 1
     applyCameraFeedback: 1
@@ -798,6 +804,8 @@ MonoBehaviour:
   hitboxGizmoColor: {r: 1, g: 0.15, b: 0.05, a: 0.35}
   attackOrigin: {fileID: 0}
   attackDirection: {fileID: 0}
+  attackAudioAnchor: {fileID: 3184000000000000102}
+  audioEmitter: {fileID: 3184000000000000201}
 --- !u!114 &3184000000000000209
 MonoBehaviour:
   m_ObjectHideFlags: 0

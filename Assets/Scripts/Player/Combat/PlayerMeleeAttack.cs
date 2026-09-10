@@ -2,26 +2,33 @@ using System;
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(25)]
-[RequireComponent(typeof(PlayerMovement), typeof(PhotonView))]
+[RequireComponent(typeof(PlayerMovement), typeof(PhotonView), typeof(AudioEmitter))]
 public class PlayerMeleeAttack : MonoBehaviour
 {
     private const string FirstPersonCameraName = "FP_Camera";
     private const string HandsCameraName = "Hands Camera";
+    private const string AttackAudioAnchorName = "AttackAudioAnchor";
     private const int MaxHitColliders = 16;
     private const float MinimumCameraFeedbackTime = 0.0001f;
 
     [Serializable]
-    public sealed class AttackHitboxWindow
+    public sealed class AttackConfig
     {
+        [Header("Combo")]
         [SerializeField] [Range(1, MovementConfig.AttackComboStepCount)] private int comboStep = 1;
+        [Header("Hitbox")]
         [SerializeField] [Min(0)] private int damageStartFrame;
         [SerializeField] [Min(1f)] private float framesPerSecond = 30f;
         [SerializeField] [Min(0.01f)] private float activeDuration = 0.12f;
         [SerializeField] [Min(0.1f)] private float targetDistance = 1.2f;
         [SerializeField] [Min(0.05f)] private float hitRadius = 1f;
+        [Header("Audio")]
+        [SerializeField] private AudioCue swingAudioCue;
+        [SerializeField] [Min(0f)] private float swingAudioDelay;
         [Header("Impact VFX")]
         [SerializeField] [Tooltip("Angle in degrees sent to hit impact VFX. Triangle A receives this as positive; Triangle B receives it as negative.")] private float impactVfxAttackAngle = 90f;
         [Header("Camera")]
@@ -34,11 +41,11 @@ public class PlayerMeleeAttack : MonoBehaviour
         [SerializeField] [Min(0f)] private float attackFovRelaxTime = 0.16f;
         [SerializeField] private Vector3 attackCameraRotation = new Vector3(-2f, 0f, 0f);
 
-        public AttackHitboxWindow()
+        public AttackConfig()
         {
         }
 
-        public AttackHitboxWindow(
+        public AttackConfig(
             int comboStep,
             int damageStartFrame,
             float framesPerSecond,
@@ -59,6 +66,8 @@ public class PlayerMeleeAttack : MonoBehaviour
         public float ActiveDuration => Mathf.Max(0.01f, activeDuration);
         public float TargetDistance => Mathf.Max(0.1f, targetDistance);
         public float HitRadius => Mathf.Max(0.05f, hitRadius);
+        public AudioCue SwingAudioCue => swingAudioCue;
+        public float SwingAudioDelay => Mathf.Max(0f, swingAudioDelay);
         public float ImpactVfxAttackAngle => Mathf.Abs(impactVfxAttackAngle);
         public PlayerCameraImpactType PlayerCameraImpactType => playerCameraImpactType;
         public bool ApplyCameraFeedback => applyCameraFeedback;
@@ -72,13 +81,26 @@ public class PlayerMeleeAttack : MonoBehaviour
             && (Mathf.Abs(attackFovPercentChange) > 0.001f || attackCameraRotation.sqrMagnitude > 0.000001f);
     }
 
+    private readonly struct ScheduledSwingAudio
+    {
+        public ScheduledSwingAudio(AudioCue cue, float playTime)
+        {
+            Cue = cue;
+            PlayTime = playTime;
+        }
+
+        public AudioCue Cue { get; }
+        public float PlayTime { get; }
+    }
+
     [Header("Attack")]
     [SerializeField] [Min(0f)] private float attackDamage = 25f;
-    [SerializeField] private List<AttackHitboxWindow> hitboxWindows = new List<AttackHitboxWindow>
+    [FormerlySerializedAs("hitboxWindows")]
+    [SerializeField] private List<AttackConfig> attackConfigs = new List<AttackConfig>
     {
-        new AttackHitboxWindow(1, 0, 30f, 0.12f, 1.2f, 1f),
-        new AttackHitboxWindow(2, 0, 30f, 0.12f, 1.25f, 1f),
-        new AttackHitboxWindow(3, 0, 30f, 0.14f, 1.3f, 1.05f)
+        new AttackConfig(1, 0, 30f, 0.12f, 1.2f, 1f),
+        new AttackConfig(2, 0, 30f, 0.12f, 1.25f, 1f),
+        new AttackConfig(3, 0, 30f, 0.14f, 1.3f, 1.05f)
     };
     [SerializeField] [HideInInspector] [Min(0.1f)] private float hitRadius = 1f;
     [SerializeField] [HideInInspector] [Min(0.1f)] private float hitDistance = 1.2f;
@@ -94,22 +116,25 @@ public class PlayerMeleeAttack : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform attackOrigin;
     [SerializeField] private Transform attackDirection;
+    [SerializeField] private Transform attackAudioAnchor;
+    [SerializeField] private AudioEmitter audioEmitter;
 
     private readonly Collider[] hitBuffer = new Collider[MaxHitColliders];
     private readonly HashSet<Component> processedTargets = new HashSet<Component>();
+    private readonly List<ScheduledSwingAudio> pendingSwingAudio = new List<ScheduledSwingAudio>();
 
     private PlayerMovement playerMovement;
     private PlayerMovementFovFeedback movementFovFeedback;
     private PlayerHealth playerHealth;
     private PhotonView photonView;
     private int lastAttackSequence;
-    private AttackHitboxWindow activeHitboxWindow;
+    private AttackConfig activeAttackConfig;
     private float activeHitboxStartTime;
     private float activeHitboxEndTime;
     private bool hasActiveHitboxWindow;
     private Camera attackFeedbackCamera;
     private Camera attackFeedbackHandsCamera;
-    private AttackHitboxWindow activeCameraFeedbackWindow;
+    private AttackConfig activeCameraFeedbackConfig;
     private ItemDefinition nextAttackItem;
     private float activeAttackDamage;
     private float attackFeedbackCameraBaseFov;
@@ -126,35 +151,46 @@ public class PlayerMeleeAttack : MonoBehaviour
 
     private void Awake()
     {
-        playerMovement = GetComponent<PlayerMovement>();
-        movementFovFeedback = GetComponent<PlayerMovementFovFeedback>();
-        playerHealth = GetComponent<PlayerHealth>();
-        photonView = GetComponent<PhotonView>();
-        ResolveAttackTransforms();
+        ResolveReferences();
     }
 
     private void OnEnable()
     {
+        ResolveReferences();
         lastAttackSequence = playerMovement != null ? playerMovement.AttackAnimationSequence : 0;
         activeAttackDamage = Mathf.Max(0f, attackDamage);
         nextAttackItem = null;
         CancelActiveHitboxWindow();
+        CancelPendingSwingAudio();
     }
 
     private void Update()
     {
-        if (photonView != null && !photonView.IsMine)
-            return;
-
         if (playerMovement == null)
             return;
 
         if (playerMovement.AttackAnimationSequence != lastAttackSequence)
         {
             lastAttackSequence = playerMovement.AttackAnimationSequence;
-            ScheduleHitboxWindow(playerMovement.AttackComboStep);
-            TriggerAttackCameraFeedback(activeHitboxWindow);
+            AttackConfig attackConfig = ResolveAttackConfig(playerMovement.AttackComboStep);
+            ScheduleSwingAudio(attackConfig);
+
+            if (HasLocalAuthority())
+            {
+                ScheduleHitboxWindow(attackConfig);
+                TriggerAttackCameraFeedback(activeAttackConfig);
+            }
+            else
+            {
+                CancelActiveHitboxWindow();
+                ResetAttackCameraFeedback();
+            }
         }
+
+        UpdatePendingSwingAudio();
+
+        if (!HasLocalAuthority())
+            return;
 
         UpdateActiveHitboxWindow();
     }
@@ -173,6 +209,7 @@ public class PlayerMeleeAttack : MonoBehaviour
     private void OnDisable()
     {
         nextAttackItem = null;
+        CancelPendingSwingAudio();
         ResetAttackCameraFeedback();
     }
 
@@ -181,10 +218,10 @@ public class PlayerMeleeAttack : MonoBehaviour
         nextAttackItem = itemDefinition;
     }
 
-    private void ScheduleHitboxWindow(int comboStep)
+    private void ScheduleHitboxWindow(AttackConfig attackConfig)
     {
-        activeHitboxWindow = ResolveHitboxWindow(comboStep);
-        if (activeHitboxWindow == null)
+        activeAttackConfig = attackConfig;
+        if (activeAttackConfig == null)
         {
             nextAttackItem = null;
             CancelActiveHitboxWindow();
@@ -195,15 +232,15 @@ public class PlayerMeleeAttack : MonoBehaviour
         nextAttackItem = null;
 
         float now = Time.time;
-        activeHitboxStartTime = now + activeHitboxWindow.DamageStartDelay;
-        activeHitboxEndTime = activeHitboxStartTime + activeHitboxWindow.ActiveDuration;
+        activeHitboxStartTime = now + activeAttackConfig.DamageStartDelay;
+        activeHitboxEndTime = activeHitboxStartTime + activeAttackConfig.ActiveDuration;
         hasActiveHitboxWindow = true;
         processedTargets.Clear();
     }
 
     private void UpdateActiveHitboxWindow()
     {
-        if (!hasActiveHitboxWindow || activeHitboxWindow == null)
+        if (!hasActiveHitboxWindow || activeAttackConfig == null)
             return;
 
         float now = Time.time;
@@ -216,27 +253,83 @@ public class PlayerMeleeAttack : MonoBehaviour
         if (now < activeHitboxStartTime)
             return;
 
-        TryHitTargets(activeHitboxWindow);
+        TryHitTargets(activeAttackConfig);
     }
 
     private void CancelActiveHitboxWindow()
     {
         hasActiveHitboxWindow = false;
-        activeHitboxWindow = null;
+        activeAttackConfig = null;
         activeHitboxStartTime = 0f;
         activeHitboxEndTime = 0f;
         processedTargets.Clear();
     }
 
-    private void TriggerAttackCameraFeedback(AttackHitboxWindow hitboxWindow)
+    private void ScheduleSwingAudio(AttackConfig attackConfig)
     {
-        if (!HasConfiguredAttackCameraFeedback(hitboxWindow))
+        if (attackConfig == null || attackConfig.SwingAudioCue == null)
+            return;
+
+        pendingSwingAudio.Add(new ScheduledSwingAudio(
+            attackConfig.SwingAudioCue,
+            Time.time + attackConfig.SwingAudioDelay));
+    }
+
+    private void UpdatePendingSwingAudio()
+    {
+        for (int i = 0; i < pendingSwingAudio.Count;)
+        {
+            ScheduledSwingAudio scheduledSwing = pendingSwingAudio[i];
+            if (Time.time + 0.0001f < scheduledSwing.PlayTime)
+            {
+                i++;
+                continue;
+            }
+
+            pendingSwingAudio.RemoveAt(i);
+            PlaySwingAudio(scheduledSwing.Cue);
+        }
+    }
+
+    private void CancelPendingSwingAudio()
+    {
+        pendingSwingAudio.Clear();
+    }
+
+    private void PlaySwingAudio(AudioCue cue)
+    {
+        if (cue == null)
+            return;
+
+        ResolveReferences();
+        Transform anchor = ResolveAttackAudioAnchor();
+        if (audioEmitter != null)
+        {
+            audioEmitter.PlayAttached(cue, anchor);
+            return;
+        }
+
+        if (cue.Is3D && cue.Anchor == AudioPlaybackAnchor.FollowTransform && anchor != null)
+        {
+            GameAudioService.Play(cue, anchor);
+            return;
+        }
+
+        if (cue.Is3D)
+            GameAudioService.Play(cue, anchor != null ? anchor.position : transform.position);
+        else
+            GameAudioService.Play(cue);
+    }
+
+    private void TriggerAttackCameraFeedback(AttackConfig attackConfig)
+    {
+        if (!HasConfiguredAttackCameraFeedback(attackConfig))
         {
             ResetAttackCameraFeedback();
             return;
         }
 
-        activeCameraFeedbackWindow = hitboxWindow;
+        activeCameraFeedbackConfig = attackConfig;
         ResolveAttackCameraFeedbackTargets();
         if (attackFeedbackCamera == null)
             return;
@@ -247,19 +340,19 @@ public class PlayerMeleeAttack : MonoBehaviour
             hasAttackFeedbackCameraBaseFov = true;
         }
 
-        if (!hitboxWindow.ApplyFovFeedbackToHandsCamera)
+        if (!attackConfig.ApplyFovFeedbackToHandsCamera)
             RestoreAttackFeedbackHandsCameraFov();
 
-        if (hitboxWindow.ApplyFovFeedbackToHandsCamera && attackFeedbackHandsCamera != null && !hasAttackFeedbackHandsCameraBaseFov)
+        if (attackConfig.ApplyFovFeedbackToHandsCamera && attackFeedbackHandsCamera != null && !hasAttackFeedbackHandsCameraBaseFov)
         {
             attackFeedbackHandsCameraBaseFov = attackFeedbackHandsCamera.fieldOfView;
             hasAttackFeedbackHandsCameraBaseFov = true;
         }
 
         float now = Time.time;
-        float reachTime = hitboxWindow.AttackFovReachTime;
-        float holdTime = hitboxWindow.AttackFovHoldTime;
-        float relaxTime = hitboxWindow.AttackFovRelaxTime;
+        float reachTime = attackConfig.AttackFovReachTime;
+        float holdTime = attackConfig.AttackFovHoldTime;
+        float relaxTime = attackConfig.AttackFovRelaxTime;
 
         attackCameraFeedbackStartTime = now;
         attackCameraFeedbackPeakTime = now + reachTime;
@@ -319,8 +412,8 @@ public class PlayerMeleeAttack : MonoBehaviour
 
     private void ApplyAttackCameraFeedback(float weight)
     {
-        AttackHitboxWindow hitboxWindow = activeCameraFeedbackWindow;
-        if (hitboxWindow == null)
+        AttackConfig attackConfig = activeCameraFeedbackConfig;
+        if (attackConfig == null)
             return;
 
         float safeWeight = Mathf.Clamp01(weight);
@@ -329,23 +422,23 @@ public class PlayerMeleeAttack : MonoBehaviour
         {
             attackFeedbackCamera.fieldOfView = ResolveAttackFeedbackFov(
                 cameraBaseFov,
-                hitboxWindow.AttackFovPercentChange,
+                attackConfig.AttackFovPercentChange,
                 safeWeight);
         }
 
-        if (hitboxWindow.ApplyFovFeedbackToHandsCamera
+        if (attackConfig.ApplyFovFeedbackToHandsCamera
             && TryResolveAttackFeedbackBaseFov(useHandsCamera: true, out float handsCameraBaseFov))
         {
             attackFeedbackHandsCamera.fieldOfView = ResolveAttackFeedbackFov(
                 handsCameraBaseFov,
-                hitboxWindow.AttackFovPercentChange,
+                attackConfig.AttackFovPercentChange,
                 safeWeight);
         }
 
         if (attackFeedbackCamera == null)
             return;
 
-        Vector3 cameraRotation = hitboxWindow.AttackCameraRotation;
+        Vector3 cameraRotation = attackConfig.AttackCameraRotation;
         if (cameraRotation.sqrMagnitude <= 0.000001f)
             return;
 
@@ -405,7 +498,7 @@ public class PlayerMeleeAttack : MonoBehaviour
     private void ClearAttackCameraFeedbackState()
     {
         hasAttackCameraFeedback = false;
-        activeCameraFeedbackWindow = null;
+        activeCameraFeedbackConfig = null;
         attackCameraFeedbackStartTime = 0f;
         attackCameraFeedbackPeakTime = 0f;
         attackCameraFeedbackRelaxStartTime = 0f;
@@ -418,9 +511,9 @@ public class PlayerMeleeAttack : MonoBehaviour
         hasAttackFeedbackHandsCameraBaseFov = false;
     }
 
-    private bool HasConfiguredAttackCameraFeedback(AttackHitboxWindow hitboxWindow)
+    private bool HasConfiguredAttackCameraFeedback(AttackConfig attackConfig)
     {
-        return hitboxWindow != null && hitboxWindow.HasCameraFeedback;
+        return attackConfig != null && attackConfig.HasCameraFeedback;
     }
 
     private bool TryResolveAttackFeedbackBaseFov(bool useHandsCamera, out float fov)
@@ -469,20 +562,20 @@ public class PlayerMeleeAttack : MonoBehaviour
         return t * t * (3f - 2f * t);
     }
 
-    private AttackHitboxWindow ResolveHitboxWindow(int comboStep)
+    private AttackConfig ResolveAttackConfig(int comboStep)
     {
         int safeComboStep = Mathf.Clamp(comboStep, 1, MovementConfig.AttackComboStepCount);
-        if (hitboxWindows != null)
+        if (attackConfigs != null)
         {
-            for (int i = 0; i < hitboxWindows.Count; i++)
+            for (int i = 0; i < attackConfigs.Count; i++)
             {
-                AttackHitboxWindow hitboxWindow = hitboxWindows[i];
-                if (hitboxWindow != null && hitboxWindow.ComboStep == safeComboStep)
-                    return hitboxWindow;
+                AttackConfig attackConfig = attackConfigs[i];
+                if (attackConfig != null && attackConfig.ComboStep == safeComboStep)
+                    return attackConfig;
             }
         }
 
-        return new AttackHitboxWindow(safeComboStep, 0, 30f, 0.12f, hitDistance, hitRadius);
+        return new AttackConfig(safeComboStep, 0, 30f, 0.12f, hitDistance, hitRadius);
     }
 
     private float ResolveAttackDamage(ItemDefinition attackItem)
@@ -499,18 +592,18 @@ public class PlayerMeleeAttack : MonoBehaviour
             || useType == ItemUseType.MeleeWeapon;
     }
 
-    private void TryHitTargets(AttackHitboxWindow hitboxWindow)
+    private void TryHitTargets(AttackConfig attackConfig)
     {
         ResolveAttackTransforms();
 
         Vector3 origin = ResolveAttackOrigin();
         Vector3 attackForward = ResolveAttackForward();
 
-        Vector3 hitCenter = origin + attackForward * hitboxWindow.TargetDistance;
-        float hitProbeDistance = Mathf.Max(0.05f, hitboxWindow.TargetDistance + hitboxWindow.HitRadius);
+        Vector3 hitCenter = origin + attackForward * attackConfig.TargetDistance;
+        float hitProbeDistance = Mathf.Max(0.05f, attackConfig.TargetDistance + attackConfig.HitRadius);
         int hitCount = Physics.OverlapSphereNonAlloc(
             hitCenter,
-            hitboxWindow.HitRadius,
+            attackConfig.HitRadius,
             hitBuffer,
             DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
             QueryTriggerInteraction.Ignore);
@@ -542,8 +635,8 @@ public class PlayerMeleeAttack : MonoBehaviour
                 resolvedHitPoint,
                 attackForward,
                 PlayerDamageAnimationType.None,
-                playerCameraImpact: hitboxWindow.PlayerCameraImpactType,
-                impactVfxAttackAngle: hitboxWindow.ImpactVfxAttackAngle,
+                playerCameraImpact: attackConfig.PlayerCameraImpactType,
+                impactVfxAttackAngle: attackConfig.ImpactVfxAttackAngle,
                 hasImpactVfxAttackAngle: true);
 
             if (damageable is EnemyHealth enemyHealth)
@@ -562,8 +655,8 @@ public class PlayerMeleeAttack : MonoBehaviour
                     resolvedHitPoint,
                     attackForward,
                     PlayerDamageAnimationType.ReactionDamage,
-                    hitboxWindow.PlayerCameraImpactType,
-                    hitboxWindow.ImpactVfxAttackAngle,
+                    attackConfig.PlayerCameraImpactType,
+                    attackConfig.ImpactVfxAttackAngle,
                     hasImpactVfxAttackAngle: true);
 
                 targetPlayerHealth.ReceiveDamage(playerDamageInfo);
@@ -637,6 +730,32 @@ public class PlayerMeleeAttack : MonoBehaviour
         return !(float.IsNaN(value.x) || float.IsNaN(value.y) || float.IsNaN(value.z));
     }
 
+    private void ResolveReferences()
+    {
+        if (playerMovement == null)
+            playerMovement = GetComponent<PlayerMovement>();
+
+        if (movementFovFeedback == null)
+            movementFovFeedback = GetComponent<PlayerMovementFovFeedback>();
+
+        if (playerHealth == null)
+            playerHealth = GetComponent<PlayerHealth>();
+
+        if (photonView == null)
+            photonView = GetComponent<PhotonView>();
+
+        if (audioEmitter == null)
+            audioEmitter = GetComponent<AudioEmitter>();
+
+        ResolveAttackTransforms();
+
+        if (attackAudioAnchor == null)
+            attackAudioAnchor = FindChildTransformByName(AttackAudioAnchorName)
+                ?? attackDirection
+                ?? attackOrigin
+                ?? transform;
+    }
+
     private void ResolveAttackTransforms()
     {
         if (attackOrigin != null && attackDirection != null)
@@ -708,21 +827,50 @@ public class PlayerMeleeAttack : MonoBehaviour
         return null;
     }
 
+    private Transform ResolveAttackAudioAnchor()
+    {
+        if (attackAudioAnchor == null)
+            ResolveReferences();
+
+        return attackAudioAnchor != null ? attackAudioAnchor : transform;
+    }
+
+    private Transform FindChildTransformByName(string childName)
+    {
+        if (string.IsNullOrWhiteSpace(childName))
+            return null;
+
+        Transform[] childTransforms = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < childTransforms.Length; i++)
+        {
+            Transform childTransform = childTransforms[i];
+            if (childTransform != null && string.Equals(childTransform.name, childName, StringComparison.Ordinal))
+                return childTransform;
+        }
+
+        return null;
+    }
+
+    private bool HasLocalAuthority()
+    {
+        return photonView == null || photonView.IsMine;
+    }
+
     private void OnDrawGizmosSelected()
     {
         if (!drawHitboxGizmo)
             return;
 
-        AttackHitboxWindow hitboxWindow = ResolveHitboxWindow(previewComboStep);
-        if (hitboxWindow == null)
+        AttackConfig attackConfig = ResolveAttackConfig(previewComboStep);
+        if (attackConfig == null)
             return;
 
         Vector3 origin = ResolveAttackOrigin();
         Vector3 attackForward = ResolveAttackForward();
 
         Gizmos.color = hitboxGizmoColor;
-        Gizmos.DrawSphere(origin + attackForward * hitboxWindow.TargetDistance, hitboxWindow.HitRadius);
+        Gizmos.DrawSphere(origin + attackForward * attackConfig.TargetDistance, attackConfig.HitRadius);
         Gizmos.color = new Color(hitboxGizmoColor.r, hitboxGizmoColor.g, hitboxGizmoColor.b, 1f);
-        Gizmos.DrawWireSphere(origin + attackForward * hitboxWindow.TargetDistance, hitboxWindow.HitRadius);
+        Gizmos.DrawWireSphere(origin + attackForward * attackConfig.TargetDistance, attackConfig.HitRadius);
     }
 }

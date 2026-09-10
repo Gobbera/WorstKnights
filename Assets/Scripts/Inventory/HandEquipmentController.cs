@@ -105,6 +105,14 @@ public class HandEquipmentController : MonoBehaviour
             || HasActiveEquippedLightSource(HandType.Left);
     }
 
+    public bool HasActiveTorchEquipped(bool requireLit = true)
+    {
+        ResolveReferences();
+
+        return HasActiveTorchEquipped(HandType.Right, requireLit)
+            || HasActiveTorchEquipped(HandType.Left, requireLit);
+    }
+
     private void Awake()
     {
         ResolveReferences();
@@ -494,6 +502,12 @@ public class HandEquipmentController : MonoBehaviour
 
         torchFlame.SetLit(lit);
         return true;
+    }
+
+    private static bool IsTorchFlameLit(WorldPickupItem pickupItem)
+    {
+        TorchFlameController torchFlame = ResolveTorchFlameController(pickupItem);
+        return torchFlame != null && torchFlame.IsLit;
     }
 
     private static void SyncTorchFlameState(WorldPickupItem sourceItem, WorldPickupItem visualItem)
@@ -941,6 +955,27 @@ public class HandEquipmentController : MonoBehaviour
     private bool HasActiveItem(HandType hand)
     {
         return GetItem(hand, GetActiveSlotIndex(hand)) != null;
+    }
+
+    private bool HasActiveTorchEquipped(HandType hand, bool requireLit)
+    {
+        int activeIndex = GetActiveSlotIndex(hand);
+        if (!IsValidSlotIndex(activeIndex))
+            return false;
+
+        ItemDefinition itemDefinition = GetItem(hand, activeIndex);
+        if (!IsTorchItem(itemDefinition))
+            return false;
+
+        if (!requireLit)
+            return true;
+
+        WorldPickupItem pickupSource = GetPickupSources(hand)[activeIndex];
+        if (IsTorchFlameLit(pickupSource))
+            return true;
+
+        WorldPickupItem firstPersonVisual = GetFirstPersonVisuals(hand)[activeIndex];
+        return IsTorchFlameLit(firstPersonVisual);
     }
 
     private bool HasActiveEquippedLightSource(HandType hand)

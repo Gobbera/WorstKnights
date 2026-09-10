@@ -39,11 +39,11 @@ Material:
     m_Ints: []
     m_Floats:
     - _Inner_Rim_Power: 0.4
-    - _Inner_Rim_Smoothness: 0.044
+    - _Inner_Rim_Smoothness: 0
     - _LightSpecCutOff: 0.5
     - _LightSpecCutOffSmoothness: 0.5
-    - _Light_Spec_Cut_Off: 0.138
-    - _Light_Spec_Cut_Off_Smoothness: 0.083
+    - _Light_Spec_Cut_Off: 0.429
+    - _Light_Spec_Cut_Off_Smoothness: 0.216
     - _Outer_Rim_Smoothness: 0.137
     - _QueueControl: 0
     - _QueueOffset: 0

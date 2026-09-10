@@ -30,6 +30,12 @@ public static class ReactionSignalSetupUtility
         return GetPrimaryCollider(targetObject) != null;
     }
 
+    public static bool CanSetupPlayerInteraction(GameObject targetObject)
+    {
+        return targetObject != null
+            && (HasPlayerInteractable(targetObject) || targetObject.GetComponentInChildren<Collider>(true) != null);
+    }
+
     public static void SetupDestructible(GameObject targetObject)
     {
         ExecuteSetup(targetObject, "Setup Reaction Destructible", receiver =>
@@ -99,6 +105,16 @@ public static class ReactionSignalSetupUtility
         });
     }
 
+    public static void SetupPlayerInteraction(GameObject targetObject)
+    {
+        ExecuteSetup(targetObject, "Setup Reaction Player Interaction", receiver =>
+        {
+            EnsureComponent<ReactionSignalEmitter>(targetObject);
+            PlayerInteractionReactionSignalBridge interactionEmitter = EnsureComponent<PlayerInteractionReactionSignalBridge>(targetObject);
+            AddSignalEntryIfMissing(receiver, interactionEmitter.InteractedSignalId);
+        });
+    }
+
     public static List<string> CollectDetectedSignals(GameObject targetObject)
     {
         HashSet<string> signalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -144,6 +160,10 @@ public static class ReactionSignalSetupUtility
             TryAddSignal(signalIds, collisionEmitter.CollisionStaySignalId);
             TryAddSignal(signalIds, collisionEmitter.CollisionExitSignalId);
         }
+
+        PlayerInteractionReactionSignalBridge interactionEmitter = targetObject.GetComponent<PlayerInteractionReactionSignalBridge>();
+        if (interactionEmitter != null)
+            TryAddSignal(signalIds, interactionEmitter.InteractedSignalId);
 
         return new List<string>(signalIds);
     }
@@ -226,6 +246,34 @@ public static class ReactionSignalSetupUtility
     private static Collider GetPrimaryCollider(GameObject targetObject)
     {
         return targetObject != null ? targetObject.GetComponent<Collider>() : null;
+    }
+
+    private static bool HasPlayerInteractable(GameObject targetObject)
+    {
+        if (targetObject == null)
+            return false;
+
+        if (ContainsPlayerInteractable(targetObject.GetComponents<MonoBehaviour>()))
+            return true;
+
+        if (ContainsPlayerInteractable(targetObject.GetComponentsInParent<MonoBehaviour>(true)))
+            return true;
+
+        return ContainsPlayerInteractable(targetObject.GetComponentsInChildren<MonoBehaviour>(true));
+    }
+
+    private static bool ContainsPlayerInteractable(MonoBehaviour[] behaviours)
+    {
+        if (behaviours == null)
+            return false;
+
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is IPlayerInteractable)
+                return true;
+        }
+
+        return false;
     }
 
     private static void TryAddSignal(HashSet<string> signalIds, string signalId)
