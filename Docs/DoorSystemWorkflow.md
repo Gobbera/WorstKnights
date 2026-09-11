@@ -5,7 +5,7 @@
 - `DoorSignalSource`: representa um sinal reutilizavel para alavancas e triggers.
 - `DoorSignalLever`: alavanca interagivel pelo jogador que liga/desliga um `DoorSignalSource`.
 - `DoorSignalTriggerZone`: trigger de cena que ativa/desativa um `DoorSignalSource` quando o jogador local entra ou sai.
-- `DoorReactionSignalBridge`: emite sinais como `Opened`, `Closed`, `Locked` e `Unlocked` para o `ReactionSignalReceiver`.
+- `DoorReactionSignalBridge`: emite sinais como `Squeaking`, `Opened`, `Closed`, `LockedAttempt`, `Locked` e `Unlocked` para o `ReactionSignalReceiver`.
 
 ## Porta simples
 1. Adicione `DoorController` no objeto da porta.
@@ -55,6 +55,7 @@
 
 ## Ajustes uteis
 - `Auto Open On Unlock`: ao destrancar, a porta ja abre.
+- `Interaction Cooldown`: tempo minimo entre interacoes diretas aceitas do jogador nessa porta. Use `0` para desligar o bloqueio.
 - `Close When Signal Turns Off`: fecha quando um sinal de alavanca/trigger desliga.
 - `Relock When Signal Turns Off`: volta a trancar quando o sinal desliga.
 - `Stay Open After First Open`: em portas por `SignalSource`, depois da primeira abertura a porta fica permanentemente aberta e ignora futuros fechamentos.
@@ -66,14 +67,19 @@
 1. Selecione a porta.
 2. Abra `Tools > Reactions > Reaction Signal Setup Tool`.
 3. Use `Setup Door`.
-4. Configure as entries `Opened`, `Closed`, `Locked` e `Unlocked` conforme a necessidade.
+4. Configure as entries `Squeaking`, `Opened`, `Closed`, `LockedAttempt`, `Locked` e `Unlocked` conforme a necessidade.
 
 Importante:
 
-- para som de abrir ou fechar a propria porta, use `Setup Door`
+- `Squeaking` dispara quando a porta comeca a se mover entre aberta e fechada
+- `Opened` dispara no inicio da abertura, mas somente quando a porta estava totalmente fechada
+- `Closed` dispara apenas quando a porta chega totalmente fechada
+- `LockedAttempt` dispara quando o jogador tenta interagir com a porta trancada sem conseguir liberar a trava, como quando falta a chave exigida
+- para som de movimento ou chegada da propria porta, use `Setup Door`
 - `Setup Trigger Volume` e para volumes de entrada/saida, como portais e zonas de ativacao
 
 ## Interacao
 - `E` agora prioriza portas e alavancas na frente do jogador.
+- cada porta pode bloquear spam da tecla `E` com `Interaction Cooldown`; sinais externos, alavancas e chamadas por codigo continuam podendo controlar a porta normalmente
 - Se nao houver nada interagivel, `E` continua funcionando para pickup de itens.
 - A layer da porta/alavanca/trigger precisa estar dentro da mascara do `PlayerPickupInteractor`.

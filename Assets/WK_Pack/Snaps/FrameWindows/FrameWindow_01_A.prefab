@@ -63,6 +63,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e333cf7efe1bed040aab99df06b2ac09, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4156406981461494194}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e333cf7efe1bed040aab99df06b2ac09, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 428351785780571598}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e333cf7efe1bed040aab99df06b2ac09, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 156431604931021729}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e333cf7efe1bed040aab99df06b2ac09, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5226964869325281432}
   m_SourcePrefab: {fileID: 100100000, guid: e333cf7efe1bed040aab99df06b2ac09, type: 3}
 --- !u!1 &3124045955188517982 stripped
 GameObject:
@@ -88,5 +97,57 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 4, y: 4, z: 0.20000036}
+  m_Size: {x: 4, y: 4, z: 0.32}
   m_Center: {x: -2, y: 2, z: 0}
+--- !u!114 &428351785780571598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3124045955188517982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac2e8041795637645942fc6f2345c16e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalReceiver
+  receiverName: Reactions
+  signalEntries:
+  - signalId: Hit
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 6e783884ba1b410408df8b90ae216cfd, type: 2}
+    effectPrefab: {fileID: 3451279753407673077, guid: 21ec746de78787842a80661b40fbf62f, type: 3}
+    effectLifetime: 1
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+--- !u!114 &156431604931021729
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3124045955188517982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae5bb85b21b7a284aa1ce87071e04bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalEmitter
+  signalReceiver: {fileID: 428351785780571598}
+--- !u!114 &5226964869325281432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3124045955188517982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1005e141aac00d1418e15620c18c7915, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ImpactReactionSignalBridge
+  signalEmitter: {fileID: 156431604931021729}
+  signalReceiver: {fileID: 428351785780571598}
+  photonView: {fileID: 0}
+  signalId: Hit
+  broadcastInMultiplayer: 1

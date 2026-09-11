@@ -31,7 +31,7 @@ A bridge escuta uma mecanica concreta e a converte em sinal.
 
 Exemplos:
 
-- `DoorReactionSignalBridge`: converte abrir, fechar, trancar e destrancar em sinais
+- `DoorReactionSignalBridge`: converte movimento, inicio de abertura, fechamento concluido, tentativa trancada, trancar e destrancar em sinais
 - `DestructibleReactionSignalBridge`: converte dano e destruicao em sinais
 - `ImpactReactionSignalBridge`: converte impacto melee em sinal
 - `TriggerVolumeReactionSignalBridge`: converte trigger em sinais
@@ -275,15 +275,17 @@ Os campos internos de referencia sao resolvidos automaticamente e ficam ocultos 
 
 #### Quando usar
 
-Use em objetos que tenham `DoorController` e que precisem reagir quando a porta abre, fecha, trava ou destrava.
+Use em objetos que tenham `DoorController` e que precisem reagir quando a porta se move, comeca a abrir a partir de fechada, termina de fechar, trava ou destrava.
 
 #### O que o setup adiciona
 
 - `ReactionSignalReceiver` se ainda nao existir
 - `ReactionSignalEmitter`
 - `DoorReactionSignalBridge`
+- `Signal Entry` para `Squeaking`
 - `Signal Entry` para `Opened`
 - `Signal Entry` para `Closed`
+- `Signal Entry` para `LockedAttempt`
 - `Signal Entry` para `Locked`
 - `Signal Entry` para `Unlocked`
 
@@ -299,20 +301,26 @@ Use em objetos que tenham `DoorController` e que precisem reagir quando a porta 
 
 `DoorReactionSignalBridge`:
 
-- `Opened Signal Id`: sinal emitido quando a porta abre
-- `Closed Signal Id`: sinal emitido quando a porta fecha
+- `Squeaking Signal Id`: sinal emitido quando a porta comeca um movimento real entre aberta e fechada
+- `Opened Signal Id`: sinal emitido quando a porta comeca a abrir a partir do ponto totalmente fechado
+- `Closed Signal Id`: sinal emitido quando a porta termina de fechar
+- `Locked Attempt Signal Id`: sinal emitido quando o jogador tenta interagir com uma porta trancada sem conseguir liberar a trava
 - `Locked Signal Id`: sinal emitido quando a porta entra em estado trancado
 - `Unlocked Signal Id`: sinal emitido quando a porta sai do estado trancado
 
 Os campos internos de referencia sao resolvidos automaticamente e ficam ocultos no inspector.
 A origem do evento da porta e calculada automaticamente a partir do `MovingPart` da porta, ou do `transform` da raiz como fallback.
 
+`Opened` e `Closed` nao sao simetricos: `Opened` dispara no inicio da abertura, mas somente se a porta estava totalmente fechada; `Closed` dispara quando a porta alcanca o ponto totalmente fechado. Use `Squeaking` para som de rangido durante o movimento de abrir ou fechar.
+
+`LockedAttempt` e feedback de interacao negada. Ele dispara, por exemplo, quando a porta esta em `KeyItem` e o jogador tenta usar a porta sem possuir a chave exigida. Ele tambem respeita o `Interaction Cooldown` da porta para evitar spam de som.
+
 #### Diferenca importante
 
 - `Setup Door` reage ao estado da porta
 - `Setup Trigger Volume` reage a entrada, permanencia ou saida de um volume
 
-Se voce quer som de abrir porta, use `Setup Door`, nao `Setup Trigger Volume`.
+Se voce quer som de movimento ou chegada da porta, use `Setup Door`, nao `Setup Trigger Volume`.
 
 ### Setup Impact
 
@@ -525,7 +533,8 @@ Nesses casos, a reaction tende a acontecer em todos os clientes porque o estado 
 #### Portas
 
 `DoorController` sincroniza mudancas de estado por RPC para todos os clientes.
-Por isso, quando a porta abre, fecha, tranca ou destranca, o `DoorReactionSignalBridge` tende a emitir os sinais em todos os clientes.
+Por isso, quando a porta se move, comeca a abrir a partir de fechada, termina de fechar, tranca ou destranca, o `DoorReactionSignalBridge` tende a emitir os sinais em todos os clientes.
+`LockedAttempt` nasce de uma tentativa local de interacao sem mudanca de estado, entao e emitido no cliente que tentou interagir.
 
 #### Destrutiveis
 
@@ -624,7 +633,7 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 ### DoorReactionSignalBridge
 
 - origem: eventos do `DoorController`
-- sinais comuns: `Opened`, `Closed`, `Locked`, `Unlocked`
+- sinais comuns: `Squeaking`, `Opened`, `Closed`, `LockedAttempt`, `Locked`, `Unlocked`
 
 ### TriggerVolumeReactionSignalBridge
 
@@ -640,6 +649,7 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 
 - origem: interacao do jogador pelo `PlayerPickupInteractor`
 - sinais comuns: `Interacted`, ou um signal de dominio como `Lit` quando usado como proxy de um interactable existente
+- para tochas, use o sinal `Lit` para feedback discreto de acendimento, como `Torch_Woosh`; o loop continuo da chama fica em `TorchFlameController.litLoopAudioCue`, ligado ao estado `IsLit`
 
 ## Regra para novas integracoes
 

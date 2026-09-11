@@ -10,6 +10,7 @@ public class DoorControllerEditor : Editor
     private SerializedProperty movingPartProperty;
     private SerializedProperty photonViewProperty;
     private SerializedProperty prototypeLocalOnlyProperty;
+    private SerializedProperty interactionCooldownProperty;
     private SerializedProperty startupStateProperty;
     private SerializedProperty autoOpenOnUnlockProperty;
     private SerializedProperty closeWhenSignalTurnsOffProperty;
@@ -35,6 +36,7 @@ public class DoorControllerEditor : Editor
         movingPartProperty = serializedObject.FindProperty("movingPart");
         photonViewProperty = serializedObject.FindProperty("photonView");
         prototypeLocalOnlyProperty = serializedObject.FindProperty("prototypeLocalOnly");
+        interactionCooldownProperty = serializedObject.FindProperty("interactionCooldown");
         startupStateProperty = serializedObject.FindProperty("startupState");
         autoOpenOnUnlockProperty = serializedObject.FindProperty("autoOpenOnUnlock");
         closeWhenSignalTurnsOffProperty = serializedObject.FindProperty("closeWhenSignalTurnsOff");
@@ -81,6 +83,7 @@ public class DoorControllerEditor : Editor
         EditorGUILayout.PropertyField(movingPartProperty, new GUIContent("Moving Part"));
         EditorGUILayout.PropertyField(photonViewProperty, new GUIContent("Photon View"));
         EditorGUILayout.PropertyField(prototypeLocalOnlyProperty, new GUIContent("Prototype Local Only"));
+        EditorGUILayout.PropertyField(interactionCooldownProperty, new GUIContent("Interaction Cooldown"));
     }
 
     private void DrawStartupStateSection()

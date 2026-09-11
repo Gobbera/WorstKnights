@@ -66,6 +66,26 @@ public class AudioCue : ScriptableObject
     public float Cooldown => cooldown;
     public bool Is3D => space == AudioSpace.ThreeD;
 
+    public void ConfigureAudioSource(
+        AudioSource audioSource,
+        AudioClip clip,
+        AudioMixerGroup fallbackMixerGroup = null,
+        bool forceLoop = false)
+    {
+        if (audioSource == null)
+            return;
+
+        audioSource.clip = clip;
+        audioSource.loop = forceLoop || loop;
+        audioSource.volume = GetRandomizedVolume();
+        audioSource.pitch = GetRandomizedPitch();
+        audioSource.spatialBlend = Is3D ? spatialBlend : 0f;
+        audioSource.spread = Is3D ? spread : 0f;
+        audioSource.minDistance = minDistance;
+        audioSource.maxDistance = maxDistance;
+        audioSource.outputAudioMixerGroup = mixerGroup != null ? mixerGroup : fallbackMixerGroup;
+    }
+
     public bool HasPlayableClip()
     {
         if (clips == null || clips.Length == 0)

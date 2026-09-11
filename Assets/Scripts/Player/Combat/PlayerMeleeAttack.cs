@@ -3,6 +3,16 @@ using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+public enum PlayerMeleeAttackShape
+{
+    Ball = 0,
+    Arc = 1,
+    Box = 2
+}
 
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(25)]
@@ -13,6 +23,7 @@ public class PlayerMeleeAttack : MonoBehaviour
     private const string HandsCameraName = "Hands Camera";
     private const string AttackAudioAnchorName = "AttackAudioAnchor";
     private const int MaxHitColliders = 16;
+    private const int ArcGizmoSegments = 28;
     private const float MinimumCameraFeedbackTime = 0.0001f;
 
     [Serializable]
@@ -20,12 +31,20 @@ public class PlayerMeleeAttack : MonoBehaviour
     {
         [Header("Combo")]
         [SerializeField] [Range(1, MovementConfig.AttackComboStepCount)] private int comboStep = 1;
+        [SerializeField] private PlayerMeleeAttackShape hitShape = PlayerMeleeAttackShape.Ball;
         [Header("Hitbox")]
         [SerializeField] [Min(0)] private int damageStartFrame;
         [SerializeField] [Min(1f)] private float framesPerSecond = 30f;
         [SerializeField] [Min(0.01f)] private float activeDuration = 0.12f;
         [SerializeField] [Min(0.1f)] private float targetDistance = 1.2f;
         [SerializeField] [Min(0.05f)] private float hitRadius = 1f;
+        [Header("Arc Shape")]
+        [SerializeField] [Min(0.1f)] private float arcRange = 1.6f;
+        [SerializeField] [Range(1f, 180f)] private float arcAngle = 120f;
+        [SerializeField] [Min(0f)] private float arcHalfHeight = 1.2f;
+        [Header("Box Shape")]
+        [SerializeField] [Min(0f)] private float boxCenterDistance = 1.2f;
+        [SerializeField] private Vector3 boxSize = new Vector3(0.8f, 0.8f, 0.8f);
         [Header("Audio")]
         [SerializeField] private AudioCue swingAudioCue;
         [SerializeField] [Min(0f)] private float swingAudioDelay;
@@ -59,13 +78,26 @@ public class PlayerMeleeAttack : MonoBehaviour
             this.activeDuration = activeDuration;
             this.targetDistance = targetDistance;
             this.hitRadius = hitRadius;
+            arcRange = Mathf.Max(0.1f, targetDistance + hitRadius);
+            boxCenterDistance = targetDistance;
+            boxSize = Vector3.one * Mathf.Max(0.1f, hitRadius * 2f);
         }
 
         public int ComboStep => Mathf.Clamp(comboStep, 1, MovementConfig.AttackComboStepCount);
+        public PlayerMeleeAttackShape HitShape => hitShape;
         public float DamageStartDelay => Mathf.Max(0, damageStartFrame) / Mathf.Max(1f, framesPerSecond);
         public float ActiveDuration => Mathf.Max(0.01f, activeDuration);
         public float TargetDistance => Mathf.Max(0.1f, targetDistance);
         public float HitRadius => Mathf.Max(0.05f, hitRadius);
+        public float ArcRange => Mathf.Max(0.1f, arcRange);
+        public float ArcAngle => Mathf.Clamp(arcAngle, 1f, 180f);
+        public float ArcHalfHeight => Mathf.Max(0f, arcHalfHeight);
+        public float BoxCenterDistance => Mathf.Max(0f, boxCenterDistance);
+        public Vector3 BoxSize => new Vector3(
+            Mathf.Max(0.05f, Mathf.Abs(boxSize.x)),
+            Mathf.Max(0.05f, Mathf.Abs(boxSize.y)),
+            Mathf.Max(0.05f, Mathf.Abs(boxSize.z)));
+        public Vector3 BoxHalfExtents => BoxSize * 0.5f;
         public AudioCue SwingAudioCue => swingAudioCue;
         public float SwingAudioDelay => Mathf.Max(0f, swingAudioDelay);
         public float ImpactVfxAttackAngle => Mathf.Abs(impactVfxAttackAngle);
@@ -598,20 +630,15 @@ public class PlayerMeleeAttack : MonoBehaviour
 
         Vector3 origin = ResolveAttackOrigin();
         Vector3 attackForward = ResolveAttackForward();
-
-        Vector3 hitCenter = origin + attackForward * attackConfig.TargetDistance;
-        float hitProbeDistance = Mathf.Max(0.05f, attackConfig.TargetDistance + attackConfig.HitRadius);
-        int hitCount = Physics.OverlapSphereNonAlloc(
-            hitCenter,
-            attackConfig.HitRadius,
-            hitBuffer,
-            DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
-            QueryTriggerInteraction.Ignore);
+        int hitCount = CollectHitCandidates(attackConfig, origin, attackForward);
 
         for (int i = 0; i < hitCount; i++)
         {
             Collider hitCollider = hitBuffer[i];
             if (hitCollider == null)
+                continue;
+
+            if (!IsColliderInsideHitShape(attackConfig, origin, attackForward, hitCollider))
                 continue;
 
             IDamageable damageable = hitCollider.GetComponentInParent<IDamageable>();
@@ -627,7 +654,7 @@ public class PlayerMeleeAttack : MonoBehaviour
             if (!processedTargets.Add(targetComponent))
                 continue;
 
-            Vector3 resolvedHitPoint = ResolveHitPoint(origin, hitCenter, attackForward, hitProbeDistance, hitCollider);
+            Vector3 resolvedHitPoint = ResolveHitPoint(attackConfig, origin, attackForward, hitCollider);
             DamageInfo damageInfo = new DamageInfo(
                 activeAttackDamage,
                 gameObject,
@@ -671,6 +698,88 @@ public class PlayerMeleeAttack : MonoBehaviour
         }
     }
 
+    private int CollectHitCandidates(AttackConfig attackConfig, Vector3 origin, Vector3 attackForward)
+    {
+        switch (attackConfig.HitShape)
+        {
+            case PlayerMeleeAttackShape.Arc:
+                return Physics.OverlapSphereNonAlloc(
+                    origin,
+                    attackConfig.ArcRange,
+                    hitBuffer,
+                    DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
+                    QueryTriggerInteraction.Ignore);
+
+            case PlayerMeleeAttackShape.Box:
+                return Physics.OverlapBoxNonAlloc(
+                    ResolveBoxCenter(attackConfig, origin, attackForward),
+                    attackConfig.BoxHalfExtents,
+                    hitBuffer,
+                    ResolveBoxRotation(attackForward),
+                    DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
+                    QueryTriggerInteraction.Ignore);
+
+            case PlayerMeleeAttackShape.Ball:
+            default:
+                return Physics.OverlapSphereNonAlloc(
+                    ResolveBallCenter(attackConfig, origin, attackForward),
+                    attackConfig.HitRadius,
+                    hitBuffer,
+                    DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
+                    QueryTriggerInteraction.Ignore);
+        }
+    }
+
+    private bool IsColliderInsideHitShape(
+        AttackConfig attackConfig,
+        Vector3 origin,
+        Vector3 attackForward,
+        Collider hitCollider)
+    {
+        if (attackConfig.HitShape != PlayerMeleeAttackShape.Arc)
+            return true;
+
+        Vector3 forward = ResolvePlanarAttackForward(attackForward);
+        Vector3 referencePoint = ResolveArcReferencePoint(attackConfig, origin, forward, hitCollider);
+        if (attackConfig.ArcHalfHeight > 0f
+            && Mathf.Abs(referencePoint.y - origin.y) > attackConfig.ArcHalfHeight)
+        {
+            return false;
+        }
+
+        Vector3 planarOffset = Vector3.ProjectOnPlane(referencePoint - origin, Vector3.up);
+        float minForwardDot = Mathf.Cos(attackConfig.ArcAngle * 0.5f * Mathf.Deg2Rad);
+        return IsInsideForwardArc(planarOffset, forward, attackConfig.ArcRange, minForwardDot);
+    }
+
+    private Vector3 ResolveHitPoint(AttackConfig attackConfig, Vector3 origin, Vector3 attackForward, Collider hitCollider)
+    {
+        switch (attackConfig.HitShape)
+        {
+            case PlayerMeleeAttackShape.Arc:
+                return ResolveForwardArcHitPoint(
+                    attackConfig,
+                    origin,
+                    ResolvePlanarAttackForward(attackForward),
+                    hitCollider);
+
+            case PlayerMeleeAttackShape.Box:
+            {
+                Vector3 boxCenter = ResolveBoxCenter(attackConfig, origin, attackForward);
+                float hitProbeDistance = Mathf.Max(0.05f, attackConfig.BoxCenterDistance + attackConfig.BoxHalfExtents.z);
+                return ResolveHitPoint(origin, boxCenter, attackForward, hitProbeDistance, hitCollider);
+            }
+
+            case PlayerMeleeAttackShape.Ball:
+            default:
+            {
+                Vector3 ballCenter = ResolveBallCenter(attackConfig, origin, attackForward);
+                float hitProbeDistance = Mathf.Max(0.05f, attackConfig.TargetDistance + attackConfig.HitRadius);
+                return ResolveHitPoint(origin, ballCenter, attackForward, hitProbeDistance, hitCollider);
+            }
+        }
+    }
+
     private bool IsSelfTarget(Component targetComponent, PlayerHealth targetPlayerHealth)
     {
         if (targetComponent != null && targetComponent.transform.IsChildOf(transform))
@@ -687,6 +796,89 @@ public class PlayerMeleeAttack : MonoBehaviour
             && targetPhotonView != null
             && photonView.ViewID != 0
             && targetPhotonView.ViewID == photonView.ViewID;
+    }
+
+    private static Vector3 ResolveBallCenter(AttackConfig attackConfig, Vector3 origin, Vector3 attackForward)
+    {
+        return origin + attackForward * attackConfig.TargetDistance;
+    }
+
+    private static Vector3 ResolveBoxCenter(AttackConfig attackConfig, Vector3 origin, Vector3 attackForward)
+    {
+        return origin + attackForward * attackConfig.BoxCenterDistance;
+    }
+
+    private Quaternion ResolveBoxRotation(Vector3 attackForward)
+    {
+        Vector3 forward = attackForward.sqrMagnitude > 0.0001f ? attackForward.normalized : transform.forward;
+        if (forward.sqrMagnitude <= 0.0001f)
+            forward = Vector3.forward;
+
+        Vector3 up = Mathf.Abs(Vector3.Dot(forward, Vector3.up)) > 0.98f
+            ? Vector3.ProjectOnPlane(transform.up, forward)
+            : Vector3.up;
+        if (up.sqrMagnitude <= 0.0001f)
+            up = Vector3.ProjectOnPlane(Vector3.forward, forward);
+        if (up.sqrMagnitude <= 0.0001f)
+            up = Vector3.right;
+
+        return Quaternion.LookRotation(forward.normalized, up.normalized);
+    }
+
+    private Vector3 ResolvePlanarAttackForward(Vector3 attackForward)
+    {
+        Vector3 forward = Vector3.ProjectOnPlane(attackForward, Vector3.up);
+        if (forward.sqrMagnitude > 0.0001f)
+            return forward.normalized;
+
+        forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        if (forward.sqrMagnitude > 0.0001f)
+            return forward.normalized;
+
+        return Vector3.forward;
+    }
+
+    private static Vector3 ResolveArcReferencePoint(
+        AttackConfig attackConfig,
+        Vector3 origin,
+        Vector3 forward,
+        Collider hitCollider)
+    {
+        Vector3 sampleCenter = origin + forward * (attackConfig.ArcRange * 0.5f);
+        if (hitCollider == null)
+            return sampleCenter;
+
+        Vector3 closestPoint = hitCollider.ClosestPoint(sampleCenter);
+        if (IsFiniteVector(closestPoint))
+            return closestPoint;
+
+        return hitCollider.bounds.center;
+    }
+
+    private static bool IsInsideForwardArc(Vector3 planarOffset, Vector3 attackForward, float hitRange, float minForwardDot)
+    {
+        if (planarOffset.sqrMagnitude <= 0.0001f)
+            return true;
+
+        float safeHitRange = Mathf.Max(0.1f, hitRange);
+        if (planarOffset.sqrMagnitude > safeHitRange * safeHitRange)
+            return false;
+
+        return Vector3.Dot(attackForward, planarOffset.normalized) >= minForwardDot;
+    }
+
+    private static Vector3 ResolveForwardArcHitPoint(
+        AttackConfig attackConfig,
+        Vector3 origin,
+        Vector3 attackForward,
+        Collider hitCollider)
+    {
+        if (hitCollider == null)
+            return origin + attackForward * attackConfig.ArcRange;
+
+        Vector3 sampleCenter = origin + attackForward * (attackConfig.ArcRange * 0.5f);
+        Vector3 closestPoint = hitCollider.ClosestPoint(sampleCenter);
+        return IsFiniteVector(closestPoint) ? closestPoint : sampleCenter;
     }
 
     private static Vector3 ResolveHitPoint(
@@ -868,9 +1060,91 @@ public class PlayerMeleeAttack : MonoBehaviour
         Vector3 origin = ResolveAttackOrigin();
         Vector3 attackForward = ResolveAttackForward();
 
+        DrawAttackShapeGizmo(attackConfig, origin, attackForward);
+    }
+
+    private void DrawAttackShapeGizmo(AttackConfig attackConfig, Vector3 origin, Vector3 attackForward)
+    {
+        switch (attackConfig.HitShape)
+        {
+            case PlayerMeleeAttackShape.Arc:
+                DrawForwardArcGizmo(
+                    origin,
+                    ResolvePlanarAttackForward(attackForward),
+                    attackConfig.ArcRange,
+                    attackConfig.ArcAngle,
+                    attackConfig.ArcHalfHeight);
+                break;
+
+            case PlayerMeleeAttackShape.Box:
+                DrawBoxGizmo(
+                    ResolveBoxCenter(attackConfig, origin, attackForward),
+                    ResolveBoxRotation(attackForward),
+                    attackConfig.BoxSize);
+                break;
+
+            case PlayerMeleeAttackShape.Ball:
+            default:
+                DrawBallGizmo(
+                    ResolveBallCenter(attackConfig, origin, attackForward),
+                    attackConfig.HitRadius);
+                break;
+        }
+    }
+
+    private void DrawBallGizmo(Vector3 center, float radius)
+    {
         Gizmos.color = hitboxGizmoColor;
-        Gizmos.DrawSphere(origin + attackForward * attackConfig.TargetDistance, attackConfig.HitRadius);
+        Gizmos.DrawSphere(center, radius);
         Gizmos.color = new Color(hitboxGizmoColor.r, hitboxGizmoColor.g, hitboxGizmoColor.b, 1f);
-        Gizmos.DrawWireSphere(origin + attackForward * attackConfig.TargetDistance, attackConfig.HitRadius);
+        Gizmos.DrawWireSphere(center, radius);
+    }
+
+    private void DrawBoxGizmo(Vector3 center, Quaternion rotation, Vector3 size)
+    {
+        Matrix4x4 previousMatrix = Gizmos.matrix;
+        Gizmos.matrix = Matrix4x4.TRS(center, rotation, Vector3.one);
+        Gizmos.color = hitboxGizmoColor;
+        Gizmos.DrawCube(Vector3.zero, size);
+        Gizmos.color = new Color(hitboxGizmoColor.r, hitboxGizmoColor.g, hitboxGizmoColor.b, 1f);
+        Gizmos.DrawWireCube(Vector3.zero, size);
+        Gizmos.matrix = previousMatrix;
+    }
+
+    private void DrawForwardArcGizmo(Vector3 origin, Vector3 forward, float range, float angle, float halfHeight)
+    {
+        float safeRange = Mathf.Max(0.1f, range);
+        float safeAngle = Mathf.Clamp(angle, 1f, 180f);
+        float halfAngle = safeAngle * 0.5f;
+        Vector3 leftDirection = Quaternion.AngleAxis(-halfAngle, Vector3.up) * forward;
+        Vector3 rightDirection = Quaternion.AngleAxis(halfAngle, Vector3.up) * forward;
+
+#if UNITY_EDITOR
+        Handles.color = hitboxGizmoColor;
+        Handles.DrawSolidArc(origin, Vector3.up, leftDirection, safeAngle, safeRange);
+        Handles.color = new Color(hitboxGizmoColor.r, hitboxGizmoColor.g, hitboxGizmoColor.b, 1f);
+        Handles.DrawWireArc(origin, Vector3.up, leftDirection, safeAngle, safeRange);
+#endif
+
+        Gizmos.color = new Color(hitboxGizmoColor.r, hitboxGizmoColor.g, hitboxGizmoColor.b, 1f);
+        Gizmos.DrawLine(origin, origin + leftDirection * safeRange);
+        Gizmos.DrawLine(origin, origin + rightDirection * safeRange);
+        Gizmos.DrawLine(origin, origin + forward * safeRange);
+
+        Vector3 previousPoint = origin + leftDirection * safeRange;
+        for (int i = 1; i <= ArcGizmoSegments; i++)
+        {
+            float t = i / (float)ArcGizmoSegments;
+            Vector3 direction = Quaternion.AngleAxis(Mathf.Lerp(-halfAngle, halfAngle, t), Vector3.up) * forward;
+            Vector3 currentPoint = origin + direction * safeRange;
+            Gizmos.DrawLine(previousPoint, currentPoint);
+            previousPoint = currentPoint;
+        }
+
+        if (halfHeight <= 0f)
+            return;
+
+        Vector3 verticalOffset = Vector3.up * halfHeight;
+        Gizmos.DrawLine(origin - verticalOffset, origin + verticalOffset);
     }
 }

@@ -89,6 +89,24 @@ audioEmitter.PlayAttached(meuCue, algumAnchor);
 audioEmitter.StopLoopingCue();
 ```
 
+## Loops de tocha
+
+Tochas usam o `AudioCue` como perfil de som, mas o loop continuo fica preso ao estado da chama no `TorchFlameController`. O projeto ja tem um cue inicial em `Assets/SFX/Audiocue's/Burning_Torch.asset`.
+
+Configure assim:
+
+1. Crie um `AudioCue` para a chama acesa.
+2. Preencha `clips` com o loop de fogo.
+3. Configure como `ThreeD`, ajuste `minDistance`, `maxDistance`, volume, pitch e mixer.
+4. No `TorchFlameController`, arraste esse asset para `Lit Loop Audio Cue`.
+5. Deixe `Auto Create Lit Loop Audio Source` ligado, ou atribua um `AudioSource` dedicado em `Lit Loop Audio Source`.
+
+O `TorchFlameController` toca esse loop somente quando esta `IsLit` e para quando apaga, quando o objeto desabilita, ou quando a apresentacao equipada fica escondida.
+
+Para wall torch, configure o `Lit Loop Audio Cue` no `TorchFlameController` do prefab `Wall_Torch`; o `WallTorchStateController` continua responsavel por sincronizar o estado e chamar `SetLit`.
+
+Para tocha de mao, configure o mesmo campo no prefab `Assets/Prefabs/Items/Torch.prefab`; as copias FPS/TP herdam a configuracao, e `SetPresentationVisible` evita que uma copia escondida continue tocando som.
+
 ## Exemplo simples
 
 ```csharp

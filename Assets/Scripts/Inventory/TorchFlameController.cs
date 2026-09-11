@@ -38,6 +38,13 @@ public sealed class TorchFlameController : MonoBehaviour
     [SerializeField] [Range(0f, 1f)] private float sputterIntensityMultiplier = 0.08f;
     [SerializeField] private bool hideFlameDuringSputter = true;
 
+    [Header("Audio")]
+    [SerializeField] private AudioCue litLoopAudioCue;
+    [SerializeField] private AudioSource litLoopAudioSource;
+    [SerializeField] private Transform litLoopAudioAnchor;
+    [SerializeField] private bool autoCreateLitLoopAudioSource = true;
+    [SerializeField] private bool stopLitLoopWhenPresentationHidden = true;
+
     private bool isLit;
     private bool presentationVisible = true;
     private bool initialized;
@@ -52,6 +59,8 @@ public sealed class TorchFlameController : MonoBehaviour
     private bool particlesActive;
     private bool sputtering;
     private float sputterEndTime;
+    private AudioCue activeLitLoopAudioCue;
+    private AudioCue missingClipWarningCue;
 
     public bool IsLit
     {
@@ -89,6 +98,11 @@ public sealed class TorchFlameController : MonoBehaviour
     {
         EnsureInitialized();
         ApplyState();
+    }
+
+    private void OnDisable()
+    {
+        StopLitLoopAudio();
     }
 
     private void Update()
@@ -161,6 +175,112 @@ public sealed class TorchFlameController : MonoBehaviour
             particleSystems = flameRoot.GetComponentsInChildren<ParticleSystem>(true);
         else
             particleSystems = GetComponentsInChildren<ParticleSystem>(true);
+
+        ResolveLitLoopAudioReferences(createIfMissing: false);
+    }
+
+    private void ResolveLitLoopAudioReferences(bool createIfMissing)
+    {
+        if (litLoopAudioAnchor == null)
+            litLoopAudioAnchor = ResolveDefaultLitLoopAudioAnchor();
+
+        if (litLoopAudioSource == null)
+        {
+            Transform audioHost = litLoopAudioAnchor != null ? litLoopAudioAnchor : transform;
+            litLoopAudioSource = audioHost.GetComponent<AudioSource>();
+
+            if (litLoopAudioSource == null && createIfMissing && autoCreateLitLoopAudioSource)
+            {
+                litLoopAudioSource = audioHost.gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        PrepareLitLoopAudioSource();
+    }
+
+    private Transform ResolveDefaultLitLoopAudioAnchor()
+    {
+        if (flameLight != null)
+            return flameLight.transform;
+
+        if (flameRoot != null)
+            return flameRoot.transform;
+
+        return transform;
+    }
+
+    private void PrepareLitLoopAudioSource()
+    {
+        if (litLoopAudioSource == null)
+            return;
+
+        litLoopAudioSource.playOnAwake = false;
+        litLoopAudioSource.loop = true;
+        litLoopAudioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        litLoopAudioSource.dopplerLevel = 0f;
+    }
+
+    private void SyncLitLoopAudio()
+    {
+        if (!ShouldPlayLitLoopAudio())
+        {
+            StopLitLoopAudio();
+            return;
+        }
+
+        if (!litLoopAudioCue.HasPlayableClip())
+        {
+            WarnMissingLitLoopClip();
+            StopLitLoopAudio();
+            return;
+        }
+
+        ResolveLitLoopAudioReferences(createIfMissing: true);
+        if (litLoopAudioSource == null)
+            return;
+
+        if (litLoopAudioSource.isPlaying && activeLitLoopAudioCue == litLoopAudioCue)
+            return;
+
+        AudioClip clip = litLoopAudioCue.GetRandomClip();
+        if (clip == null)
+        {
+            WarnMissingLitLoopClip();
+            StopLitLoopAudio();
+            return;
+        }
+
+        litLoopAudioSource.Stop();
+        litLoopAudioCue.ConfigureAudioSource(litLoopAudioSource, clip, forceLoop: true);
+        PrepareLitLoopAudioSource();
+        litLoopAudioSource.Play();
+        activeLitLoopAudioCue = litLoopAudioCue;
+    }
+
+    private bool ShouldPlayLitLoopAudio()
+    {
+        return Application.isPlaying
+            && isActiveAndEnabled
+            && isLit
+            && litLoopAudioCue != null
+            && (!stopLitLoopWhenPresentationHidden || presentationVisible);
+    }
+
+    private void StopLitLoopAudio()
+    {
+        if (litLoopAudioSource != null && litLoopAudioSource.isPlaying)
+            litLoopAudioSource.Stop();
+
+        activeLitLoopAudioCue = null;
+    }
+
+    private void WarnMissingLitLoopClip()
+    {
+        if (missingClipWarningCue == litLoopAudioCue)
+            return;
+
+        missingClipWarningCue = litLoopAudioCue;
+        Debug.LogWarning($"[TorchFlameController] '{gameObject.name}' tem Lit Loop Audio Cue sem AudioClip valido.", this);
     }
 
     private void ApplyState()
@@ -178,6 +298,8 @@ public sealed class TorchFlameController : MonoBehaviour
 
         if (!lightActive)
             ApplyLightValues(0f, baseRange, baseColor, resetPosition: true);
+
+        SyncLitLoopAudio();
     }
 
     private void PullBaseLightValuesFromLight()

@@ -258,15 +258,7 @@ public class GameAudioService : MonoBehaviour
 
         AudioSource audioSource = voice.Source;
         audioSource.Stop();
-        audioSource.clip = clip;
-        audioSource.loop = cue.Loop;
-        audioSource.volume = cue.GetRandomizedVolume();
-        audioSource.pitch = cue.GetRandomizedPitch();
-        audioSource.spatialBlend = cue.Is3D ? cue.SpatialBlend : 0f;
-        audioSource.spread = cue.Is3D ? cue.Spread : 0f;
-        audioSource.minDistance = cue.MinDistance;
-        audioSource.maxDistance = cue.MaxDistance;
-        audioSource.outputAudioMixerGroup = ResolveMixerGroup(cue);
+        cue.ConfigureAudioSource(audioSource, clip, ResolveMixerGroup(cue));
 
         if (cue.Is3D && cue.Anchor == AudioPlaybackAnchor.FollowTransform && followTarget != null)
             voice.FollowTarget.SetTarget(followTarget);

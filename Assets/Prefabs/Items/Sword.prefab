@@ -62,59 +62,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 633854447230150576}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &3366343608888062212
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8246395308816314782}
-  - component: {fileID: 8647959311827502610}
-  m_Layer: 0
-  m_Name: DropCollision
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8246395308816314782
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3366343608888062212}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.0024312735, y: 0.00050747395, z: -0.000000029802322}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 633854447230150576}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &8647959311827502610
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3366343608888062212}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.07712817, y: 1.0664647, z: 0.31054688}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &4028396572854170130
 GameObject:
   m_ObjectHideFlags: 0
@@ -127,6 +74,10 @@ GameObject:
   - component: {fileID: 1712722791654391419}
   - component: {fileID: 1957267593433637024}
   - component: {fileID: 6507421317713916814}
+  - component: {fileID: 8211033233629302061}
+  - component: {fileID: 7014019411817586477}
+  - component: {fileID: 4860545721033579551}
+  - component: {fileID: 1034609494136353517}
   m_Layer: 0
   m_Name: Sword
   m_TagString: Untagged
@@ -149,7 +100,6 @@ Transform:
   m_Children:
   - {fileID: 4437330379825756573}
   - {fileID: 3304105155123711384}
-  - {fileID: 8246395308816314782}
   - {fileID: 7849651066528308823}
   - {fileID: 901270100000000002}
   - {fileID: 4105705401218564104}
@@ -226,6 +176,84 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 2
+--- !u!65 &8211033233629302061
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4028396572854170130}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.07712817, y: 1.0664647, z: 0.31054688}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &7014019411817586477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4028396572854170130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8441a309f7200944886f37da5942fe21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollisionReactionSignalBridge
+  signalEmitter: {fileID: 1034609494136353517}
+  targetMode: 0
+  collisionEnterSignalId: Impact
+  collisionStaySignalId: 
+  collisionExitSignalId: 
+  minimumRelativeSpeed: 0.25
+  stayEmitInterval: 0.25
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 1915
+--- !u!114 &4860545721033579551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4028396572854170130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac2e8041795637645942fc6f2345c16e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalReceiver
+  receiverName: Reactions
+  signalEntries:
+  - signalId: Impact
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: eb3c0990c7d177342b4a7880d947b669, type: 2}
+    effectPrefab: {fileID: 3451279753407673077, guid: 21ec746de78787842a80661b40fbf62f, type: 3}
+    effectLifetime: 5
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+--- !u!114 &1034609494136353517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4028396572854170130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae5bb85b21b7a284aa1ce87071e04bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalEmitter
+  signalReceiver: {fileID: 4860545721033579551}
 --- !u!1 &5639419186954443948
 GameObject:
   m_ObjectHideFlags: 0

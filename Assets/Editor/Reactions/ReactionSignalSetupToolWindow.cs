@@ -75,7 +75,7 @@ public class ReactionSignalSetupToolWindow : EditorWindow
 
         DrawSetupButton(
             "Setup Door",
-            "Adiciona ReactionSignalEmitter e DoorReactionSignalBridge, com os sinais Opened, Closed, Locked e Unlocked.",
+            "Adiciona ReactionSignalEmitter e DoorReactionSignalBridge, com os sinais Squeaking, Opened, Closed, LockedAttempt, Locked e Unlocked.",
             ReactionSignalSetupUtility.CanSetupDoor(targetObject),
             () => ReactionSignalSetupUtility.SetupDoor(targetObject));
 

@@ -53,8 +53,10 @@ public static class ReactionSignalSetupUtility
         {
             EnsureComponent<ReactionSignalEmitter>(targetObject);
             EnsureComponent<DoorReactionSignalBridge>(targetObject);
+            AddSignalEntryIfMissing(receiver, "Squeaking");
             AddSignalEntryIfMissing(receiver, "Opened");
             AddSignalEntryIfMissing(receiver, "Closed");
+            AddSignalEntryIfMissing(receiver, "LockedAttempt");
             AddSignalEntryIfMissing(receiver, "Locked");
             AddSignalEntryIfMissing(receiver, "Unlocked");
         });
@@ -139,8 +141,10 @@ public static class ReactionSignalSetupUtility
         DoorReactionSignalBridge doorBridge = targetObject.GetComponent<DoorReactionSignalBridge>();
         if (doorBridge != null)
         {
+            TryAddSignal(signalIds, doorBridge.SqueakingSignalId);
             TryAddSignal(signalIds, doorBridge.OpenedSignalId);
             TryAddSignal(signalIds, doorBridge.ClosedSignalId);
+            TryAddSignal(signalIds, doorBridge.LockedAttemptSignalId);
             TryAddSignal(signalIds, doorBridge.LockedSignalId);
             TryAddSignal(signalIds, doorBridge.UnlockedSignalId);
         }

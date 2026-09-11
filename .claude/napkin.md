@@ -98,32 +98,32 @@
 1. **[2026-08-17] Melee VFX context must survive each reaction bridge**
    Do instead: when adding per-attack VFX parameters, pass `ReactionSignalContext` through both `ImpactReactionSignalBridge` and destructible damage flows; for impact feedback, keep `ImpactReactionSignalBridge` on the same GameObject as `PhotonView` so its lightweight RPC can replay the cosmetic signal on other clients.
 
-2. **[2026-08-20] Ground-aware VFX Graph collision should be bound from runtime raycasts**
+2. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
+   Do instead: configure continuous fire audio through `TorchFlameController.litLoopAudioCue`; keep `Lit` reaction audio for one-shot ignition like `Torch_Woosh`, and let `SetLit`/`SetPresentationVisible` start or stop the loop for wall and hand torches.
+
+3. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
+   Do instead: drive jump, land, attack, pickup, emote, torch-lit loops, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
+
+4. **[2026-08-20] Ground-aware VFX Graph collision should be bound from runtime raycasts**
    Do instead: for blood/splatter VFX that use `Collision Shape`, expose ground center/normal/size parameters in the VFX Graph and drive them with `VisualEffectGroundCollisionBinder` instead of hardcoding a world-space box at `y=0`.
 
-3. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
+5. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
    Do instead: keep `Use Native Vivox Positional Audio` off when native `JoinPositionalChannelAsync` causes `5100/1001`; join a 2D `-sim3d` Vivox channel, map `VivoxParticipant.PlayerId` through Photon `kwkVivoxPlayerId`, and drive per-participant local volume/mute from Photon player distance.
 
-4. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
+6. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
    Do instead: when testing builds, expect profiles like `kwk-player-xxxxxxxx`; only pass `--ugs-profile=<name>` for deliberate persistent identity, and never reuse the same manual profile in two simultaneous clients.
 
-5. **[2026-07-08] Vivox channel drops must suspend 3D publishing and reconnect with backoff**
+7. **[2026-07-08] Vivox channel drops must suspend 3D publishing and reconnect with backoff**
    Do instead: treat `ChannelJoined` as the safe point for `Set3DPosition`, publish around `0.3s`, and on `ChannelLeft` or connection recovery stop 3D updates immediately and retry with backoff so server disconnect `5100` does not cascade into stale-session `1001` loops.
 
-6. **[2026-07-08] Same-machine standalone Vivox clients need distinct Authentication profiles**
+8. **[2026-07-08] Same-machine standalone Vivox clients need distinct Authentication profiles**
    Do instead: build once and launch each standalone instance with a unique `--ugs-profile=<name>` argument; otherwise both instances reuse the same cached anonymous identity while Editor + build appear healthy because their defaults already differ.
 
-7. **[2026-07-07] Vivox positional voice must publish the owner-local camera pose at a limited rate**
+9. **[2026-07-07] Vivox positional voice must publish the owner-local camera pose at a limited rate**
    Do instead: join a positional channel with shared `Channel3DProperties`, resolve the owning `PlayerSetup`/`FP_Camera`, and call `Set3DPosition` about 2-4 times per second rather than every frame.
 
-8. **[2026-07-07] Vivox package installation does not populate service credentials**
+10. **[2026-07-07] Vivox package installation does not populate service credentials**
    Do instead: complete Vivox Dashboard onboarding, open `Project Settings > Services > Vivox` to pull Server/Domain/Issuer, validate before Play/build, and rebuild players made before credentials were saved.
-
-9. **[2026-07-07] Photon rooms remain authoritative when integrating Vivox**
-   Do instead: mirror the active Photon room into a deterministic Vivox channel and use Unity Authentication only for Vivox identity; do not introduce Unity Lobby or Multiplayer Services as a second room authority.
-
-10. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
-   Do instead: drive jump, land, attack, pickup, emote, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
 
 ## Inventory & Equipment
 1. **[2026-08-17] Sword trail no longer uses the legacy attack-trail stack**
@@ -217,7 +217,7 @@
    Do instead: tune enemy AI with a larger serialized attack-start radius and keep damage tied to weapon/contact hit windows, so backing out of exact melee range cannot force endless chase loops.
 
 4. **[2026-08-05] Player melee attack tuning lives per combo step**
-   Do instead: tune `PlayerMeleeAttack.attackConfigs` on `Assets/Resources/Player.prefab` for each combo step's hit timing, hitbox shape, swing audio/delay, impact VFX angle, and camera feedback instead of changing one global attack value.
+   Do instead: tune `PlayerMeleeAttack.attackConfigs` on `Assets/Resources/Player.prefab`; each combo step chooses `Ball`, `Arc`, or `Box` hit shape and owns timing, swing audio/delay, impact VFX angle, and camera feedback instead of changing one global attack value.
 
 5. **[2026-05-21] Enemy death cleanup must be scheduled on every client, not only on the authority object**
    Do instead: when an enemy can die under Photon, schedule destruction through an `RPC` to all clients and also destroy on replicated death application, otherwise remote clients can keep a dead corpse in scene.

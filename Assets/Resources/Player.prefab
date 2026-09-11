@@ -291,8 +291,8 @@ MonoBehaviour:
   maxStrongKnockbackImpactImpulse: 12
   maxStrongKnockbackImpactUpward: 2.5
   enableHighFallRagdoll: 1
-  minFallHeightForRagdoll: 6
-  minFallDownSpeedForRagdoll: 10
+  minFallHeightForRagdoll: 12
+  minFallDownSpeedForRagdoll: 8
   highFallRecoverAfterGroundedSeconds: 1.5
   highFallBaseImpactImpulse: 1
   highFallDistanceImpulseMultiplier: 0.8
@@ -313,20 +313,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerRagdollController
   enableImpactRagdoll: 1
-  enableWallImpactRagdoll: 1
+  enableWallImpactRagdoll: 0
   enablePlayerCollisionImpactRagdoll: 1
   enableDynamicBodyImpactRagdoll: 1
   impactCollisionMask:
     serializedVersion: 2
-    m_Bits: 1915
-  minWallImpactSpeed: 5.2
+    m_Bits: 1907
+  minWallImpactSpeed: 5
   minPlayerCollisionSelfSpeed: 4.8
   minPlayerCollisionRelativeSpeed: 7.5
   minDynamicBodyImpactSpeed: 5
   minDynamicBodyMass: 2
   impactToImpulseMultiplier: 1.1
   maxImpactImpulse: 14
-  impactAutoRecoverAfterGroundedSeconds: 1.25
+  impactAutoRecoverAfterGroundedSeconds: 2
   logImpactRagdoll: 0
   ragdollRoot: {fileID: 5164466171579573174}
   ragdollAnimator: {fileID: 2805368766037670630}
@@ -424,7 +424,7 @@ MonoBehaviour:
   handEquipmentController: {fileID: 3184000000000000204}
   lightAnchor: {fileID: 5298891682522162122}
   assistLight: {fileID: 0}
-  assistEnabled: 0
+  assistEnabled: 1
   disableWhenEquippedLightSource: 1
   applyInspectorChangesInPlayMode: 1
   lightAnchorName: FP_Camera
@@ -742,13 +742,19 @@ MonoBehaviour:
   attackDamage: 25
   attackConfigs:
   - comboStep: 1
+    hitShape: 0
     damageStartFrame: 20
     framesPerSecond: 30
     activeDuration: 0.14
     targetDistance: 1.5
     hitRadius: 0.18
-    swingAudioCue: {fileID: 0}
-    swingAudioDelay: 0
+    arcRange: 1.68
+    arcAngle: 120
+    arcHalfHeight: 1.2
+    boxCenterDistance: 1.5
+    boxSize: {x: 0.36, y: 0.36, z: 0.36}
+    swingAudioCue: {fileID: 11400000, guid: a12c40bdeb4dcab48b2b49087247172e, type: 2}
+    swingAudioDelay: 0.6
     impactVfxAttackAngle: 145
     playerCameraImpactType: 1
     applyCameraFeedback: 1
@@ -759,13 +765,19 @@ MonoBehaviour:
     attackFovRelaxTime: 0.4
     attackCameraRotation: {x: -2, y: 2, z: 2}
   - comboStep: 2
+    hitShape: 0
     damageStartFrame: 18
     framesPerSecond: 30
     activeDuration: 0.14
     targetDistance: 1.5
     hitRadius: 0.18
-    swingAudioCue: {fileID: 0}
-    swingAudioDelay: 0
+    arcRange: 1.68
+    arcAngle: 120
+    arcHalfHeight: 1.2
+    boxCenterDistance: 1.5
+    boxSize: {x: 0.36, y: 0.36, z: 0.36}
+    swingAudioCue: {fileID: 11400000, guid: a12c40bdeb4dcab48b2b49087247172e, type: 2}
+    swingAudioDelay: 0.6
     impactVfxAttackAngle: 90
     playerCameraImpactType: 1
     applyCameraFeedback: 1
@@ -776,13 +788,19 @@ MonoBehaviour:
     attackFovRelaxTime: 0.4
     attackCameraRotation: {x: 0, y: -5, z: -1}
   - comboStep: 3
+    hitShape: 0
     damageStartFrame: 18
     framesPerSecond: 30
     activeDuration: 0.18
     targetDistance: 1.5
     hitRadius: 0.18
-    swingAudioCue: {fileID: 0}
-    swingAudioDelay: 0
+    arcRange: 1.68
+    arcAngle: 120
+    arcHalfHeight: 1.2
+    boxCenterDistance: 1.5
+    boxSize: {x: 0.36, y: 0.36, z: 0.36}
+    swingAudioCue: {fileID: 11400000, guid: a12c40bdeb4dcab48b2b49087247172e, type: 2}
+    swingAudioDelay: 0.6
     impactVfxAttackAngle: 180
     playerCameraImpactType: 1
     applyCameraFeedback: 1

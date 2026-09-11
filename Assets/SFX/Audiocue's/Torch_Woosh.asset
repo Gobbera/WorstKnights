@@ -17,8 +17,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: bad8e05df4374d647a6c56b1b1c72358, type: 3}
   mixerGroup: {fileID: 0}
   space: 1
-  replication: 0
-  anchor: 0
+  replication: 2
+  anchor: 1
   loop: 0
   baseVolume: 1
   randomVolumeRange: {x: 1, y: 1}

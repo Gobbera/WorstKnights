@@ -22,6 +22,16 @@
 - `PlayerMovement` owns combo state, accepted attack sequence, replicated combo step, queue timing, stamina, and movement slow.
 - `MovementConfig` exposes attack combo timing fields for the three animation steps.
 - `MovementAnimationController` plays `Attack_1`, `Attack_2`, or `Attack_3` on the existing `Upper Body Attack` layer from the replicated combo step.
-- `PlayerMeleeAttack` owns `Attack Configs` per combo step, applying hit behavior and scheduling per-attack swing audio once per accepted attack sequence.
+- `PlayerMeleeAttack` owns `Attack Configs` per combo step, applying hit behavior, drawing the selected hit shape preview, and scheduling per-attack swing audio once per accepted attack sequence.
 - Photon sync now sends the combo step immediately after `AttackAnimationSequence`; all multiplayer clients should use the updated build together.
 - `Upper Body Attack` fades its layer weight back to locomotion after the attack state returns to `Empty`, keeping the end of the combo smooth.
+
+## Attack Configs
+
+Each combo step can choose a `Hit Shape`:
+
+- `Ball`: current sphere behavior, using `Center Distance` and `Radius`.
+- `Arc`: forward horizontal arc, using `Range`, `Angle`, and `Half Height`; `Half Height = 0` disables the vertical limit.
+- `Box`: oriented box in the attack direction, using `Center Distance` and `Size`.
+
+The custom inspector drawer only shows the parameters for the selected shape, plus the shared timing, audio, impact VFX, and camera feedback fields.

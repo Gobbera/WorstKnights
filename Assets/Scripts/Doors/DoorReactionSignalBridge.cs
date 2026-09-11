@@ -8,15 +8,19 @@ public class DoorReactionSignalBridge : MonoBehaviour
     [HideInInspector] [SerializeField] private ReactionSignalEmitter signalEmitter;
     [HideInInspector] [SerializeField] private ReactionSignalReceiver signalReceiver;
     [Header("Signals")]
+    [SerializeField] private string squeakingSignalId = "Squeaking";
     [SerializeField] private string openedSignalId = "Opened";
     [SerializeField] private string closedSignalId = "Closed";
+    [SerializeField] private string lockedAttemptSignalId = "LockedAttempt";
     [SerializeField] private string lockedSignalId = "Locked";
     [SerializeField] private string unlockedSignalId = "Unlocked";
 
     private bool subscribed;
 
+    public string SqueakingSignalId => squeakingSignalId;
     public string OpenedSignalId => openedSignalId;
     public string ClosedSignalId => closedSignalId;
+    public string LockedAttemptSignalId => lockedAttemptSignalId;
     public string LockedSignalId => lockedSignalId;
     public string UnlockedSignalId => unlockedSignalId;
 
@@ -40,6 +44,11 @@ public class DoorReactionSignalBridge : MonoBehaviour
         Unsubscribe();
     }
 
+    private void HandleSqueaking(DoorController source)
+    {
+        EmitSignal(squeakingSignalId, source);
+    }
+
     private void HandleOpened(DoorController source)
     {
         EmitSignal(openedSignalId, source);
@@ -48,6 +57,11 @@ public class DoorReactionSignalBridge : MonoBehaviour
     private void HandleClosed(DoorController source)
     {
         EmitSignal(closedSignalId, source);
+    }
+
+    private void HandleLockedInteractionFailed(DoorController source)
+    {
+        EmitSignal(lockedAttemptSignalId, source);
     }
 
     private void HandleLocked(DoorController source)
@@ -65,8 +79,10 @@ public class DoorReactionSignalBridge : MonoBehaviour
         if (subscribed || door == null)
             return;
 
+        door.Squeaking += HandleSqueaking;
         door.Opened += HandleOpened;
         door.Closed += HandleClosed;
+        door.LockedInteractionFailed += HandleLockedInteractionFailed;
         door.Locked += HandleLocked;
         door.Unlocked += HandleUnlocked;
         subscribed = true;
@@ -77,8 +93,10 @@ public class DoorReactionSignalBridge : MonoBehaviour
         if (!subscribed || door == null)
             return;
 
+        door.Squeaking -= HandleSqueaking;
         door.Opened -= HandleOpened;
         door.Closed -= HandleClosed;
+        door.LockedInteractionFailed -= HandleLockedInteractionFailed;
         door.Locked -= HandleLocked;
         door.Unlocked -= HandleUnlocked;
         subscribed = false;

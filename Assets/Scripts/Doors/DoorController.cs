@@ -9,6 +9,7 @@ using UnityEngine;
 public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
 {
     private const string RoomPropertyKeyPrefix = "door:";
+    private const float MotionEndpointEpsilon = 0.0001f;
 
     public enum DoorStartupState
     {
@@ -44,6 +45,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
     [SerializeField] private new PhotonView photonView;
     [SerializeField] [HideInInspector] private string networkSceneId = string.Empty;
     [SerializeField] private bool prototypeLocalOnly;
+    [SerializeField] [Min(0f)] private float interactionCooldown = 0.35f;
     [Header("Startup State")]
     [SerializeField] private DoorStartupState startupState = DoorStartupState.StartsOpen;
     [SerializeField] private bool autoOpenOnUnlock = true;
@@ -82,15 +84,21 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
     private bool destroyExecuted;
     private bool signalPermanentOpenLatched;
     private float destroyExecuteTime = float.NegativeInfinity;
+    private float nextAllowedInteractionTime = float.NegativeInfinity;
 
     public int InteractionPriority => 100;
     public string DisplayName => string.IsNullOrWhiteSpace(doorName) ? gameObject.name : doorName;
     public Transform MovingPart => movingPart;
     public bool IsOpen => isOpen;
     public bool IsLocked => isLocked;
+    public bool IsMoving => motionMode != DoorMotionMode.Destroy
+        && movingPart != null
+        && Mathf.Abs(openProgress - (isOpen ? 1f : 0f)) > MotionEndpointEpsilon;
     public bool SupportsPasscodeEntry => UsesLockConfiguration && lockMode == DoorLockMode.Passcode;
+    public event Action<DoorController> Squeaking;
     public event Action<DoorController> Opened;
     public event Action<DoorController> Closed;
+    public event Action<DoorController> LockedInteractionFailed;
     public event Action<DoorController> Locked;
     public event Action<DoorController> Unlocked;
 
@@ -109,6 +117,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
 
     private void OnValidate()
     {
+        interactionCooldown = Mathf.Max(0f, interactionCooldown);
         ResolveReferences();
     }
 
@@ -152,6 +161,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
 
     public bool TryInteract(PlayerPickupInteractor interactor)
     {
+        if (IsInteractionCooldownActive())
+            return false;
+
         ResolveReferences();
 
         if (UsesLockConfiguration && lockMode == DoorLockMode.SignalSource)
@@ -160,10 +172,16 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
         if (HasLatchedPermanentSignalOpenState)
             return true;
 
+        bool interacted;
         if (isLocked)
-            return TryHandleLockedInteraction(interactor);
+            interacted = TryHandleLockedInteraction(interactor);
+        else
+            interacted = RequestSetDoorState(!isOpen, isLocked, interactor);
 
-        return RequestSetDoorState(!isOpen, isLocked, interactor);
+        if (interacted)
+            ArmInteractionCooldown();
+
+        return interacted;
     }
 
     public bool TrySubmitPasscode(string submittedPasscode, PlayerPickupInteractor interactor = null)
@@ -184,7 +202,11 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
             return false;
         }
 
-        return RequestSetDoorState(autoOpenOnUnlock, false, interactor);
+        bool changedState = RequestSetDoorState(autoOpenOnUnlock, false, interactor);
+        if (changedState)
+            ArmInteractionCooldown();
+
+        return changedState;
     }
 
     public bool RequestOpen()
@@ -223,6 +245,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
                 return true;
             case DoorLockMode.SignalSource:
                 Debug.Log($"[DoorController] '{DisplayName}' permanece trancada aguardando o sinal correto.");
+                NotifyLockedInteractionFailed();
                 return false;
             default:
                 return false;
@@ -234,6 +257,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
         if (requiredKeyItem == null)
         {
             Debug.LogWarning($"[DoorController] '{DisplayName}' esta trancada por chave, mas nenhuma chave foi configurada.", gameObject);
+            NotifyLockedInteractionFailed();
             return false;
         }
 
@@ -241,6 +265,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
         if (equipmentController == null || !equipmentController.HasItem(requiredKeyItem))
         {
             Debug.Log($"[DoorController] '{DisplayName}' requer a chave '{requiredKeyItem.ItemName}'.");
+            NotifyLockedInteractionFailed();
             return false;
         }
 
@@ -299,6 +324,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
 
         bool wasOpen = isOpen;
         bool wasLocked = isLocked;
+        bool wasFullyClosed = IsDoorFullyClosed();
         isOpen = targetOpen;
         isLocked = targetLocked;
 
@@ -321,7 +347,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
             }
         }
 
-        NotifyStateChanged(wasOpen, wasLocked);
+        NotifyDoorStateChanged(wasOpen, wasLocked, wasFullyClosed);
         return true;
     }
 
@@ -470,21 +496,29 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
             return;
 
         float targetProgress = isOpen ? 1f : 0f;
-        if (Mathf.Abs(openProgress - targetProgress) <= 0.0001f)
+        if (Mathf.Abs(openProgress - targetProgress) <= MotionEndpointEpsilon)
         {
             openProgress = targetProgress;
             return;
         }
 
-        if (moveDuration <= 0.0001f)
+        if (moveDuration <= MotionEndpointEpsilon)
         {
             ApplyDoorPoseInstant(targetProgress);
+            NotifyDoorReachedEndpoint(isOpen);
             return;
         }
 
+        float previousProgress = openProgress;
         openProgress = Mathf.MoveTowards(openProgress, targetProgress, Time.deltaTime / moveDuration);
         float evaluatedProgress = moveCurve != null ? moveCurve.Evaluate(openProgress) : openProgress;
         ApplyDoorPose(evaluatedProgress);
+
+        if (Mathf.Abs(previousProgress - targetProgress) > MotionEndpointEpsilon
+            && Mathf.Abs(openProgress - targetProgress) <= MotionEndpointEpsilon)
+        {
+            NotifyDoorReachedEndpoint(isOpen);
+        }
     }
 
     private void ApplyDoorPoseInstant(float targetProgress)
@@ -703,18 +737,74 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
         }
     }
 
-    private void NotifyStateChanged(bool wasOpen, bool wasLocked)
+    private void NotifyDoorStateChanged(bool wasOpen, bool wasLocked, bool wasFullyClosed)
     {
         if (wasLocked && !isLocked)
             Unlocked?.Invoke(this);
 
-        if (!wasOpen && isOpen)
-            Opened?.Invoke(this);
-        else if (wasOpen && !isOpen)
-            Closed?.Invoke(this);
+        if (wasOpen != isOpen)
+        {
+            if (isOpen && wasFullyClosed)
+                Opened?.Invoke(this);
+
+            if (motionMode == DoorMotionMode.Destroy || movingPart == null)
+            {
+                if (!isOpen)
+                    NotifyDoorReachedEndpoint(isOpen);
+            }
+            else
+            {
+                NotifyDoorStartedMoving();
+            }
+        }
 
         if (!wasLocked && isLocked)
             Locked?.Invoke(this);
+    }
+
+    private void NotifyDoorStartedMoving()
+    {
+        if (motionMode == DoorMotionMode.Destroy || movingPart == null)
+            return;
+
+        float targetProgress = isOpen ? 1f : 0f;
+        if (Mathf.Abs(openProgress - targetProgress) <= MotionEndpointEpsilon)
+            return;
+
+        if (moveDuration <= MotionEndpointEpsilon)
+            return;
+
+        Squeaking?.Invoke(this);
+    }
+
+    private void NotifyDoorReachedEndpoint(bool reachedOpen)
+    {
+        if (!reachedOpen)
+            Closed?.Invoke(this);
+    }
+
+    private bool IsDoorFullyClosed()
+    {
+        return Mathf.Abs(openProgress) <= MotionEndpointEpsilon;
+    }
+
+    private void NotifyLockedInteractionFailed()
+    {
+        LockedInteractionFailed?.Invoke(this);
+        ArmInteractionCooldown();
+    }
+
+    private bool IsInteractionCooldownActive()
+    {
+        return interactionCooldown > 0f && Time.time < nextAllowedInteractionTime;
+    }
+
+    private void ArmInteractionCooldown()
+    {
+        if (interactionCooldown <= 0f || !Application.isPlaying)
+            return;
+
+        nextAllowedInteractionTime = Mathf.Max(nextAllowedInteractionTime, Time.time + interactionCooldown);
     }
 
     private bool ShouldUsePhotonViewSync()

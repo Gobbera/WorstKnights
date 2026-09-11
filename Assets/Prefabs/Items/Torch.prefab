@@ -228,6 +228,11 @@ MonoBehaviour:
   sputterDuration: {x: 0.06, y: 0.18}
   sputterIntensityMultiplier: 0.08
   hideFlameDuringSputter: 1
+  litLoopAudioCue: {fileID: 11400000, guid: d5a8f4d0a9ee4fd8aefbf4c26d17a912, type: 2}
+  litLoopAudioSource: {fileID: 0}
+  litLoopAudioAnchor: {fileID: 8723694259016037029}
+  autoCreateLitLoopAudioSource: 1
+  stopLitLoopWhenPresentationHidden: 1
 --- !u!1 &1742636261155844161
 GameObject:
   m_ObjectHideFlags: 0

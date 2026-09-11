@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 2957384248752800403}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1, y: 1, z: 0.08}
+  m_LocalPosition: {x: -1, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -79,6 +79,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 2351b26f406fa8a4baa874f34a48b5d1, type: 2}
+    - target: {fileID: -7511558181221131132, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: a2c70d50cd9073d4997177555f969036, type: 2}
     - target: {fileID: 919132149155446097, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
       propertyPath: m_Name
       value: Door_01
@@ -133,16 +141,17 @@ MonoBehaviour:
   photonView: {fileID: 0}
   networkSceneId: 'Map 2:Door[9]'
   prototypeLocalOnly: 0
-  startupState: 0
+  interactionCooldown: 1
+  startupState: 2
   autoOpenOnUnlock: 1
   closeWhenSignalTurnsOff: 1
   relockWhenSignalTurnsOff: 1
   motionMode: 0
   rotatePivot: {fileID: 9160900573352107792}
-  openAwayFromInteractor: 0
+  openAwayFromInteractor: 1
   openLocalEulerAngles: {x: 0, y: -90, z: 0}
   openLocalPositionOffset: {x: 0, y: 0, z: 0}
-  moveDuration: 0.45
+  moveDuration: 1.5
   destroyDelay: 0
   moveCurve:
     serializedVersion: 2
@@ -150,8 +159,8 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0
       value: 0
-      inSlope: 2
-      outSlope: 2
+      inSlope: 0
+      outSlope: 0
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
@@ -159,8 +168,8 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 0
-      outSlope: 0
+      inSlope: 2
+      outSlope: 2
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
@@ -168,7 +177,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  lockMode: 3
+  lockMode: 1
   requiredKeyItem: {fileID: 0}
   requiredPasscode: 1234
   requiredSignals:
@@ -189,15 +198,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalReceiver
   receiverName: Reactions
   signalEntries:
+  - signalId: Squeaking
+    feedbackOrigin: {fileID: 9160900573352107792}
+    audioCue: {fileID: 11400000, guid: 7b1c11d8e008d084bba15236398e4b8f, type: 2}
+    effectPrefab: {fileID: 0}
+    effectLifetime: 5
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
   - signalId: Opened
     feedbackOrigin: {fileID: 0}
-    audioCue: {fileID: 11400000, guid: ceb6517111d86484aaca898ba076d4f2, type: 2}
+    audioCue: {fileID: 11400000, guid: 98e0d828776bef64f891c41fc9134ef5, type: 2}
     effectPrefab: {fileID: 0}
     effectLifetime: 5
     onSignalReceived:
       m_PersistentCalls:
         m_Calls: []
   - signalId: Closed
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 0a90c672cec0375418879ad936bc1d45, type: 2}
+    effectPrefab: {fileID: 0}
+    effectLifetime: 5
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+  - signalId: LockedAttempt
     feedbackOrigin: {fileID: 0}
     audioCue: {fileID: 0}
     effectPrefab: {fileID: 0}
@@ -207,7 +232,7 @@ MonoBehaviour:
         m_Calls: []
   - signalId: Locked
     feedbackOrigin: {fileID: 0}
-    audioCue: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 92913da8f2f553e45865a42191bad2ae, type: 2}
     effectPrefab: {fileID: 0}
     effectLifetime: 5
     onSignalReceived:
@@ -215,7 +240,7 @@ MonoBehaviour:
         m_Calls: []
   - signalId: Unlocked
     feedbackOrigin: {fileID: 0}
-    audioCue: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 4b0cbe0dff776bf48998cdd3b5d87bd4, type: 2}
     effectPrefab: {fileID: 0}
     effectLifetime: 5
     onSignalReceived:
@@ -249,8 +274,10 @@ MonoBehaviour:
   door: {fileID: 0}
   signalEmitter: {fileID: 0}
   signalReceiver: {fileID: 0}
+  squeakingSignalId: Squeaking
   openedSignalId: Opened
   closedSignalId: Closed
+  lockedAttemptSignalId: LockedAttempt
   lockedSignalId: Locked
   unlockedSignalId: Unlocked
 --- !u!64 &2059240867401289586
