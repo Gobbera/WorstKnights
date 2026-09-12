@@ -2,7 +2,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [AddComponentMenu("World/Reactions/Player Interaction Reaction Signal Bridge")]
-public sealed class PlayerInteractionReactionSignalBridge : MonoBehaviour, IPlayerInteractable
+public sealed class PlayerInteractionReactionSignalBridge : MonoBehaviour, IPlayerInteractable, IPlayerInteractionPromptProvider, IPlayerInteractionPromptPlacementProvider, IPlayerHeldItemInteractionProvider
 {
     [Header("Interaction")]
     [SerializeField] private int interactionPriority = 500;
@@ -10,6 +10,7 @@ public sealed class PlayerInteractionReactionSignalBridge : MonoBehaviour, IPlay
     [SerializeField] private MonoBehaviour targetInteractable;
     [SerializeField] private bool requireSuccessfulTargetInteraction = true;
     [SerializeField] private bool emitWithoutTargetInteractable = true;
+    [SerializeField] private string interactionPrompt;
     [Header("Target")]
     [HideInInspector] [SerializeField] private ReactionSignalEmitter signalEmitter;
     [HideInInspector] [SerializeField] private ReactionSignalReceiver signalReceiver;
@@ -59,6 +60,71 @@ public sealed class PlayerInteractionReactionSignalBridge : MonoBehaviour, IPlay
 
         bool emitted = EmitSignal(interactor);
         return emitted || (usedTargetInteractable && targetHandledInteraction);
+    }
+
+    public bool TryGetInteractionPrompt(PlayerInteractionPromptContext context, out string promptTemplate)
+    {
+        promptTemplate = string.Empty;
+        ResolveReferences(resolveTargetInteractable: true);
+
+        IPlayerInteractable target = null;
+        bool hasTarget = forwardToTargetInteractable && TryResolveTargetInteractable(out target);
+        if (hasTarget && target is IPlayerInteractionPromptProvider promptProvider)
+            return promptProvider.TryGetInteractionPrompt(context, out promptTemplate);
+
+        if (hasTarget || emitWithoutTargetInteractable || !forwardToTargetInteractable)
+        {
+            promptTemplate = interactionPrompt;
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool TryGetInteractionPromptPlacement(PlayerInteractionPromptContext context, out PlayerInteractionPromptPlacement placement)
+    {
+        placement = default;
+        ResolveReferences(resolveTargetInteractable: true);
+
+        if (!forwardToTargetInteractable || !TryResolveTargetInteractable(out IPlayerInteractable target))
+            return false;
+
+        if (target is not IPlayerInteractionPromptPlacementProvider placementProvider)
+            return false;
+
+        return placementProvider.TryGetInteractionPromptPlacement(context, out placement);
+    }
+
+    public bool TryGetHeldItemInteractionPrompt(PlayerHeldItemInteractionContext context, out string promptTemplate)
+    {
+        promptTemplate = string.Empty;
+        ResolveReferences(resolveTargetInteractable: true);
+
+        if (!forwardToTargetInteractable || !TryResolveTargetInteractable(out IPlayerInteractable target))
+            return false;
+
+        if (target is not IPlayerHeldItemInteractionProvider heldItemProvider)
+            return false;
+
+        return heldItemProvider.TryGetHeldItemInteractionPrompt(context, out promptTemplate);
+    }
+
+    public bool TryInteractWithHeldItem(PlayerHeldItemInteractionContext context)
+    {
+        ResolveReferences(resolveTargetInteractable: true);
+
+        if (!forwardToTargetInteractable || !TryResolveTargetInteractable(out IPlayerInteractable target))
+            return false;
+
+        if (target is not IPlayerHeldItemInteractionProvider heldItemProvider)
+            return false;
+
+        bool targetHandledInteraction = heldItemProvider.TryInteractWithHeldItem(context);
+        if (!targetHandledInteraction)
+            return false;
+
+        bool emitted = EmitSignal(context.Interactor);
+        return emitted || targetHandledInteraction;
     }
 
     private bool EmitSignal(PlayerPickupInteractor interactor)

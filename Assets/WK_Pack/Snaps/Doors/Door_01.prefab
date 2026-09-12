@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1961323056602412995
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7332785130655100356}
+  m_Layer: 0
+  m_Name: Prompt_Pivot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7332785130655100356
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1961323056602412995}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.777, y: 0.79, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1284160626870180310}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2957384248752800403
 GameObject:
   m_ObjectHideFlags: 0
@@ -97,6 +128,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9160900573352107792}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7332785130655100356}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
       insertIndex: -1
@@ -142,6 +176,12 @@ MonoBehaviour:
   networkSceneId: 'Map 2:Door[9]'
   prototypeLocalOnly: 0
   interactionCooldown: 1
+  openInteractionPrompt: Press [{key}] to open the door
+  closeInteractionPrompt: Press [{key}] to close the door
+  unlockInteractionPrompt: Press [{key}] to unlock the door
+  passcodeInteractionPrompt: Press [{key}] to enter the passcode
+  interactionPromptPivot: {fileID: 7332785130655100356}
+  interactionPromptLocalOffset: {x: 0, y: 0, z: 0}
   startupState: 2
   autoOpenOnUnlock: 1
   closeWhenSignalTurnsOff: 1
@@ -166,19 +206,28 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 2
-      outSlope: 2
+      time: 0.2745224
+      value: -0.012751245
+      inSlope: 0.034317266
+      outSlope: 0.034317266
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.17142841
+      outWeight: 0.16518311
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 3.9729893
+      outSlope: 3.9729893
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.06265062
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
   lockMode: 1
-  requiredKeyItem: {fileID: 0}
+  requiredKeyItem: {fileID: 11400000, guid: f68aec20e5ec13f41b6b787a5d1cad2b, type: 2}
   requiredPasscode: 1234
   requiredSignals:
   - {fileID: 0}
@@ -224,7 +273,7 @@ MonoBehaviour:
         m_Calls: []
   - signalId: LockedAttempt
     feedbackOrigin: {fileID: 0}
-    audioCue: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 3a00f4718d6c3c1468d5985d419cbc68, type: 2}
     effectPrefab: {fileID: 0}
     effectLifetime: 5
     onSignalReceived:

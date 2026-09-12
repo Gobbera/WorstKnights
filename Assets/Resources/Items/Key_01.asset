@@ -16,7 +16,7 @@ MonoBehaviour:
   uiSprite: {fileID: 21300000, guid: c8ebc6d8b12e84d4caa1126412bbdeca, type: 3}
   handRequirement: 2
   preferredHand: 1
-  useType: 2
+  useType: 6
   healAmount: 0
   baseDamage: 0
   consumeOnUse: 1

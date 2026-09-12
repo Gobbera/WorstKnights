@@ -11,6 +11,12 @@ public class DoorControllerEditor : Editor
     private SerializedProperty photonViewProperty;
     private SerializedProperty prototypeLocalOnlyProperty;
     private SerializedProperty interactionCooldownProperty;
+    private SerializedProperty openInteractionPromptProperty;
+    private SerializedProperty closeInteractionPromptProperty;
+    private SerializedProperty unlockInteractionPromptProperty;
+    private SerializedProperty passcodeInteractionPromptProperty;
+    private SerializedProperty interactionPromptPivotProperty;
+    private SerializedProperty interactionPromptLocalOffsetProperty;
     private SerializedProperty startupStateProperty;
     private SerializedProperty autoOpenOnUnlockProperty;
     private SerializedProperty closeWhenSignalTurnsOffProperty;
@@ -37,6 +43,12 @@ public class DoorControllerEditor : Editor
         photonViewProperty = serializedObject.FindProperty("photonView");
         prototypeLocalOnlyProperty = serializedObject.FindProperty("prototypeLocalOnly");
         interactionCooldownProperty = serializedObject.FindProperty("interactionCooldown");
+        openInteractionPromptProperty = serializedObject.FindProperty("openInteractionPrompt");
+        closeInteractionPromptProperty = serializedObject.FindProperty("closeInteractionPrompt");
+        unlockInteractionPromptProperty = serializedObject.FindProperty("unlockInteractionPrompt");
+        passcodeInteractionPromptProperty = serializedObject.FindProperty("passcodeInteractionPrompt");
+        interactionPromptPivotProperty = serializedObject.FindProperty("interactionPromptPivot");
+        interactionPromptLocalOffsetProperty = serializedObject.FindProperty("interactionPromptLocalOffset");
         startupStateProperty = serializedObject.FindProperty("startupState");
         autoOpenOnUnlockProperty = serializedObject.FindProperty("autoOpenOnUnlock");
         closeWhenSignalTurnsOffProperty = serializedObject.FindProperty("closeWhenSignalTurnsOff");
@@ -84,6 +96,15 @@ public class DoorControllerEditor : Editor
         EditorGUILayout.PropertyField(photonViewProperty, new GUIContent("Photon View"));
         EditorGUILayout.PropertyField(prototypeLocalOnlyProperty, new GUIContent("Prototype Local Only"));
         EditorGUILayout.PropertyField(interactionCooldownProperty, new GUIContent("Interaction Cooldown"));
+        EditorGUILayout.PropertyField(openInteractionPromptProperty, new GUIContent("Open Prompt"));
+        EditorGUILayout.PropertyField(closeInteractionPromptProperty, new GUIContent("Close Prompt"));
+        EditorGUILayout.PropertyField(unlockInteractionPromptProperty, new GUIContent("Unlock Prompt"));
+        EditorGUILayout.PropertyField(passcodeInteractionPromptProperty, new GUIContent("Passcode Prompt"));
+        EditorGUILayout.PropertyField(interactionPromptPivotProperty, new GUIContent("Prompt Pivot"));
+        EditorGUILayout.PropertyField(interactionPromptLocalOffsetProperty, new GUIContent("Prompt Local Offset"));
+        EditorGUILayout.HelpBox(
+            "Use {key} para inserir automaticamente a tecla correta. Se Prompt Pivot estiver preenchido, o texto aparece no mundo nesse ponto para o jogador local que esta mirando no objeto; se estiver vazio, usa o prompt abaixo da mira.",
+            MessageType.None);
     }
 
     private void DrawStartupStateSection()

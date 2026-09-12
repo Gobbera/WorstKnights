@@ -1,7 +1,9 @@
 using System;
+using TMPro;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PhotonView))]
@@ -12,6 +14,9 @@ public class PlayerPickupInteractor : MonoBehaviour
     private const string PasscodeFieldControlName = "DoorPasscodeField";
     private const float PasscodePanelWidth = 320f;
     private const float PasscodePanelHeight = 140f;
+    private const string InteractionPromptObjectName = "InteractionPrompt";
+    private const string WorldInteractionPromptObjectName = "WorldInteractionPrompt";
+    private static readonly string[] PreferredCanvasRootNames = { "Gameplay Canvas", "Canvas", "Inventory", "Invetory" };
 
     [FormerlySerializedAs("pickupKey")]
     [SerializeField] private KeyCode interactKey = KeyCode.E;
@@ -27,6 +32,17 @@ public class PlayerPickupInteractor : MonoBehaviour
     [SerializeField] [Min(0.5f)] private float outlineDistance = 3f;
     [SerializeField] [Min(0f)] private float outlineRayRadius;
     [SerializeField] private LayerMask outlineMask = Physics.DefaultRaycastLayers;
+    [Header("Interaction Prompt")]
+    [SerializeField] private bool showInteractionPrompt = true;
+    [SerializeField] private Vector2 interactionPromptOffset = new Vector2(0f, -72f);
+    [SerializeField] [Min(120f)] private float interactionPromptWidth = 640f;
+    [SerializeField] [Min(20f)] private float interactionPromptHeight = 44f;
+    [SerializeField] [Min(8f)] private float interactionPromptFontSize = 22f;
+    [SerializeField] private Color interactionPromptColor = new Color(0.92f, 0.94f, 0.96f, 0.96f);
+    [SerializeField] private bool showPickupPrompt = true;
+    [SerializeField] private string pickupPrompt = "[{key}]";
+    [SerializeField] private Color pickupPromptColor = new Color(0.92f, 0.94f, 0.96f, 0.62f);
+    [SerializeField] private bool preferObjectPromptAnchors = true;
 
     private readonly RaycastHit[] sphereCastHits = new RaycastHit[MaxHits];
     private readonly RaycastHit[] outlineHits = new RaycastHit[MaxHits];
@@ -36,6 +52,12 @@ public class PlayerPickupInteractor : MonoBehaviour
     private WorldPickupItem highlightedPickup;
     private Outline highlightedOutline;
     private bool highlightedOutlineWasEnabled;
+    private Canvas interactionPromptCanvas;
+    private CanvasGroup interactionPromptCanvasGroup;
+    private TextMeshProUGUI interactionPromptText;
+    private CanvasGroup worldInteractionPromptCanvasGroup;
+    private RectTransform worldInteractionPromptRect;
+    private TextMeshProUGUI worldInteractionPromptText;
 
     public HandEquipmentController HandEquipmentController
     {
@@ -47,6 +69,8 @@ public class PlayerPickupInteractor : MonoBehaviour
     }
 
     public bool IsInteractionUiOpen => activePasscodeDoor != null;
+    public KeyCode InteractKey => interactKey;
+    public string InteractKeyText => GetKeyDisplayName(interactKey);
 
     private void Awake()
     {
@@ -58,12 +82,14 @@ public class PlayerPickupInteractor : MonoBehaviour
         if (!HasLocalAuthority())
         {
             ClearPickupOutline();
+            SetInteractionPromptVisible(false);
             return;
         }
 
         if (activePasscodeDoor != null)
         {
             ClearPickupOutline();
+            SetInteractionPromptVisible(false);
 
             if (!activePasscodeDoor.isActiveAndEnabled || !activePasscodeDoor.IsLocked)
                 CancelPasscodeEntry();
@@ -72,6 +98,7 @@ public class PlayerPickupInteractor : MonoBehaviour
         }
 
         UpdatePickupOutline();
+        UpdateInteractionPrompt();
 
         if (Input.GetKeyDown(interactKey))
             TryInteract();
@@ -80,6 +107,7 @@ public class PlayerPickupInteractor : MonoBehaviour
     private void OnDisable()
     {
         ClearPickupOutline();
+        SetInteractionPromptVisible(false);
     }
 
     private void OnGUI()
@@ -144,6 +172,21 @@ public class PlayerPickupInteractor : MonoBehaviour
         return TryPickupItemFromHits(hitCount);
     }
 
+    public bool TryInteractWithHeldItem(HandType hand, ItemDefinition itemDefinition, KeyCode actionKey)
+    {
+        if (itemDefinition == null || actionKey == KeyCode.None)
+            return false;
+
+        if (!TryResolveInteractionCamera(logWarning: false))
+            return false;
+
+        int hitCount = PerformInteractionCast();
+        if (!TryFindBestInteractable(hitCount, out IPlayerInteractable interactable))
+            return false;
+
+        return TryExecuteHeldItemInteraction(interactable, hand, itemDefinition, actionKey);
+    }
+
     public bool TryPickupItem()
     {
         if (!TryResolveInteractionCamera())
@@ -180,14 +223,16 @@ public class PlayerPickupInteractor : MonoBehaviour
             CancelPasscodeEntry();
     }
 
-    private bool TryResolveInteractionCamera()
+    private bool TryResolveInteractionCamera(bool logWarning = true)
     {
         ResolveReferences();
 
         if (interactionCamera != null)
             return true;
 
-        Debug.LogWarning("[PlayerPickupInteractor] Nenhuma camera local foi encontrada para interacao.", gameObject);
+        if (logWarning)
+            Debug.LogWarning("[PlayerPickupInteractor] Nenhuma camera local foi encontrada para interacao.", gameObject);
+
         return false;
     }
 
@@ -215,7 +260,26 @@ public class PlayerPickupInteractor : MonoBehaviour
             return false;
         }
 
-        WorldPickupItem bestPickup = null;
+        if (!TryFindBestPickup(hitCount, out WorldPickupItem bestPickup))
+        {
+            Debug.Log("[PlayerPickupInteractor] Nenhum item coletavel encontrado na frente do jogador.");
+            return false;
+        }
+
+        bool wasHighlightedPickup = bestPickup == highlightedPickup;
+        if (wasHighlightedPickup)
+            ClearPickupOutline(forceDisable: true);
+
+        bool equipped = handEquipmentController.TryEquipWorldItem(bestPickup);
+        if (!equipped && wasHighlightedPickup)
+            UpdatePickupOutline();
+
+        return equipped;
+    }
+
+    private bool TryFindBestPickup(int hitCount, out WorldPickupItem bestPickup)
+    {
+        bestPickup = null;
         float bestDistance = float.MaxValue;
 
         for (int i = 0; i < hitCount; i++)
@@ -231,28 +295,517 @@ public class PlayerPickupInteractor : MonoBehaviour
             if (pickupItem == null || !pickupItem.gameObject.activeInHierarchy)
                 continue;
 
-            if (hit.distance < bestDistance)
-            {
-                bestDistance = hit.distance;
-                bestPickup = pickupItem;
-            }
+            if (hit.distance >= bestDistance)
+                continue;
+
+            bestDistance = hit.distance;
+            bestPickup = pickupItem;
         }
 
-        if (bestPickup == null)
+        return bestPickup != null;
+    }
+
+    private void UpdateInteractionPrompt()
+    {
+        if (!showInteractionPrompt || activePasscodeDoor != null)
         {
-            Debug.Log("[PlayerPickupInteractor] Nenhum item coletavel encontrado na frente do jogador.");
+            SetInteractionPromptVisible(false);
+            return;
+        }
+
+        if (!TryResolveInteractionCamera(logWarning: false))
+        {
+            SetInteractionPromptVisible(false);
+            return;
+        }
+
+        int hitCount = PerformInteractionCast();
+        if (TryFindBestInteractable(hitCount, out IPlayerInteractable interactable)
+            && TryResolveInteractionPrompt(interactable, out string promptText))
+        {
+            if (TryResolveInteractionPromptPlacement(interactable, out PlayerInteractionPromptPlacement placement))
+                SetWorldInteractionPrompt(promptText, placement);
+            else
+                SetInteractionPrompt(promptText);
+
+            return;
+        }
+
+        if (showPickupPrompt && TryFindBestPickup(hitCount, out _))
+        {
+            SetPickupInteractionPrompt();
+            return;
+        }
+
+        SetInteractionPromptVisible(false);
+    }
+
+    private bool TryResolveInteractionPrompt(IPlayerInteractable interactable, out string promptText)
+    {
+        promptText = string.Empty;
+        if (interactable == null)
+            return false;
+
+        if (TryResolveHeldItemInteractionPrompt(interactable, out promptText))
+            return true;
+
+        string promptTemplate = PlayerInteractionPrompt.DefaultTemplate;
+        if (interactable is IPlayerInteractionPromptProvider promptProvider)
+        {
+            PlayerInteractionPromptContext context = new PlayerInteractionPromptContext(this, interactKey, InteractKeyText);
+            if (!promptProvider.TryGetInteractionPrompt(context, out promptTemplate))
+                return false;
+        }
+
+        promptText = PlayerInteractionPrompt.Format(promptTemplate, InteractKeyText);
+        return !string.IsNullOrWhiteSpace(promptText);
+    }
+
+    private bool TryResolveInteractionPromptPlacement(
+        IPlayerInteractable interactable,
+        out PlayerInteractionPromptPlacement placement)
+    {
+        placement = default;
+        if (!preferObjectPromptAnchors || interactable is not IPlayerInteractionPromptPlacementProvider placementProvider)
+            return false;
+
+        PlayerInteractionPromptContext context = new PlayerInteractionPromptContext(this, interactKey, InteractKeyText);
+        return placementProvider.TryGetInteractionPromptPlacement(context, out placement)
+            && placement.HasAnchor;
+    }
+
+    private bool TryResolveHeldItemInteractionPrompt(IPlayerInteractable interactable, out string promptText)
+    {
+        promptText = string.Empty;
+        if (interactable is not IPlayerHeldItemInteractionProvider heldItemProvider)
+            return false;
+
+        ResolveReferences();
+        if (handEquipmentController == null)
+            return false;
+
+        if (TryResolveHeldItemInteractionPrompt(heldItemProvider, HandType.Right, out promptText))
+            return true;
+
+        return TryResolveHeldItemInteractionPrompt(heldItemProvider, HandType.Left, out promptText);
+    }
+
+    private bool TryResolveHeldItemInteractionPrompt(
+        IPlayerHeldItemInteractionProvider heldItemProvider,
+        HandType hand,
+        out string promptText)
+    {
+        promptText = string.Empty;
+        if (heldItemProvider == null || handEquipmentController == null)
+            return false;
+
+        int activeIndex = handEquipmentController.GetActiveSlotIndex(hand);
+        ItemDefinition itemDefinition = handEquipmentController.GetItem(hand, activeIndex);
+        if (itemDefinition == null)
+            return false;
+
+        KeyCode actionKey = handEquipmentController.GetUseKey(hand);
+        if (actionKey == KeyCode.None)
+            return false;
+
+        PlayerHeldItemInteractionContext context = CreateHeldItemInteractionContext(hand, itemDefinition, actionKey);
+        if (!heldItemProvider.TryGetHeldItemInteractionPrompt(context, out string promptTemplate))
+            return false;
+
+        promptText = PlayerInteractionPrompt.Format(promptTemplate, context.ActionKeyText);
+        return !string.IsNullOrWhiteSpace(promptText);
+    }
+
+    private bool TryExecuteHeldItemInteraction(
+        IPlayerInteractable interactable,
+        HandType hand,
+        ItemDefinition itemDefinition,
+        KeyCode actionKey)
+    {
+        if (interactable is not IPlayerHeldItemInteractionProvider heldItemProvider)
+            return false;
+
+        PlayerHeldItemInteractionContext context = CreateHeldItemInteractionContext(hand, itemDefinition, actionKey);
+        return heldItemProvider.TryInteractWithHeldItem(context);
+    }
+
+    private PlayerHeldItemInteractionContext CreateHeldItemInteractionContext(
+        HandType hand,
+        ItemDefinition itemDefinition,
+        KeyCode actionKey)
+    {
+        ResolveReferences();
+        string actionKeyText = GetKeyDisplayName(actionKey);
+        return new PlayerHeldItemInteractionContext(
+            this,
+            handEquipmentController,
+            hand,
+            itemDefinition,
+            actionKey,
+            actionKeyText);
+    }
+
+    private void SetInteractionPrompt(string promptText)
+    {
+        SetScreenInteractionPrompt(promptText, interactionPromptColor);
+    }
+
+    private void SetPickupInteractionPrompt()
+    {
+        string promptTemplate = string.IsNullOrWhiteSpace(pickupPrompt)
+            ? "[{key}]"
+            : pickupPrompt;
+        string promptText = PlayerInteractionPrompt.Format(promptTemplate, InteractKeyText);
+        SetScreenInteractionPrompt(promptText, pickupPromptColor);
+    }
+
+    private void SetScreenInteractionPrompt(string promptText, Color promptColor)
+    {
+        SetWorldInteractionPromptVisible(false);
+        EnsureInteractionPromptUi();
+        if (interactionPromptText == null || interactionPromptCanvasGroup == null)
+            return;
+
+        ConfigureInteractionPromptRect();
+        interactionPromptText.text = promptText;
+        interactionPromptText.color = promptColor;
+        interactionPromptText.fontSize = interactionPromptFontSize;
+        SetScreenInteractionPromptVisible(true);
+    }
+
+    private void SetWorldInteractionPrompt(string promptText, PlayerInteractionPromptPlacement placement)
+    {
+        SetScreenInteractionPromptVisible(false);
+        EnsureWorldInteractionPromptUi();
+        if (worldInteractionPromptText == null
+            || worldInteractionPromptCanvasGroup == null
+            || worldInteractionPromptRect == null)
+        {
+            return;
+        }
+
+        if (!UpdateWorldInteractionPromptTransform(placement))
+        {
+            SetWorldInteractionPromptVisible(false);
+            return;
+        }
+
+        ConfigureWorldInteractionPromptRect();
+        worldInteractionPromptText.text = promptText;
+        worldInteractionPromptText.color = interactionPromptColor;
+        worldInteractionPromptText.fontSize = interactionPromptFontSize;
+        SetWorldInteractionPromptVisible(true);
+    }
+
+    private void SetInteractionPromptVisible(bool visible)
+    {
+        SetScreenInteractionPromptVisible(visible);
+        SetWorldInteractionPromptVisible(visible);
+    }
+
+    private void SetScreenInteractionPromptVisible(bool visible)
+    {
+        if (interactionPromptCanvasGroup == null)
+            return;
+
+        interactionPromptCanvasGroup.alpha = visible ? 1f : 0f;
+        interactionPromptCanvasGroup.interactable = false;
+        interactionPromptCanvasGroup.blocksRaycasts = false;
+    }
+
+    private void SetWorldInteractionPromptVisible(bool visible)
+    {
+        if (worldInteractionPromptCanvasGroup == null)
+            return;
+
+        worldInteractionPromptCanvasGroup.alpha = visible ? 1f : 0f;
+        worldInteractionPromptCanvasGroup.interactable = false;
+        worldInteractionPromptCanvasGroup.blocksRaycasts = false;
+    }
+
+    private void EnsureInteractionPromptUi()
+    {
+        if (interactionPromptText != null && interactionPromptCanvasGroup != null)
+            return;
+
+        Canvas targetCanvas = FindGameplayCanvas();
+        if (targetCanvas == null)
+            targetCanvas = CreateGameplayCanvas();
+
+        if (targetCanvas == null)
+            return;
+
+        interactionPromptCanvas = targetCanvas;
+        interactionPromptText = FindInteractionPromptText(targetCanvas);
+        if (interactionPromptText != null)
+        {
+            interactionPromptCanvasGroup = interactionPromptText.GetComponent<CanvasGroup>();
+            if (interactionPromptCanvasGroup == null)
+                interactionPromptCanvasGroup = interactionPromptText.gameObject.AddComponent<CanvasGroup>();
+
+            ConfigureInteractionPromptText();
+            return;
+        }
+
+        GameObject promptObject = new GameObject(InteractionPromptObjectName, typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI), typeof(Shadow));
+        promptObject.transform.SetParent(targetCanvas.transform, false);
+
+        interactionPromptCanvasGroup = promptObject.GetComponent<CanvasGroup>();
+        interactionPromptText = promptObject.GetComponent<TextMeshProUGUI>();
+        Shadow shadow = promptObject.GetComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+        shadow.effectDistance = new Vector2(1.5f, -1.5f);
+
+        ConfigureInteractionPromptText();
+        ConfigureInteractionPromptRect();
+        SetInteractionPromptVisible(false);
+    }
+
+    private void EnsureWorldInteractionPromptUi()
+    {
+        if (worldInteractionPromptText != null
+            && worldInteractionPromptCanvasGroup != null
+            && worldInteractionPromptRect != null)
+        {
+            return;
+        }
+
+        Canvas targetCanvas = FindGameplayCanvas();
+        if (targetCanvas == null)
+            targetCanvas = CreateGameplayCanvas();
+
+        if (targetCanvas == null)
+            return;
+
+        worldInteractionPromptText = FindWorldInteractionPromptText(targetCanvas);
+        if (worldInteractionPromptText != null)
+        {
+            worldInteractionPromptRect = worldInteractionPromptText.rectTransform;
+            worldInteractionPromptCanvasGroup = worldInteractionPromptText.GetComponent<CanvasGroup>();
+            if (worldInteractionPromptCanvasGroup == null)
+                worldInteractionPromptCanvasGroup = worldInteractionPromptText.gameObject.AddComponent<CanvasGroup>();
+
+            ConfigureWorldInteractionPromptText();
+            ConfigureWorldInteractionPromptRect();
+            return;
+        }
+
+        GameObject promptObject = new GameObject(WorldInteractionPromptObjectName, typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI), typeof(Shadow));
+        promptObject.transform.SetParent(targetCanvas.transform, false);
+        promptObject.transform.SetAsLastSibling();
+
+        worldInteractionPromptRect = promptObject.GetComponent<RectTransform>();
+        worldInteractionPromptCanvasGroup = promptObject.GetComponent<CanvasGroup>();
+        worldInteractionPromptText = promptObject.GetComponent<TextMeshProUGUI>();
+        Shadow shadow = promptObject.GetComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+        shadow.effectDistance = new Vector2(1.5f, -1.5f);
+
+        ConfigureWorldInteractionPromptText();
+        ConfigureWorldInteractionPromptRect();
+        SetWorldInteractionPromptVisible(false);
+    }
+
+    private void ConfigureInteractionPromptText()
+    {
+        if (interactionPromptText == null)
+            return;
+
+        interactionPromptText.raycastTarget = false;
+        interactionPromptText.alignment = TextAlignmentOptions.Center;
+        interactionPromptText.textWrappingMode = TextWrappingModes.NoWrap;
+        interactionPromptText.overflowMode = TextOverflowModes.Ellipsis;
+        interactionPromptText.fontSize = interactionPromptFontSize;
+        interactionPromptText.color = interactionPromptColor;
+    }
+
+    private void ConfigureWorldInteractionPromptText()
+    {
+        if (worldInteractionPromptText == null)
+            return;
+
+        worldInteractionPromptText.raycastTarget = false;
+        worldInteractionPromptText.alignment = TextAlignmentOptions.Center;
+        worldInteractionPromptText.textWrappingMode = TextWrappingModes.NoWrap;
+        worldInteractionPromptText.overflowMode = TextOverflowModes.Ellipsis;
+        worldInteractionPromptText.fontSize = interactionPromptFontSize;
+        worldInteractionPromptText.color = interactionPromptColor;
+    }
+
+    private void ConfigureInteractionPromptRect()
+    {
+        if (interactionPromptText == null)
+            return;
+
+        RectTransform promptRect = interactionPromptText.rectTransform;
+        promptRect.anchorMin = new Vector2(0.5f, 0.5f);
+        promptRect.anchorMax = new Vector2(0.5f, 0.5f);
+        promptRect.pivot = new Vector2(0.5f, 0.5f);
+        promptRect.anchoredPosition = interactionPromptOffset;
+        promptRect.sizeDelta = new Vector2(interactionPromptWidth, interactionPromptHeight);
+    }
+
+    private void ConfigureWorldInteractionPromptRect()
+    {
+        if (worldInteractionPromptRect == null)
+            return;
+
+        worldInteractionPromptRect.anchorMin = new Vector2(0.5f, 0.5f);
+        worldInteractionPromptRect.anchorMax = new Vector2(0.5f, 0.5f);
+        worldInteractionPromptRect.pivot = new Vector2(0.5f, 0.5f);
+        worldInteractionPromptRect.sizeDelta = new Vector2(interactionPromptWidth, interactionPromptHeight);
+        worldInteractionPromptRect.localRotation = Quaternion.identity;
+        worldInteractionPromptRect.localScale = Vector3.one;
+    }
+
+    private bool UpdateWorldInteractionPromptTransform(PlayerInteractionPromptPlacement placement)
+    {
+        if (worldInteractionPromptRect == null || interactionCamera == null || !placement.HasAnchor)
+            return false;
+
+        Vector3 worldPosition = placement.ResolveWorldPosition();
+        Vector3 screenPoint = interactionCamera.WorldToScreenPoint(worldPosition);
+        if (screenPoint.z <= 0.01f)
+            return false;
+
+        Canvas targetCanvas = worldInteractionPromptRect.GetComponentInParent<Canvas>();
+        RectTransform canvasRect = targetCanvas != null ? targetCanvas.transform as RectTransform : null;
+        if (targetCanvas == null || canvasRect == null)
+            return false;
+
+        Camera uiCamera = targetCanvas.renderMode == RenderMode.ScreenSpaceOverlay
+            ? null
+            : targetCanvas.worldCamera != null
+                ? targetCanvas.worldCamera
+                : interactionCamera;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                canvasRect,
+                screenPoint,
+                uiCamera,
+                out Vector2 localPoint))
+        {
             return false;
         }
 
-        bool wasHighlightedPickup = bestPickup == highlightedPickup;
-        if (wasHighlightedPickup)
-            ClearPickupOutline(forceDisable: true);
+        worldInteractionPromptRect.SetAsLastSibling();
+        worldInteractionPromptRect.anchoredPosition = localPoint;
+        worldInteractionPromptRect.localRotation = Quaternion.identity;
+        worldInteractionPromptRect.localScale = Vector3.one;
 
-        bool equipped = handEquipmentController.TryEquipWorldItem(bestPickup);
-        if (!equipped && wasHighlightedPickup)
-            UpdatePickupOutline();
+        return true;
+    }
 
-        return equipped;
+    private static TextMeshProUGUI FindInteractionPromptText(Canvas targetCanvas)
+    {
+        if (targetCanvas == null)
+            return null;
+
+        TextMeshProUGUI[] texts = targetCanvas.GetComponentsInChildren<TextMeshProUGUI>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TextMeshProUGUI text = texts[i];
+            if (text != null && string.Equals(text.gameObject.name, InteractionPromptObjectName, StringComparison.Ordinal))
+                return text;
+        }
+
+        return null;
+    }
+
+    private static TextMeshProUGUI FindWorldInteractionPromptText(Canvas targetCanvas)
+    {
+        if (targetCanvas == null)
+            return null;
+
+        TextMeshProUGUI[] texts = targetCanvas.GetComponentsInChildren<TextMeshProUGUI>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TextMeshProUGUI text = texts[i];
+            if (text != null && string.Equals(text.gameObject.name, WorldInteractionPromptObjectName, StringComparison.Ordinal))
+                return text;
+        }
+
+        return null;
+    }
+
+    private static Canvas FindGameplayCanvas()
+    {
+        Transform preferredRoot = FindSceneTransformByNames(PreferredCanvasRootNames);
+        if (preferredRoot != null)
+        {
+            Canvas preferredCanvas = preferredRoot.GetComponentInParent<Canvas>(true);
+            if (preferredCanvas != null)
+                return preferredCanvas;
+        }
+
+        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            Canvas candidate = canvases[i];
+            if (candidate != null && candidate.isActiveAndEnabled && candidate.renderMode == RenderMode.ScreenSpaceOverlay)
+                return candidate;
+        }
+
+        return canvases.Length > 0 ? canvases[0] : null;
+    }
+
+    private static Canvas CreateGameplayCanvas()
+    {
+        GameObject canvasObject = new GameObject("Gameplay Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Canvas createdCanvas = canvasObject.GetComponent<Canvas>();
+        createdCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        return createdCanvas;
+    }
+
+    private static Transform FindSceneTransformByNames(string[] objectNames)
+    {
+        Transform[] sceneTransforms = FindObjectsByType<Transform>(FindObjectsInactive.Include);
+        for (int i = 0; i < sceneTransforms.Length; i++)
+        {
+            Transform sceneTransform = sceneTransforms[i];
+            if (sceneTransform == null)
+                continue;
+
+            for (int j = 0; j < objectNames.Length; j++)
+            {
+                if (string.Equals(sceneTransform.name, objectNames[j], StringComparison.Ordinal))
+                    return sceneTransform;
+            }
+        }
+
+        return null;
+    }
+
+    public static string GetKeyDisplayName(KeyCode keyCode)
+    {
+        if (keyCode >= KeyCode.Alpha0 && keyCode <= KeyCode.Alpha9)
+            return ((int)keyCode - (int)KeyCode.Alpha0).ToString();
+
+        if (keyCode >= KeyCode.Keypad0 && keyCode <= KeyCode.Keypad9)
+            return $"Num {(int)keyCode - (int)KeyCode.Keypad0}";
+
+        return keyCode switch
+        {
+            KeyCode.Mouse0 => "LMB",
+            KeyCode.Mouse1 => "RMB",
+            KeyCode.Mouse2 => "MMB",
+            KeyCode.Space => "Space",
+            KeyCode.Return => "Enter",
+            KeyCode.KeypadEnter => "Enter",
+            KeyCode.LeftShift => "Shift",
+            KeyCode.RightShift => "Shift",
+            KeyCode.LeftControl => "Ctrl",
+            KeyCode.RightControl => "Ctrl",
+            KeyCode.LeftAlt => "Alt",
+            KeyCode.RightAlt => "Alt",
+            KeyCode.Escape => "Esc",
+            _ => keyCode.ToString()
+        };
     }
 
     private bool TryFindBestInteractable(int hitCount, out IPlayerInteractable bestInteractable)

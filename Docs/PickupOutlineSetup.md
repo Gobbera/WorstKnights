@@ -21,6 +21,9 @@ Campos principais em `PlayerPickupInteractor`:
 - `Outline Distance`: distancia maxima do raycast de outline.
 - `Outline Ray Radius`: `0` usa raycast puro; valores acima de `0` usam spherecast fino para deixar a mira mais tolerante.
 - `Outline Mask`: layers consideradas pelo raycast. Para parede/cenario bloquear o highlight, mantenha essas layers incluidas na mascara.
+- `Show Pickup Prompt`: mostra um prompt discreto abaixo da mira quando um `WorldPickupItem` pode ser coletado.
+- `Pickup Prompt`: texto do prompt de pickup. O padrao e `[{key}]`, resolvido pela tecla configurada em `Interact Key`.
+- `Pickup Prompt Color`: cor/alpha do prompt de pickup. Por padrao ele e mais transparente que prompts de interacao comuns.
 
 O player nao define cor, espessura ou modo. Esses valores vivem no componente `Outline` de cada item.
 
@@ -73,10 +76,11 @@ A espada usa espessura um pouco maior porque o mesh e mais fino; com a mesma esp
 1. Entre em Play como player local.
 2. Olhe diretamente para a espada, tocha ou potion.
 3. O item deve ganhar outline amarelo.
-4. Mire para fora do item.
-5. O outline deve sumir.
-6. Aperte `E` enquanto mira no item.
-7. O item deve ser equipado e o outline deve ser removido junto.
+4. O prompt discreto `[E]` deve aparecer abaixo da mira.
+5. Mire para fora do item.
+6. O outline e o prompt devem sumir.
+7. Aperte `E` enquanto mira no item.
+8. O item deve ser equipado e o outline deve ser removido junto.
 
 ## Observacoes
 

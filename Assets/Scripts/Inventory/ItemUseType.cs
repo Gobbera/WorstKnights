@@ -5,5 +5,6 @@ public enum ItemUseType
     Consumable = 2,
     Tool = 3,
     SellOnly = 4,
-    Weapon = 5
+    Weapon = 5,
+    KeyConsumable = 6
 }

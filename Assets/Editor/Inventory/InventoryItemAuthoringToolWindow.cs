@@ -332,6 +332,14 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             editDraftHealAmount = Mathf.Max(0f, EditorGUILayout.FloatField("Heal Amount", editDraftHealAmount));
             editDraftConsumeOnUse = EditorGUILayout.Toggle("Consume On Use", editDraftConsumeOnUse);
         }
+        else if (IsKeyConsumableUseType(editDraftUseType))
+        {
+            editDraftHealAmount = 0f;
+            editDraftConsumeOnUse = true;
+            EditorGUILayout.HelpBox(
+                "Key Consumable e consumido apenas quando uma interacao de cena compativel aceita o item, como uma porta destrancada pela chave correta.",
+                MessageType.None);
+        }
 
         if (IsWeaponUseType(editDraftUseType))
             editDraftBaseDamage = Mathf.Max(0f, EditorGUILayout.FloatField("Base Damage", editDraftBaseDamage));
@@ -690,6 +698,14 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             healAmount = Mathf.Max(0f, EditorGUILayout.FloatField("Heal Amount", healAmount));
             consumeOnUse = EditorGUILayout.Toggle("Consume On Use", consumeOnUse);
         }
+        else if (IsKeyConsumableUseType(useType))
+        {
+            healAmount = 0f;
+            consumeOnUse = true;
+            EditorGUILayout.HelpBox(
+                "Key Consumable e consumido apenas quando uma interacao de cena compativel aceita o item, como uma porta destrancada pela chave correta.",
+                MessageType.None);
+        }
 
         if (IsWeaponUseType(useType))
             baseDamage = Mathf.Max(0f, EditorGUILayout.FloatField("Base Damage", baseDamage));
@@ -895,6 +911,11 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
     private static bool IsConsumableUseType(ItemUseType useType)
     {
         return useType == ItemUseType.Consumable;
+    }
+
+    private static bool IsKeyConsumableUseType(ItemUseType useType)
+    {
+        return useType == ItemUseType.KeyConsumable;
     }
 
     private static bool IsWeaponUseType(ItemUseType useType)

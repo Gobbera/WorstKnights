@@ -211,12 +211,14 @@ Use para sinais disparados por colisao fisica.
 
 ### PlayerInteractionReactionSignalBridge
 
-Use para sinais disparados pelo sistema de interacao do jogador, normalmente quando `PlayerPickupInteractor` encontra um `IPlayerInteractable` e o jogador aperta a tecla de interacao (`E` por padrao).
+Use para sinais disparados pelo sistema de interacao do jogador, normalmente quando `PlayerPickupInteractor` encontra um `IPlayerInteractable` e o jogador aperta a tecla de interacao (`E` por padrao). Tambem funciona como proxy para interacoes contextuais de item equipado quando o alvo implementa `IPlayerHeldItemInteractionProvider`.
 
 #### O que ele faz
 
 - implementa `IPlayerInteractable`, entao pode ser escolhido pelo raycast de interacao do jogador
 - pode encaminhar a interacao para outro `IPlayerInteractable` do mesmo objeto, parent ou children
+- pode encaminhar a acao de um item equipado para outro `IPlayerHeldItemInteractionProvider`, como chave em porta ou tocha em tocha de parede
+- pode reaproveitar o pivot de prompt do alvo quando ele implementa `IPlayerInteractionPromptPlacementProvider`
 - emite o signal configurado depois que o alvo encaminhado aceita a interacao
 
 #### Parametros
@@ -226,6 +228,7 @@ Use para sinais disparados pelo sistema de interacao do jogador, normalmente qua
 - `Target Interactable`: interactable alvo explicito. Se vazio, a bridge tenta resolver automaticamente outro `IPlayerInteractable` no objeto, parents ou children.
 - `Require Successful Target Interaction`: quando ativo, o signal so e emitido se o interactable alvo retornar sucesso.
 - `Emit Without Target Interactable`: permite usar a bridge como um interactable simples que apenas emite reaction.
+- `Interaction Prompt`: texto opcional mostrado abaixo da mira quando este objeto esta selecionado para interacao. Use `{key}` para inserir a tecla configurada no `PlayerPickupInteractor`. Se vazio, o prompt padrao e usado.
 - `Interacted Signal Id`: signal enviado ao `ReactionSignalReceiver`.
 - `Feedback Origin`: origem opcional usada como posicao do signal.
 - `Direction From Interactor`: quando ativo, a direcao do signal aponta do jogador para a origem do feedback.
@@ -233,6 +236,7 @@ Use para sinais disparados pelo sistema de interacao do jogador, normalmente qua
 #### Observacoes
 
 - Para sons como `Torch_Woosh`, use um signal como `Lit` e encaminhe para o interactable que realmente acende a tocha.
+- Quando `Forward To Target Interactable` aponta para outro interactable que tambem fornece prompt, a bridge reaproveita o prompt desse alvo. Isso inclui prompts de item equipado, nos quais `{key}` resolve para a acao da mao que segura o item ativo, e tambem o pivot de prompt no mundo quando o alvo tiver um configurado.
 - Se a reacao precisa acontecer somente em mudanca real de estado, faca o interactable alvo retornar sucesso apenas quando aquela mudanca aconteceu.
 - Esta bridge nao substitui uma bridge especifica de estado quando a mecanica precisa reagir a eventos que nao nasceram da interacao direta do jogador.
 
@@ -456,6 +460,7 @@ Use em objetos interagiveis pelo `PlayerPickupInteractor`, como tochas de parede
 - `Target Interactable`
 - `Require Successful Target Interaction`
 - `Emit Without Target Interactable`
+- `Interaction Prompt`
 - `Interacted Signal Id`
 - `Feedback Origin`
 
@@ -649,7 +654,7 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 
 - origem: interacao do jogador pelo `PlayerPickupInteractor`
 - sinais comuns: `Interacted`, ou um signal de dominio como `Lit` quando usado como proxy de um interactable existente
-- para tochas, use o sinal `Lit` para feedback discreto de acendimento, como `Torch_Woosh`; o loop continuo da chama fica em `TorchFlameController.litLoopAudioCue`, ligado ao estado `IsLit`
+- para tochas, use o sinal `Lit` para feedback discreto de acendimento, como `Torch_Woosh`; a bridge encaminha a acao da tocha equipada para `WallTorchInteractable`, e o loop continuo da chama fica em `TorchFlameController.litLoopAudioCue`, ligado ao estado `IsLit`
 
 ## Regra para novas integracoes
 

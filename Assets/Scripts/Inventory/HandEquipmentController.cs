@@ -49,6 +49,7 @@ public class HandEquipmentController : MonoBehaviour
     [SerializeField] private PlayerMeleeAttack playerMeleeAttack;
     [SerializeField] private PlayerHealth playerHealth;
     [SerializeField] private PhotonView photonView;
+    [SerializeField] private PlayerPickupInteractor pickupInteractor;
     [SerializeField] private ItemDefinition torchItemDefinition;
     [SerializeField] private bool prototypeLocalOnly;
 
@@ -58,6 +59,9 @@ public class HandEquipmentController : MonoBehaviour
     [SerializeField] private Transform firstPersonModelRoot;
     [SerializeField] private Transform rightHandFirstPersonSocket;
     [SerializeField] private Transform leftHandFirstPersonSocket;
+    [Header("Item Use")]
+    [SerializeField] private KeyCode rightHandUseKey = KeyCode.Mouse0;
+    [SerializeField] private KeyCode leftHandUseKey = KeyCode.Mouse1;
     [Header("Drop")]
     [SerializeField] private KeyCode dropKey = KeyCode.G;
     [SerializeField] [Min(0.25f)] private float dropDistance = 1.25f;
@@ -109,8 +113,19 @@ public class HandEquipmentController : MonoBehaviour
     {
         ResolveReferences();
 
-        return HasActiveTorchEquipped(HandType.Right, requireLit)
-            || HasActiveTorchEquipped(HandType.Left, requireLit);
+        return HasActiveTorchEquippedInternal(HandType.Right, requireLit)
+            || HasActiveTorchEquippedInternal(HandType.Left, requireLit);
+    }
+
+    public bool HasActiveTorchEquipped(HandType hand, bool requireLit = true)
+    {
+        ResolveReferences();
+        return HasActiveTorchEquippedInternal(hand, requireLit);
+    }
+
+    public KeyCode GetUseKey(HandType hand)
+    {
+        return hand == HandType.Right ? rightHandUseKey : leftHandUseKey;
     }
 
     private void Awake()
@@ -149,10 +164,10 @@ public class HandEquipmentController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha2))
             ToggleActiveSlot(HandType.Left);
 
-        if (Input.GetMouseButtonDown(0))
+        if (IsActionKeyPressed(rightHandUseKey))
             UseActiveItem(HandType.Right);
 
-        if (Input.GetMouseButtonDown(1))
+        if (IsActionKeyPressed(leftHandUseKey))
             UseActiveItem(HandType.Left);
 
         if (Input.GetKeyDown(dropKey))
@@ -331,6 +346,9 @@ public class HandEquipmentController : MonoBehaviour
             return false;
         }
 
+        if (pickupInteractor != null && pickupInteractor.TryInteractWithHeldItem(hand, itemDefinition, GetUseKey(hand)))
+            return true;
+
         switch (itemDefinition.UseType)
         {
             case ItemUseType.Weapon:
@@ -338,6 +356,8 @@ public class HandEquipmentController : MonoBehaviour
                 return UseMeleeWeapon(hand, itemDefinition);
             case ItemUseType.Consumable:
                 return UseConsumable(hand, itemDefinition);
+            case ItemUseType.KeyConsumable:
+                return UseKeyConsumable(hand, itemDefinition);
             case ItemUseType.Tool:
                 return UseTool(hand, itemDefinition);
             case ItemUseType.SellOnly:
@@ -409,6 +429,12 @@ public class HandEquipmentController : MonoBehaviour
             ConsumeActiveSlot(hand, $"{itemDefinition.ItemName} foi consumido apos o uso.");
 
         return true;
+    }
+
+    private bool UseKeyConsumable(HandType hand, ItemDefinition itemDefinition)
+    {
+        Debug.Log($"[HandEquipmentController] '{itemDefinition.ItemName}' precisa ser usado em um alvo de cena compativel.");
+        return false;
     }
 
     private bool UseTool(HandType hand, ItemDefinition itemDefinition)
@@ -614,6 +640,28 @@ public class HandEquipmentController : MonoBehaviour
         ClearSlotReference(hand, activeIndex, reason);
     }
 
+    public bool TryConsumeActiveItem(HandType hand, ItemDefinition expectedItem, string reason)
+    {
+        ResolveReferences();
+
+        int activeIndex = GetActiveSlotIndex(hand);
+        if (!IsValidSlotIndex(activeIndex))
+            return false;
+
+        ItemDefinition activeItem = GetItem(hand, activeIndex);
+        if (activeItem == null)
+            return false;
+
+        if (expectedItem != null && activeItem != expectedItem)
+            return false;
+
+        string resolvedReason = string.IsNullOrWhiteSpace(reason)
+            ? $"{activeItem.ItemName} foi consumido."
+            : reason;
+        ConsumeActiveSlot(hand, resolvedReason);
+        return true;
+    }
+
     private void ClearSlotReference(
         HandType hand,
         int slotIndex,
@@ -758,6 +806,9 @@ public class HandEquipmentController : MonoBehaviour
 
         if (playerHealth == null)
             playerHealth = GetComponent<PlayerHealth>();
+
+        if (pickupInteractor == null)
+            pickupInteractor = GetComponent<PlayerPickupInteractor>();
 
         if (torchItemDefinition == null)
             torchItemDefinition = Resources.Load<ItemDefinition>(DefaultTorchItemResourcePath);
@@ -957,7 +1008,7 @@ public class HandEquipmentController : MonoBehaviour
         return GetItem(hand, GetActiveSlotIndex(hand)) != null;
     }
 
-    private bool HasActiveTorchEquipped(HandType hand, bool requireLit)
+    private bool HasActiveTorchEquippedInternal(HandType hand, bool requireLit)
     {
         int activeIndex = GetActiveSlotIndex(hand);
         if (!IsValidSlotIndex(activeIndex))
@@ -1541,6 +1592,11 @@ public class HandEquipmentController : MonoBehaviour
     {
         if (playerMovement != null)
             playerMovement.BeginInventoryItemActionLock();
+    }
+
+    private static bool IsActionKeyPressed(KeyCode actionKey)
+    {
+        return actionKey != KeyCode.None && Input.GetKeyDown(actionKey);
     }
 
     private void BroadcastInventorySnapshotIfNeeded()

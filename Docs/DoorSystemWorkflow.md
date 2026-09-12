@@ -26,7 +26,8 @@
 2. Na porta, selecione `Starts Locked`.
 3. Em `Lock Mode`, escolha `KeyItem`.
 4. Em `Required Key Item`, arraste a chave correta.
-5. O jogador pode abrir a porta com `E` se estiver carregando essa chave em qualquer slot das maos.
+5. O jogador destranca a porta usando a acao da mao que esta com a chave ativa. Por padrao, a mao direita usa `LMB` e a mao esquerda usa `RMB`, mas isso e configuravel em `HandEquipmentController`.
+6. Se a chave deve desaparecer depois de cumprir seu proposito, configure o `ItemDefinition` como `Use Type = KeyConsumable`. Esse tipo so e consumido quando uma interacao de cena compativel aceita o item, como uma porta destrancada pela chave correta. Uma chave comum com outro `Use Type` permanece no inventario.
 
 ## Porta trancada por senha
 1. Na porta, selecione `Starts Locked`.
@@ -79,7 +80,12 @@ Importante:
 - `Setup Trigger Volume` e para volumes de entrada/saida, como portais e zonas de ativacao
 
 ## Interacao
-- `E` agora prioriza portas e alavancas na frente do jogador.
-- cada porta pode bloquear spam da tecla `E` com `Interaction Cooldown`; sinais externos, alavancas e chamadas por codigo continuam podendo controlar a porta normalmente
+- `E` prioriza portas comuns, portas por senha, alavancas e interactables que nao dependem de item na mao.
+- Interacoes que dependem de item equipado usam a acao configurada da mao que segura o item ativo, nao `E`. Exemplo: uma porta `KeyItem` usa a acao da mao com a chave ativa; uma tocha de parede usa a acao da mao com a tocha ativa.
+- cada porta pode bloquear spam de interacoes diretas do jogador com `Interaction Cooldown`; sinais externos, alavancas e chamadas por codigo continuam podendo controlar a porta normalmente
+- o texto abaixo da mira vem dos prompts do interactable; use `{key}` no texto para inserir automaticamente a tecla configurada. Em prompts comuns, `{key}` vem do `PlayerPickupInteractor`; em prompts de item equipado, vem da acao da mao configurada no `HandEquipmentController`.
+- Para testar prompt no proprio objeto, preencha `Prompt Pivot` no interactable, como `DoorController` ou `WallTorchInteractable`. O ponto vem desse pivot, mas o texto e renderizado em overlay por cima da cena, entao nao fica escondido dentro das meshes. Ele aparece somente para o jogador local que esta mirando nele e mantem tamanho visual estavel. Se `Prompt Pivot` estiver vazio, o sistema volta para o prompt abaixo da mira.
+- portas usam prompts contextuais: abrir, fechar, destrancar por chave/senha; a mensagem de destrancar por chave so aparece quando a chave exigida esta ativa em uma das maos
+- se um interactable nao fornecer texto customizado, o prompt padrao e `Press [{key}] to interact`
 - Se nao houver nada interagivel, `E` continua funcionando para pickup de itens.
 - A layer da porta/alavanca/trigger precisa estar dentro da mascara do `PlayerPickupInteractor`.

@@ -97,6 +97,10 @@ GameObject:
   - component: {fileID: 3028640066627419804}
   - component: {fileID: 673766563544846760}
   - component: {fileID: 5594783533642574461}
+  - component: {fileID: 1046699095492923511}
+  - component: {fileID: 1132049323372930221}
+  - component: {fileID: 2421762600752742317}
+  - component: {fileID: 4459469421671077074}
   m_Layer: 0
   m_Name: Torch
   m_TagString: Untagged
@@ -121,7 +125,6 @@ Transform:
   - {fileID: 9157814188017664855}
   - {fileID: 3722042003776564643}
   - {fileID: 2376330553085639881}
-  - {fileID: 6158831823183325143}
   - {fileID: 7894439193959760756}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -233,6 +236,84 @@ MonoBehaviour:
   litLoopAudioAnchor: {fileID: 8723694259016037029}
   autoCreateLitLoopAudioSource: 1
   stopLitLoopWhenPresentationHidden: 1
+--- !u!65 &1046699095492923511
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1702947530480675978}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.16024564, y: 0.8250946, z: 0.15513143}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1132049323372930221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1702947530480675978}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac2e8041795637645942fc6f2345c16e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalReceiver
+  receiverName: Reactions
+  signalEntries:
+  - signalId: Impact
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 018dbad6bdab9e94da1340cf26ddf7b0, type: 2}
+    effectPrefab: {fileID: 0}
+    effectLifetime: 5
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+--- !u!114 &2421762600752742317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1702947530480675978}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae5bb85b21b7a284aa1ce87071e04bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalEmitter
+  signalReceiver: {fileID: 1132049323372930221}
+--- !u!114 &4459469421671077074
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1702947530480675978}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8441a309f7200944886f37da5942fe21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollisionReactionSignalBridge
+  signalEmitter: {fileID: 2421762600752742317}
+  targetMode: 0
+  collisionEnterSignalId: Impact
+  collisionStaySignalId: 
+  collisionExitSignalId: 
+  minimumRelativeSpeed: 0.25
+  stayEmitInterval: 0.25
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 1915
 --- !u!1 &1742636261155844161
 GameObject:
   m_ObjectHideFlags: 0
@@ -265,59 +346,6 @@ Transform:
   - {fileID: 8179815691598864940}
   m_Father: {fileID: 6651676090901468234}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &4137679868726242299
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6158831823183325143}
-  - component: {fileID: 7661915028821360669}
-  m_Layer: 0
-  m_Name: DropCollision
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6158831823183325143
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4137679868726242299}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0062138513, y: -0.00796026, z: -0.00000023841858}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 6651676090901468234}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &7661915028821360669
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4137679868726242299}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.16024564, y: 0.8250946, z: 0.15513143}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5798024992634184790
 GameObject:
   m_ObjectHideFlags: 0
@@ -461,7 +489,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
-  m_CustomShadowLayers: 0
+  m_CustomShadowLayers: 1
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 0

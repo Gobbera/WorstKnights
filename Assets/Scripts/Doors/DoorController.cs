@@ -6,7 +6,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [AddComponentMenu("World/Doors/Door Controller")]
-public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
+public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IPlayerInteractionPromptProvider, IPlayerInteractionPromptPlacementProvider, IPlayerHeldItemInteractionProvider
 {
     private const string RoomPropertyKeyPrefix = "door:";
     private const float MotionEndpointEpsilon = 0.0001f;
@@ -46,6 +46,13 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
     [SerializeField] [HideInInspector] private string networkSceneId = string.Empty;
     [SerializeField] private bool prototypeLocalOnly;
     [SerializeField] [Min(0f)] private float interactionCooldown = 0.35f;
+    [Header("Interaction Prompt")]
+    [SerializeField] private string openInteractionPrompt = "Press [{key}] to open the door";
+    [SerializeField] private string closeInteractionPrompt = "Press [{key}] to close the door";
+    [SerializeField] private string unlockInteractionPrompt = "Press [{key}] to unlock the door";
+    [SerializeField] private string passcodeInteractionPrompt = "Press [{key}] to enter the passcode";
+    [SerializeField] private Transform interactionPromptPivot;
+    [SerializeField] private Vector3 interactionPromptLocalOffset;
     [Header("Startup State")]
     [SerializeField] private DoorStartupState startupState = DoorStartupState.StartsOpen;
     [SerializeField] private bool autoOpenOnUnlock = true;
@@ -111,6 +118,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
 
         if (photonView == null)
             photonView = GetComponent<PhotonView>();
+
+        if (interactionPromptPivot == null)
+            interactionPromptPivot = transform;
 
         EnsureNetworkSceneId();
     }
@@ -184,6 +194,59 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
         return interacted;
     }
 
+    public bool TryGetInteractionPrompt(PlayerInteractionPromptContext context, out string promptTemplate)
+    {
+        promptTemplate = string.Empty;
+        ResolveReferences();
+
+        if (HasLatchedPermanentSignalOpenState)
+            return false;
+
+        if (isLocked)
+            return TryGetLockedInteractionPrompt(context.Interactor, out promptTemplate);
+
+        promptTemplate = isOpen ? closeInteractionPrompt : openInteractionPrompt;
+        return true;
+    }
+
+    public bool TryGetInteractionPromptPlacement(PlayerInteractionPromptContext context, out PlayerInteractionPromptPlacement placement)
+    {
+        placement = default;
+        if (interactionPromptPivot == null)
+            return false;
+
+        placement = new PlayerInteractionPromptPlacement(interactionPromptPivot, interactionPromptLocalOffset);
+        return true;
+    }
+
+    public bool TryGetHeldItemInteractionPrompt(PlayerHeldItemInteractionContext context, out string promptTemplate)
+    {
+        promptTemplate = string.Empty;
+        if (!CanUseHeldKey(context, logFailures: false))
+            return false;
+
+        promptTemplate = unlockInteractionPrompt;
+        return true;
+    }
+
+    public bool TryInteractWithHeldItem(PlayerHeldItemInteractionContext context)
+    {
+        if (IsInteractionCooldownActive())
+            return CanUseHeldKey(context, logFailures: false);
+
+        if (!CanUseHeldKey(context, logFailures: true))
+            return false;
+
+        bool interacted = RequestSetDoorState(autoOpenOnUnlock, false, context.Interactor);
+        if (interacted)
+        {
+            ConsumeHeldKeyIfNeeded(context);
+            ArmInteractionCooldown();
+        }
+
+        return interacted;
+    }
+
     public bool TrySubmitPasscode(string submittedPasscode, PlayerPickupInteractor interactor = null)
     {
         if (!UsesLockConfiguration || lockMode != DoorLockMode.Passcode || !isLocked)
@@ -236,7 +299,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
             case DoorLockMode.None:
                 return RequestSetDoorState(autoOpenOnUnlock, false, interactor);
             case DoorLockMode.KeyItem:
-                return TryUnlockWithKey(interactor);
+                return TryHandleLockedKeyInteractionFromInteractKey(interactor);
             case DoorLockMode.Passcode:
                 if (interactor == null)
                     return false;
@@ -252,7 +315,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
         }
     }
 
-    private bool TryUnlockWithKey(PlayerPickupInteractor interactor)
+    private bool TryHandleLockedKeyInteractionFromInteractKey(PlayerPickupInteractor interactor)
     {
         if (requiredKeyItem == null)
         {
@@ -269,7 +332,78 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable
             return false;
         }
 
-        return RequestSetDoorState(autoOpenOnUnlock, false, interactor);
+        Debug.Log($"[DoorController] '{DisplayName}' precisa que a chave '{requiredKeyItem.ItemName}' seja usada pela acao do item equipado.");
+        return false;
+    }
+
+    private bool CanUseHeldKey(PlayerHeldItemInteractionContext context, bool logFailures)
+    {
+        ResolveReferences();
+
+        if (!isLocked || HasLatchedPermanentSignalOpenState)
+            return false;
+
+        if (ResolveEffectiveLockMode() != DoorLockMode.KeyItem)
+            return false;
+
+        if (requiredKeyItem == null)
+        {
+            if (logFailures)
+                Debug.LogWarning($"[DoorController] '{DisplayName}' esta trancada por chave, mas nenhuma chave foi configurada.", gameObject);
+
+            return false;
+        }
+
+        if (context.EquipmentController == null)
+        {
+            if (logFailures)
+                Debug.LogWarning($"[DoorController] '{DisplayName}' nao encontrou o equipamento do jogador para usar a chave.", gameObject);
+
+            return false;
+        }
+
+        int activeIndex = context.EquipmentController.GetActiveSlotIndex(context.Hand);
+        ItemDefinition activeHeldItem = context.EquipmentController.GetItem(context.Hand, activeIndex);
+        if (activeHeldItem != requiredKeyItem)
+            return false;
+
+        return true;
+    }
+
+    private void ConsumeHeldKeyIfNeeded(PlayerHeldItemInteractionContext context)
+    {
+        if (requiredKeyItem == null || requiredKeyItem.UseType != ItemUseType.KeyConsumable)
+            return;
+
+        if (context.EquipmentController == null)
+            return;
+
+        context.EquipmentController.TryConsumeActiveItem(
+            context.Hand,
+            requiredKeyItem,
+            $"{requiredKeyItem.ItemName} foi consumida ao destrancar '{DisplayName}'.");
+    }
+
+    private bool TryGetLockedInteractionPrompt(PlayerPickupInteractor interactor, out string promptTemplate)
+    {
+        promptTemplate = string.Empty;
+
+        switch (ResolveEffectiveLockMode())
+        {
+            case DoorLockMode.None:
+                promptTemplate = unlockInteractionPrompt;
+                return true;
+
+            case DoorLockMode.KeyItem:
+                return false;
+
+            case DoorLockMode.Passcode:
+                promptTemplate = passcodeInteractionPrompt;
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     private bool RequestSetDoorState(bool targetOpen, bool targetLocked, PlayerPickupInteractor interactor = null)
