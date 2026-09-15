@@ -22,5 +22,11 @@ public enum MovementAnimatorSemantic
     LeftHandOccupied,
     LeftTorchEquipped,
     ThumbsUpTrigger,
-    KickTrigger
+    KickTrigger,
+    ShieldGuarding,
+    ShieldBlocking,
+    RightShieldGuarding,
+    LeftShieldGuarding,
+    ShieldBlockTrigger,
+    LitTorchTrigger
 }

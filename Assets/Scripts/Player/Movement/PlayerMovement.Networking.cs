@@ -40,8 +40,11 @@ public partial class PlayerMovement
         pickupAnimationHand = networkPickupAnimationHand;
         drawAnimationSequence = networkDrawAnimationSequence;
         drawAnimationHand = networkDrawAnimationHand;
+        litTorchAnimationSequence = networkLitTorchAnimationSequence;
+        litTorchAnimationHand = networkLitTorchAnimationHand;
         damageAnimationSequence = networkDamageAnimationSequence;
         currentDamageAnimationType = networkDamageAnimationType;
+        shieldBlockAnimationSequence = networkShieldBlockAnimationSequence;
         emoteAnimationSequence = networkEmoteAnimationSequence;
         currentEmoteType = networkEmoteType;
         rightHandOccupied = networkRightHandOccupied;
@@ -99,8 +102,11 @@ public partial class PlayerMovement
             stream.SendNext((int)pickupAnimationHand);
             stream.SendNext(drawAnimationSequence);
             stream.SendNext((int)drawAnimationHand);
+            stream.SendNext(litTorchAnimationSequence);
+            stream.SendNext((int)litTorchAnimationHand);
             stream.SendNext(damageAnimationSequence);
             stream.SendNext((int)currentDamageAnimationType);
+            stream.SendNext(shieldBlockAnimationSequence);
             stream.SendNext(emoteAnimationSequence);
             stream.SendNext((int)currentEmoteType);
             stream.SendNext(rightHandOccupied);
@@ -108,6 +114,10 @@ public partial class PlayerMovement
             stream.SendNext(leftHandTorchEquipped);
             stream.SendNext(lookYawOffset);
             stream.SendNext(lookPitch);
+            stream.SendNext(shieldGuarding);
+            stream.SendNext(shieldBlocking);
+            stream.SendNext((int)shieldGuardHand);
+            stream.SendNext(shieldGuardSpeedMultiplier);
             return;
         }
 
@@ -131,8 +141,11 @@ public partial class PlayerMovement
         networkPickupAnimationHand = (HandType)(int)stream.ReceiveNext();
         networkDrawAnimationSequence = (int)stream.ReceiveNext();
         networkDrawAnimationHand = (HandType)(int)stream.ReceiveNext();
+        networkLitTorchAnimationSequence = (int)stream.ReceiveNext();
+        networkLitTorchAnimationHand = (HandType)(int)stream.ReceiveNext();
         networkDamageAnimationSequence = (int)stream.ReceiveNext();
         networkDamageAnimationType = (PlayerDamageAnimationType)(int)stream.ReceiveNext();
+        networkShieldBlockAnimationSequence = (int)stream.ReceiveNext();
         networkEmoteAnimationSequence = (int)stream.ReceiveNext();
         networkEmoteType = (PlayerEmoteType)(int)stream.ReceiveNext();
         networkRightHandOccupied = (bool)stream.ReceiveNext();
@@ -140,6 +153,10 @@ public partial class PlayerMovement
         networkLeftHandTorchEquipped = (bool)stream.ReceiveNext();
         networkLookYawOffset = (float)stream.ReceiveNext();
         networkLookPitch = (float)stream.ReceiveNext();
+        networkShieldGuarding = (bool)stream.ReceiveNext();
+        networkShieldBlocking = (bool)stream.ReceiveNext();
+        networkShieldGuardHand = (HandType)(int)stream.ReceiveNext();
+        networkShieldGuardSpeedMultiplier = Mathf.Clamp01((float)stream.ReceiveNext());
 
         if (!hasNetworkState)
         {

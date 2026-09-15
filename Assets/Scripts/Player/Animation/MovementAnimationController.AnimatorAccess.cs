@@ -22,8 +22,14 @@ public partial class MovementAnimationController
         if (upperBodyAttackLayerIndex < 0)
             upperBodyAttackLayerIndex = animator.GetLayerIndex(UpperBodyAttackLayerName);
 
+        if (torchGripLayerIndex < 0)
+            torchGripLayerIndex = animator.GetLayerIndex(TorchGripLayerName);
+
         if (kickLayerIndex < 0)
             kickLayerIndex = animator.GetLayerIndex(KickLayerName);
+
+        if (shieldGripLayerIndex < 0)
+            shieldGripLayerIndex = animator.GetLayerIndex(ShieldGripLayerName);
 
         if (emoteLayerIndex < 0)
             emoteLayerIndex = animator.GetLayerIndex(EmoteLayerName);
@@ -69,16 +75,17 @@ public partial class MovementAnimationController
         animator.SetBool(parameterName, value);
     }
 
-    private void SetTriggerIfExists(MovementAnimatorSemantic semantic, string fallbackParameterName)
+    private bool SetTriggerIfExists(MovementAnimatorSemantic semantic, string fallbackParameterName)
     {
         if (animator == null)
-            return;
+            return false;
 
         string parameterName = ResolveParameterName(semantic, fallbackParameterName);
         if (!HasParameter(parameterName))
-            return;
+            return false;
 
         animator.SetTrigger(parameterName);
+        return true;
     }
 
     private void ResetTriggerIfExists(MovementAnimatorSemantic semantic, string fallbackParameterName)

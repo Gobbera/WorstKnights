@@ -88,6 +88,7 @@ public sealed class WallTorchInteractable : MonoBehaviour, IPlayerInteractable, 
 
         if (stateController.RequestLight())
         {
+            context.Interactor?.TriggerLitTorchAnimation(context.Hand);
             Debug.Log($"[WallTorchInteractable] '{stateController.TorchName}' foi acesa.");
             return true;
         }

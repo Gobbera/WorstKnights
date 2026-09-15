@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c80f3bef2b485482470234040e9fe4, type: 3}
+  m_Name: FootstepSurfaceResolver_Default
+  m_EditorClassIdentifier: Assembly-CSharp::FootstepSurfaceResolver
+  defaultSurface: {fileID: 11400000, guid: fd8889d08a00fe646b7ca7cc64913998, type: 2}
+  searchParentSurface: 1
+  rendererMaterialSurfaces: []
+  physicsMaterialSurfaces: []
+  terrainLayerSurfaces: []

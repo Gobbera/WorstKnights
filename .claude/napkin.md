@@ -63,7 +63,7 @@
    Do instead: when connection or spawn fails in `FieldTestCharacter`, inspect `RoomManager.BootstrapGameplayRoomManager()` and scene-name/path checks before hunting for a missing manager in the hierarchy.
 
 9. **[2026-05-26] World pickup items should be authored on prefab assets, not inferred by runtime name scans**
-   Do instead: attach `WorldPickupItem` on the prefab root, bind the correct `ItemDefinition`, and save an explicit trigger collider on the asset so scene instances inherit stable pickup behavior.
+   Do instead: use `Tools/Inventory/Item Authoring Tool`, keep `WorldPickupItem`, item select/use cues, root solid collision, and the reaction bridge stack on the prefab root, keep `PickupTrigger` only for interaction/outline, and bind the correct `ItemDefinition` so scene instances inherit stable pickup behavior.
 
 10. **[2026-05-21] Menu lobby refresh must handle stale Photon connections**
    Do instead: when re-entering the menu, if the client is still connected but outside a room, join the lobby directly or disconnect first; never wait on `!PhotonNetwork.IsConnected` unless this scene actually triggered a disconnect.
@@ -95,35 +95,35 @@
    Do instead: edit the five `emoteWheelSlots` on `Assets/Resources/Player.prefab`'s `PlayerEmoteWheelController` for emote type, label, and sprite, and use `Assets/Prefabs/UI/EmoteWheel.prefab` only when a scene needs an explicit saved Canvas object.
 
 ## Audio & Feedback
-1. **[2026-08-17] Melee VFX context must survive each reaction bridge**
+1. **[2026-09-14] Footsteps are layered by surface plus character**
+   Do instead: keep cadence/events in player or enemy controllers, put shared probe/playback in `FootstepPlaybackController`, resolve terrain through `FootstepSurfaceResolver`, and add per-character boot/armor/bone layers through `FootstepCharacterAudioProfile`.
+
+2. **[2026-08-17] Melee VFX context must survive each reaction bridge**
    Do instead: when adding per-attack VFX parameters, pass `ReactionSignalContext` through both `ImpactReactionSignalBridge` and destructible damage flows; for impact feedback, keep `ImpactReactionSignalBridge` on the same GameObject as `PhotonView` so its lightweight RPC can replay the cosmetic signal on other clients.
 
-2. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
+3. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
    Do instead: configure continuous fire audio through `TorchFlameController.litLoopAudioCue`; keep `Lit` reaction audio for one-shot ignition like `Torch_Woosh`, and let `SetLit`/`SetPresentationVisible` start or stop the loop for wall and hand torches.
 
-3. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
+4. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
    Do instead: drive jump, land, attack, pickup, emote, torch-lit loops, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
 
-4. **[2026-08-20] Ground-aware VFX Graph collision should be bound from runtime raycasts**
+5. **[2026-08-20] Ground-aware VFX Graph collision should be bound from runtime raycasts**
    Do instead: for blood/splatter VFX that use `Collision Shape`, expose ground center/normal/size parameters in the VFX Graph and drive them with `VisualEffectGroundCollisionBinder` instead of hardcoding a world-space box at `y=0`.
 
-5. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
+6. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
    Do instead: keep `Use Native Vivox Positional Audio` off when native `JoinPositionalChannelAsync` causes `5100/1001`; join a 2D `-sim3d` Vivox channel, map `VivoxParticipant.PlayerId` through Photon `kwkVivoxPlayerId`, and drive per-participant local volume/mute from Photon player distance.
 
-6. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
+7. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
    Do instead: when testing builds, expect profiles like `kwk-player-xxxxxxxx`; only pass `--ugs-profile=<name>` for deliberate persistent identity, and never reuse the same manual profile in two simultaneous clients.
 
-7. **[2026-07-08] Vivox channel drops must suspend 3D publishing and reconnect with backoff**
+8. **[2026-07-08] Vivox channel drops must suspend 3D publishing and reconnect with backoff**
    Do instead: treat `ChannelJoined` as the safe point for `Set3DPosition`, publish around `0.3s`, and on `ChannelLeft` or connection recovery stop 3D updates immediately and retry with backoff so server disconnect `5100` does not cascade into stale-session `1001` loops.
 
-8. **[2026-07-08] Same-machine standalone Vivox clients need distinct Authentication profiles**
+9. **[2026-07-08] Same-machine standalone Vivox clients need distinct Authentication profiles**
    Do instead: build once and launch each standalone instance with a unique `--ugs-profile=<name>` argument; otherwise both instances reuse the same cached anonymous identity while Editor + build appear healthy because their defaults already differ.
 
-9. **[2026-07-07] Vivox positional voice must publish the owner-local camera pose at a limited rate**
+10. **[2026-07-07] Vivox positional voice must publish the owner-local camera pose at a limited rate**
    Do instead: join a positional channel with shared `Channel3DProperties`, resolve the owning `PlayerSetup`/`FP_Camera`, and call `Set3DPosition` about 2-4 times per second rather than every frame.
-
-10. **[2026-07-07] Vivox package installation does not populate service credentials**
-   Do instead: complete Vivox Dashboard onboarding, open `Project Settings > Services > Vivox` to pull Server/Domain/Issuer, validate before Play/build, and rebuild players made before credentials were saved.
 
 ## Inventory & Equipment
 1. **[2026-08-17] Sword trail no longer uses the legacy attack-trail stack**
@@ -133,7 +133,7 @@
    Do instead: keep one `WorldPickupItem` as the gameplay/network source, author TP grips into `GripPoints_TP_Right`/`GripPoints_TP_Left`, author FPS grips into `GripPoints_FPS_Right`/`GripPoints_FPS_Left`, expose both perspectives in the inspector/tooling, keep legacy `GripPoint*` names as migration fallback only, and let runtime FPS fall back to TP only when no FPS grip has been saved yet.
 
 3. **[2026-08-11] World pickup item network physics is intentionally disabled for retest**
-   Do instead: keep item prefab roots with a local dynamic Rigidbody (`useGravity=true`, `isKinematic=false`, `detectCollisions=true`) plus an enabled solid `DropCollision`, do not reintroduce MasterClient pickup-physics snapshots or room-synced rest poses without a new design, and let equip/FPS clone paths suppress physics only while held or owner-visual.
+   Do instead: keep item prefab roots with a local dynamic Rigidbody (`useGravity=true`, `isKinematic=false`, `detectCollisions=true`) plus an enabled solid root collider, do not reintroduce MasterClient pickup-physics snapshots or room-synced rest poses without a new design, and let equip/FPS clone paths suppress physics only while held or owner-visual.
 
 4. **[2026-08-04] FPS item runtime sockets must match authoring sockets**
    Do instead: equip FPS item visuals into `RightHandSocket`/`LeftHandSocket` children under `FPS_Model`, not directly into raw `Hand.R`/`Hand.L` bones, so Scene authoring and Play mode use the same anchor.
@@ -154,7 +154,7 @@
    Do instead: when equipping a `WorldPickupItem`, store the original pickup reference alongside the slot data, then make `DropToWorld` reactivate inactive stored pickups before repositioning them instead of relying only on `ItemDefinition` or the equipped visual clone.
 
 10. **[2026-08-05] Physical item drops must restore pickup transform before physics**
-   Do instead: cache the pickup's pre-equip world scale/parent, keep all item colliders disabled while equipped, suppress drop Rigidbody/collision before reparenting, restore scale on `DropToWorld`, then enable `DropCollision` and launch physics.
+   Do instead: cache the pickup's pre-equip world scale/parent, keep all item colliders disabled while equipped, suppress drop Rigidbody/collision before reparenting, restore scale on `DropToWorld`, then enable the root solid collider and launch physics.
 
 ## Animation Coupling
 1. **[2026-08-05] First-person arms sync is owner-local and separate from TP**

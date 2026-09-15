@@ -101,6 +101,8 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
     private float activeDrawActionEndTime;
     private float activeInventoryItemActionEndTime;
     private float activeEmoteActionEndTime;
+    private float shieldGuardSpeedMultiplier = 0.3f;
+    private float networkShieldGuardSpeedMultiplier = 0.3f;
     private float nextJumpInputAllowedTime;
     private float jumpGroundIgnoreUntil;
     private float airborneMomentumSpeed;
@@ -123,6 +125,10 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
     private bool networkAttackMovementSlowActive;
     private bool networkKickMovementSlowActive;
     private bool networkFallMovementSlowActive;
+    private bool shieldGuarding;
+    private bool shieldBlocking;
+    private bool networkShieldGuarding;
+    private bool networkShieldBlocking;
     private bool hasQueuedAttackComboStep;
     private bool emoteWheelSelectionActive;
     private bool directionChangeBrakeActive;
@@ -136,6 +142,10 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
     private HandType networkPickupAnimationHand = HandType.Right;
     private HandType drawAnimationHand = HandType.Right;
     private HandType networkDrawAnimationHand = HandType.Right;
+    private HandType litTorchAnimationHand = HandType.Left;
+    private HandType networkLitTorchAnimationHand = HandType.Left;
+    private HandType shieldGuardHand = HandType.Left;
+    private HandType networkShieldGuardHand = HandType.Left;
     private int attackAnimationSequence;
     private int attackComboStep;
     private int queuedAttackComboStep;
@@ -149,8 +159,12 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
     private int networkPickupAnimationSequence;
     private int drawAnimationSequence;
     private int networkDrawAnimationSequence;
+    private int litTorchAnimationSequence;
+    private int networkLitTorchAnimationSequence;
     private int damageAnimationSequence;
     private int networkDamageAnimationSequence;
+    private int shieldBlockAnimationSequence;
+    private int networkShieldBlockAnimationSequence;
     private int emoteAnimationSequence;
     private int networkEmoteAnimationSequence;
     private Vector3 desiredMoveDirection;
@@ -245,13 +259,20 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
     public HandType PickupAnimationHand => pickupAnimationHand;
     public int DrawAnimationSequence => drawAnimationSequence;
     public HandType DrawAnimationHand => drawAnimationHand;
+    public int LitTorchAnimationSequence => litTorchAnimationSequence;
+    public HandType LitTorchAnimationHand => litTorchAnimationHand;
     public int DamageAnimationSequence => damageAnimationSequence;
     public PlayerDamageAnimationType CurrentDamageAnimationType => currentDamageAnimationType;
+    public int ShieldBlockAnimationSequence => shieldBlockAnimationSequence;
     public int EmoteAnimationSequence => emoteAnimationSequence;
     public PlayerEmoteType CurrentEmoteType => currentEmoteType;
     public bool IsRightHandOccupied => rightHandOccupied;
     public bool IsLeftHandOccupied => leftHandOccupied;
     public bool IsLeftHandTorchEquipped => leftHandTorchEquipped;
+    public bool IsShieldGuarding => HasAuthority() ? shieldGuarding : networkShieldGuarding;
+    public bool IsShieldBlocking => HasAuthority() ? shieldBlocking : networkShieldBlocking;
+    public HandType ShieldGuardHand => HasAuthority() ? shieldGuardHand : networkShieldGuardHand;
+    private float ShieldGuardSpeedMultiplier => HasAuthority() ? shieldGuardSpeedMultiplier : networkShieldGuardSpeedMultiplier;
     public bool IsEmoteWheelSelectionActive => emoteWheelSelectionActive;
     public float LocomotionScale { get; private set; } = 1f;
     public float CurrentStamina => currentStamina;
@@ -279,6 +300,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
             return HasAvailableStaminaForSprint()
                 && !sprintRepressRequiredAfterAttack
+                && !IsShieldGuarding
                 && !IsKickActionActiveAt(Time.time)
                 && !IsAttackSprintBlocked(Time.time);
         }
@@ -457,6 +479,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         activeDrawActionEndTime = 0f;
         activeInventoryItemActionEndTime = 0f;
         activeEmoteActionEndTime = 0f;
+        SetShieldGuardState(false, false, shieldGuardHand, shieldGuardSpeedMultiplier);
         fallMovementSlowUntil = 0f;
         damageKnockbackControlLockUntil = 0f;
         ResetAttackComboState();
@@ -479,7 +502,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         UpdateAttackComboState();
 
         float now = Time.time;
-        if (IsKickActionActiveAt(now) || IsNonCombatInventoryActionActive(now))
+        if (IsShieldGuarding || IsKickActionActiveAt(now) || IsNonCombatInventoryActionActive(now))
             return false;
 
         if (!HasActiveAttackCombo(now))
@@ -659,6 +682,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             || IsDrawActionActive(now)
             || IsInventoryItemActionActive(now)
             || IsEmoteActionActive(now)
+            || IsShieldGuarding
             || emoteWheelSelectionActive;
     }
 
@@ -696,7 +720,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
     private bool CanStartKickAt(float now, bool checkCrouchStand)
     {
-        if (HasActiveAttackCombo(now) || IsNonCombatInventoryActionActive(now))
+        if (IsShieldGuarding || HasActiveAttackCombo(now) || IsNonCombatInventoryActionActive(now))
             return false;
 
         float cooldown = config != null
@@ -757,7 +781,34 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             return false;
 
         UpdateAttackComboState();
-        return !IsInventorySlotChangeLockedAt(Time.time);
+        return !IsShieldGuarding && !IsInventorySlotChangeLockedAt(Time.time);
+    }
+
+    public void SetShieldGuardState(bool guarding, bool blocking, HandType hand, float speedMultiplier)
+    {
+        if (!HasAuthority())
+            return;
+
+        bool nextGuarding = guarding;
+        bool nextBlocking = nextGuarding && blocking;
+        shieldGuardHand = hand;
+        shieldGuardSpeedMultiplier = Mathf.Clamp01(speedMultiplier);
+
+        if (nextGuarding && CurrentState == MovementState.sprinting)
+            SetMovementStateInternal(MovementState.walking);
+
+        if (shieldGuarding == nextGuarding && shieldBlocking == nextBlocking)
+            return;
+
+        shieldGuarding = nextGuarding;
+        shieldBlocking = nextBlocking;
+
+        if (shieldGuarding)
+        {
+            ResetAttackComboState();
+            activeInventoryItemActionEndTime = 0f;
+            activeEmoteActionEndTime = 0f;
+        }
     }
 
     public void SetEmoteWheelSelectionActive(bool active)
@@ -809,6 +860,17 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         return true;
     }
 
+    public bool TriggerLitTorchAnimation(HandType hand)
+    {
+        if (!HasAuthority())
+            return false;
+
+        litTorchAnimationHand = hand;
+        litTorchAnimationSequence++;
+        BeginActionLock(ref activeInventoryItemActionEndTime, GetItemUseInventoryLockDuration());
+        return true;
+    }
+
     public void TriggerDamageAnimation(PlayerDamageAnimationType type)
     {
         if (!HasAuthority() || type == PlayerDamageAnimationType.None)
@@ -816,6 +878,15 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
         currentDamageAnimationType = type;
         damageAnimationSequence++;
+    }
+
+    public bool TriggerShieldBlockAnimation()
+    {
+        if (!HasAuthority() || !shieldGuarding || !shieldBlocking)
+            return false;
+
+        shieldBlockAnimationSequence++;
+        return true;
     }
 
     public bool TriggerEmote(PlayerEmoteType type)

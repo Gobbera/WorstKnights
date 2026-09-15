@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a1055a6b9a79d40bcad2eec8cb41ae, type: 3}
+  m_Name: Footstep_Rock_Land
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCue
+  cueId: 
+  clips:
+  - {fileID: 8300000, guid: 3d8f480d252db9449b2f978284506f8e, type: 3}
+  - {fileID: 8300000, guid: 79e6e1370ee1ca747b469e68d0dcb0fe, type: 3}
+  - {fileID: 8300000, guid: b796f7e3b1a4d7344b7ee8d6c077a68f, type: 3}
+  - {fileID: 8300000, guid: 1f080a1e65d584c4ca3e3c75fbb406b3, type: 3}
+  - {fileID: 8300000, guid: 45bc125cb8cb195408490bec63fde615, type: 3}
+  - {fileID: 8300000, guid: c2e0d3f88cb48f240af40a1f1bac7e8c, type: 3}
+  mixerGroup: {fileID: 0}
+  space: 1
+  replication: 0
+  anchor: 0
+  loop: 0
+  baseVolume: 0.18
+  randomVolumeRange: {x: 0.95, y: 1.05}
+  basePitch: 1
+  randomPitchRange: {x: 0.9, y: 1.05}
+  spatialBlend: 1
+  spread: 0
+  minDistance: 1
+  maxDistance: 15
+  cooldown: 0

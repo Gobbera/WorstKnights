@@ -15,7 +15,6 @@ public class WorldPickupItem : MonoBehaviour
     private static readonly Dictionary<string, WorldPickupItem> SceneItemRegistry = new Dictionary<string, WorldPickupItem>(StringComparer.Ordinal);
     private static bool createAsPresentationClone;
     private const string PickupColliderHostName = "PickupTrigger";
-    private const string DropCollisionHostName = "DropCollision";
     private const string LegacyGripPointObjectName = "GripPoint";
     private const string RightGripPointObjectName = "GripPoints_TP_Right";
     private const string LeftGripPointObjectName = "GripPoints_TP_Left";
@@ -35,6 +34,9 @@ public class WorldPickupItem : MonoBehaviour
 
     [Header("Item Data")]
     [SerializeField] private ItemDefinition itemDefinition;
+    [Header("Audio")]
+    [SerializeField] private AudioCue inventorySelectAudioCue;
+    [SerializeField] private AudioCue useAudioCue;
     [Header("Networking")]
     [SerializeField] private string networkSceneId = string.Empty;
     [SerializeField] [HideInInspector] private Transform pickupColliderHost;
@@ -72,6 +74,8 @@ public class WorldPickupItem : MonoBehaviour
 
     public ItemDefinition ItemDefinition => itemDefinition;
     public string ItemName => itemDefinition != null ? itemDefinition.ItemName : gameObject.name;
+    public AudioCue InventorySelectAudioCue => inventorySelectAudioCue != null ? inventorySelectAudioCue : itemDefinition != null ? itemDefinition.InventorySelectAudioCue : null;
+    public AudioCue UseAudioCue => useAudioCue != null ? useAudioCue : itemDefinition != null ? itemDefinition.UseAudioCue : null;
     public bool IsEquipped { get; private set; }
     public HandType EquippedHand { get; private set; } = HandType.Right;
     public EquippedItemPerspective EquippedPerspective { get; private set; } = EquippedItemPerspective.ThirdPerson;
@@ -254,6 +258,12 @@ public class WorldPickupItem : MonoBehaviour
     public void SetItemDefinition(ItemDefinition definition)
     {
         itemDefinition = definition;
+    }
+
+    public void SetAudioCues(AudioCue selectCue, AudioCue actionCue)
+    {
+        inventorySelectAudioCue = selectCue;
+        useAudioCue = actionCue;
     }
 
     public bool ValidateAuthoringState()
@@ -1108,11 +1118,7 @@ public class WorldPickupItem : MonoBehaviour
             if (pickupCollider == null)
                 return;
 
-            Transform collisionHost = EnsureDropCollisionHost(createIfMissing: true);
-            if (collisionHost == null)
-                return;
-
-            generatedDropCollider = CreateSolidColliderFromSource(collisionHost.gameObject, pickupCollider);
+            generatedDropCollider = CreateSolidColliderFromSource(gameObject, pickupCollider);
             if (generatedDropCollider == null)
                 return;
         }
@@ -1123,7 +1129,7 @@ public class WorldPickupItem : MonoBehaviour
 
     private Collider FindExistingSolidWorldCollider()
     {
-        Collider[] colliders = GetComponentsInChildren<Collider>(true);
+        Collider[] colliders = GetComponents<Collider>();
         for (int i = 0; i < colliders.Length; i++)
         {
             Collider collider = colliders[i];
@@ -1178,23 +1184,22 @@ public class WorldPickupItem : MonoBehaviour
         if (pickupCollider == null)
             return false;
 
-        Transform collisionHost = EnsureDropCollisionHost(createIfMissing: true);
-        if (collisionHost == null)
-            return false;
-
-        CopyDropCollisionHostTransform(pickupCollider.transform, collisionHost);
-        generatedDropCollider = CreateSolidColliderFromSource(collisionHost.gameObject, pickupCollider);
+        generatedDropCollider = CreateSolidColliderFromSource(gameObject, pickupCollider);
         return generatedDropCollider != null;
     }
 
     private Collider CreateSolidColliderFromSource(GameObject hostObject, Collider sourceCollider)
     {
+        if (hostObject == null || sourceCollider == null)
+            return null;
+
+        Transform hostTransform = hostObject.transform;
         if (sourceCollider is BoxCollider sourceBox)
         {
             BoxCollider worldBox = EnsureCollider<BoxCollider>(hostObject);
             CopySharedColliderSettings(sourceBox, worldBox);
-            worldBox.center = sourceBox.center;
-            worldBox.size = sourceBox.size;
+            worldBox.center = hostTransform.InverseTransformPoint(sourceBox.transform.TransformPoint(sourceBox.center));
+            worldBox.size = Vector3.Scale(sourceBox.size, GetRelativeAbsScale(sourceBox.transform, hostTransform));
             return worldBox;
         }
 
@@ -1202,8 +1207,9 @@ public class WorldPickupItem : MonoBehaviour
         {
             SphereCollider worldSphere = EnsureCollider<SphereCollider>(hostObject);
             CopySharedColliderSettings(sourceSphere, worldSphere);
-            worldSphere.center = sourceSphere.center;
-            worldSphere.radius = sourceSphere.radius;
+            Vector3 relativeScale = GetRelativeAbsScale(sourceSphere.transform, hostTransform);
+            worldSphere.center = hostTransform.InverseTransformPoint(sourceSphere.transform.TransformPoint(sourceSphere.center));
+            worldSphere.radius = sourceSphere.radius * Mathf.Max(relativeScale.x, relativeScale.y, relativeScale.z);
             return worldSphere;
         }
 
@@ -1211,32 +1217,15 @@ public class WorldPickupItem : MonoBehaviour
         {
             CapsuleCollider worldCapsule = EnsureCollider<CapsuleCollider>(hostObject);
             CopySharedColliderSettings(sourceCapsule, worldCapsule);
-            worldCapsule.center = sourceCapsule.center;
-            worldCapsule.radius = sourceCapsule.radius;
-            worldCapsule.height = sourceCapsule.height;
+            Vector3 relativeScale = GetRelativeAbsScale(sourceCapsule.transform, hostTransform);
+            worldCapsule.center = hostTransform.InverseTransformPoint(sourceCapsule.transform.TransformPoint(sourceCapsule.center));
+            worldCapsule.radius = sourceCapsule.radius * GetCapsuleRadiusScale(sourceCapsule.direction, relativeScale);
+            worldCapsule.height = sourceCapsule.height * GetAxisScale(sourceCapsule.direction, relativeScale);
             worldCapsule.direction = sourceCapsule.direction;
             return worldCapsule;
         }
 
         return null;
-    }
-
-    private void CopyDropCollisionHostTransform(Transform sourceHost, Transform collisionHost)
-    {
-        if (sourceHost == null || collisionHost == null)
-            return;
-
-        if (sourceHost == transform)
-        {
-            collisionHost.localPosition = Vector3.zero;
-            collisionHost.localRotation = Quaternion.identity;
-            collisionHost.localScale = Vector3.one;
-            return;
-        }
-
-        collisionHost.localPosition = sourceHost.localPosition;
-        collisionHost.localRotation = sourceHost.localRotation;
-        collisionHost.localScale = sourceHost.localScale;
     }
 
     private static void CopySharedColliderSettings(Collider sourceCollider, Collider targetCollider)
@@ -1245,6 +1234,44 @@ public class WorldPickupItem : MonoBehaviour
             return;
 
         targetCollider.sharedMaterial = sourceCollider.sharedMaterial;
+    }
+
+    private static Vector3 GetRelativeAbsScale(Transform source, Transform root)
+    {
+        Vector3 sourceScale = GetAbsoluteLossyScale(source);
+        Vector3 rootScale = GetAbsoluteLossyScale(root);
+        return new Vector3(
+            SafeDivide(sourceScale.x, rootScale.x),
+            SafeDivide(sourceScale.y, rootScale.y),
+            SafeDivide(sourceScale.z, rootScale.z));
+    }
+
+    private static float GetCapsuleRadiusScale(int direction, Vector3 scale)
+    {
+        switch (direction)
+        {
+            case 0:
+                return Mathf.Max(scale.y, scale.z);
+            case 2:
+                return Mathf.Max(scale.x, scale.y);
+            case 1:
+            default:
+                return Mathf.Max(scale.x, scale.z);
+        }
+    }
+
+    private static float GetAxisScale(int direction, Vector3 scale)
+    {
+        switch (direction)
+        {
+            case 0:
+                return scale.x;
+            case 2:
+                return scale.z;
+            case 1:
+            default:
+                return scale.y;
+        }
     }
 
     private T EnsureCollider<T>(GameObject colliderHostObject) where T : Collider
@@ -1264,7 +1291,7 @@ public class WorldPickupItem : MonoBehaviour
         for (int i = 0; i < colliders.Length; i++)
         {
             Collider collider = colliders[i];
-            if (collider != null && collider.GetType() != colliderTypeToKeep)
+            if (collider != null && !collider.isTrigger && collider.GetType() != colliderTypeToKeep)
                 DestroyColliderComponent(collider);
         }
     }
@@ -1294,35 +1321,13 @@ public class WorldPickupItem : MonoBehaviour
         return null;
     }
 
-    private Transform EnsureDropCollisionHost(bool createIfMissing)
-    {
-        Transform host = transform.Find(DropCollisionHostName);
-        if (host != null || !createIfMissing)
-            return host;
-
-        GameObject hostObject = new GameObject(DropCollisionHostName);
-        hostObject.transform.SetParent(transform, false);
-        hostObject.transform.localPosition = Vector3.zero;
-        hostObject.transform.localRotation = Quaternion.identity;
-        hostObject.transform.localScale = Vector3.one;
-        return hostObject.transform;
-    }
-
     private bool TryCreateDropColliderFromRendererBounds()
     {
         if (!TryCalculateLocalRendererBounds(transform, out Bounds rootLocalBounds))
             return false;
 
-        Transform collisionHost = EnsureDropCollisionHost(createIfMissing: true);
-        if (collisionHost == null)
-            return false;
-
-        collisionHost.localPosition = rootLocalBounds.center;
-        collisionHost.localRotation = Quaternion.identity;
-        collisionHost.localScale = Vector3.one;
-
-        BoxCollider boxCollider = EnsureCollider<BoxCollider>(collisionHost.gameObject);
-        boxCollider.center = Vector3.zero;
+        BoxCollider boxCollider = EnsureCollider<BoxCollider>(gameObject);
+        boxCollider.center = rootLocalBounds.center;
         boxCollider.size = EnsureMinimumSize(rootLocalBounds.size);
         boxCollider.isTrigger = false;
         boxCollider.enabled = false;

@@ -136,6 +136,25 @@ public class PlayerHealth : CombatHealth
             playerCameraImpact));
     }
 
+    public void ReceiveEnemyShieldBlock(GameObject instigator, Vector3 hitPoint, Vector3 hitDirection)
+    {
+        if (CanApplyDamageLocally())
+        {
+            ApplyEnemyShieldBlockFeedback(instigator, hitPoint, hitDirection);
+            return;
+        }
+
+        if (photonView == null || photonView.Owner == null)
+            return;
+
+        photonView.RPC(
+            nameof(RpcReceiveEnemyShieldBlock),
+            photonView.Owner,
+            ResolveInstigatorViewId(instigator),
+            hitPoint,
+            hitDirection);
+    }
+
     public void ReceiveFallDamage(float amount)
     {
         ReceiveFallDamage(amount, 0f, 0f);
@@ -456,6 +475,12 @@ public class PlayerHealth : CombatHealth
     }
 
     [PunRPC]
+    private void RpcReceiveEnemyShieldBlock(int instigatorViewId, Vector3 hitPoint, Vector3 hitDirection)
+    {
+        ApplyEnemyShieldBlockFeedback(ResolveInstigatorObject(instigatorViewId), hitPoint, hitDirection);
+    }
+
+    [PunRPC]
     private void RpcReceiveKickDamage(
         float amount,
         int instigatorViewId,
@@ -635,6 +660,15 @@ public class PlayerHealth : CombatHealth
 
         if (!Mathf.Approximately(CurrentHealth, previousHealth) || IsAlive != wasAlive)
             BroadcastLifeState();
+    }
+
+    private void ApplyEnemyShieldBlockFeedback(GameObject instigator, Vector3 hitPoint, Vector3 hitDirection)
+    {
+        if (!CanApplyDamageLocally() || !IsAlive)
+            return;
+
+        playerMovement ??= GetComponent<PlayerMovement>();
+        playerMovement?.TriggerShieldBlockAnimation();
     }
 
     private void ApplyKickDamageAndKnockback(DamageInfo damageInfo, Vector3 velocityChange, float controlLockDuration)

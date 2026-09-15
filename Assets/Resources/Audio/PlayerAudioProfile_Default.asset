@@ -23,7 +23,7 @@ MonoBehaviour:
   crouch:
     cue: {fileID: 11400000, guid: ce32de6ce0641c6418391ac26a62c28e, type: 2}
     minPlanarSpeed: 0.1
-    metersPerStep: 0.6
+    metersPerStep: 0.73
   attack: {fileID: 0}
   jump: {fileID: 0}
   land: {fileID: 0}

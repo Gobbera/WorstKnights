@@ -141,6 +141,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldPickupItem
   itemDefinition: {fileID: 11400000, guid: b283689958819274fb26139fd4842313, type: 2}
+  inventorySelectAudioCue: {fileID: 0}
+  useAudioCue: {fileID: 11400000, guid: 3248b8a5cb4f17b42892e16833124489, type: 2}
   networkSceneId: 
   pickupColliderHost: {fileID: 2376330553085639881}
   rightHandPose:
@@ -256,7 +258,7 @@ BoxCollider:
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.16024564, y: 0.8250946, z: 0.15513143}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: -0.0062138513, y: -0.00796026, z: -0.00000023841858}
 --- !u!114 &1132049323372930221
 MonoBehaviour:
   m_ObjectHideFlags: 0

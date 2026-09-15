@@ -23,12 +23,11 @@ Move item-authoring responsibilities out of `WorldPickupItem` and into a dedicat
   - `Assets/Resources/Items/<ItemName>.asset`
   - `Assets/Prefabs/Items/<ItemName>.prefab`
 - Prefab structure:
-  - Root: `WorldPickupItem` + `Outline`
+  - Root: `WorldPickupItem` + `Outline` + solid collision collider + `ReactionSignalReceiver` + `ReactionSignalEmitter` + `CollisionReactionSignalBridge`
   - `Model`: selected model/prefab instance
   - `PickupTrigger`: trigger collider used by player interaction
   - `GripPoint_Right` / `GripPoint_Left`: hand grip reference transforms
   - `GripPoint_FPS_Right` / `GripPoint_FPS_Left`: first-person hand grip reference transforms
-  - `DropCollision`: optional generated solid collider for physical drops
 
 ## Runtime Boundary
 
@@ -36,11 +35,13 @@ Move item-authoring responsibilities out of `WorldPickupItem` and into a dedicat
 
 ## Current Implementation
 
-- `WorldPickupItem` now exposes only the runtime item reference, network scene id, pickup trigger reference, and right/left grip references.
-- Collider shape, collider fitting, outline setup, prefab creation, and `DropCollision` live in `Tools/Inventory/Item Authoring Tool`.
+- `WorldPickupItem` now exposes the runtime item reference, item audio cues, network scene id, pickup trigger reference, and right/left grip references.
+- Collider shape, collider fitting, outline setup, prefab creation, root collision, and item reaction setup live in `Tools/Inventory/Item Authoring Tool`.
 - Scene preview, target socket selection, and grip pose saving live in `Tools/Inventory/Item Grip Authoring Tool`.
 - Grip authoring saves TP sockets into `GripPoint_Right` / `GripPoint_Left` and FPS sockets into `GripPoint_FPS_Right` / `GripPoint_FPS_Left`, so the two perspectives do not overwrite each other.
 - `ItemDefinition` fields are shown by use type: consumables show healing/consume settings, while `Weapon` and `MeleeWeapon` show `Base Damage`.
+- `WorldPickupItem.InventorySelectAudioCue` is authored in the tool and plays locally when the item is picked up/equipped or selected from an inventory slot; `ItemDefinition` keeps the same cue as a fallback for older/no-pickup paths.
+- `WorldPickupItem.UseAudioCue` is authored in the tool and plays locally when the equipped item action is accepted, such as attack, consumable use, tool toggle, or a held-item scene interaction.
 - Sellable item fields are independent from use type: enable `Can Be Sold` to reveal `Sell Price`.
 - In `Editar`, item data, runtime pickup references, and checked prefab setup actions are staged in the window and saved only when `Confirmar Edições` is clicked at the bottom of the window; `Reverter` reloads the current prefab data.
 - Confirming edits writes through the prefab contents and renames the prefab root/file plus the local `ItemDefinition` asset to match `Item Name` when applicable.
@@ -53,18 +54,18 @@ Move item-authoring responsibilities out of `WorldPickupItem` and into a dedicat
 
 1. Open `Tools/Inventory/Item Authoring Tool`.
 2. Click `Novo Item`.
-3. Fill `Item Name`, select the model, configure item data, choose the pickup collider shape, and set outline color/width.
+3. Fill `Item Name`, select the model, configure item data, optionally assign `Inventory Select Audio Cue` and `Use Audio Cue`, choose the pickup collider shape, and set outline color/width.
 4. Click `Criar Item`.
 
-The tool creates the `ItemDefinition`, builds the prefab root with `WorldPickupItem` and `Outline`, adds the selected model under `Model`, creates `PickupTrigger`, creates TP/FPS grip point transforms, and creates a disabled `DropCollision` collider for physical drops.
+The tool creates the `ItemDefinition`, builds the prefab root with `WorldPickupItem`, `Outline`, root solid collision, `ReactionSignalReceiver`, `ReactionSignalEmitter`, and `CollisionReactionSignalBridge`, adds the selected model under `Model`, creates `PickupTrigger`, and creates TP/FPS grip point transforms.
 
 ### Edit An Existing Item
 
 1. Open `Tools/Inventory/Item Authoring Tool`.
 2. Click `Editar`.
 3. Use the `Item Prefab` search field to pick a prefab from `Assets/Prefabs/Items`, or select one in Project and click `Usar Selecionado`.
-4. Edit the `ItemDefinition` and runtime pickup references in the window.
-5. Mark `Gerar/Atualizar Outline`, `Gerar/Atualizar Grip Points`, or `Gerar/Atualizar Drop Collision` when the prefab should receive one of those setup pieces.
+4. Edit the `ItemDefinition`, item audio cues, and runtime pickup references in the window.
+5. Use `Gerar Outline`, `Gerar Grip Points TP/FPS`, or `Gerar Collision No Root` when the prefab should receive one of those setup pieces.
 6. At the bottom of the window, click `Confirmar Edições` to save those edits, or `Reverter` to discard pending changes.
 7. Use `Recriar PickupTrigger Pelo Visual` to rebuild the trigger collider from renderer bounds.
 

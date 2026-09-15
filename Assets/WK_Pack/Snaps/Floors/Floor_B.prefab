@@ -18,7 +18,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -2
+      value: -40
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.y
@@ -26,7 +26,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -2
+      value: -12
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalRotation.w
@@ -59,7 +59,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 993481e21127e7742ba85500285f1fbb, type: 2}
+      objectReference: {fileID: 2100000, guid: 2351b26f406fa8a4baa874f34a48b5d1, type: 2}
     - target: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_Name
       value: Floor_B
@@ -71,6 +71,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       insertIndex: -1
       addedObject: {fileID: -592631793589121638}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7528218593204179588}
   m_SourcePrefab: {fileID: 100100000, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
 --- !u!1 &1859214127934557383 stripped
 GameObject:
@@ -98,3 +101,16 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 4, y: 0, z: 4}
   m_Center: {x: 2, y: 0, z: 2}
+--- !u!114 &7528218593204179588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1859214127934557383}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51eaf0e2055340d69a67e315f41f72ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FootstepSurface
+  surface: {fileID: 11400000, guid: 386e041331b656f43860144daebd6798, type: 2}

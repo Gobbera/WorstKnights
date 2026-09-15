@@ -22,6 +22,13 @@ public partial class MovementAnimationController : MonoBehaviour
     private const string KickLayerName = "Kick";
     private const string KickLayerEmptyStatePath = "Kick.Empty";
     private const string KickLayerKickStatePath = "Kick.Kick";
+    private const string TorchGripLayerName = "Torch Grip";
+    private const string LitTorchStatePath = "Torch Grip.Lit a Torch";
+    private const string ShieldGripLayerName = "Shield Grip";
+    private const string ShieldGripStatePath = "Shield Grip.Shield_Grip";
+    private const string ShieldGripAlternateStatePath = "Shield Grip.Shield Grip";
+    private const string ShieldBlockReactionStatePath = "Shield Grip.Shield Damage Receive";
+    private const float ShieldBlockReactionFallbackReturnTime = 0.25f;
     private const string EmoteLayerName = "Thumbs Up";
     private const string EmoteLayerEmptyStatePath = "Thumbs Up.Empty";
     private const string EmoteLayerThumbsUpStatePath = "Thumbs Up.ThumbsUp";
@@ -74,7 +81,9 @@ public partial class MovementAnimationController : MonoBehaviour
     private int lastLandingAnimationSequence;
     private int lastPickupAnimationSequence;
     private int lastDrawAnimationSequence;
+    private int lastLitTorchAnimationSequence;
     private int lastDamageAnimationSequence;
+    private int lastShieldBlockAnimationSequence;
     private int lastEmoteAnimationSequence;
     private float airborneTime;
     private float idleTurnAccumulatedYaw;
@@ -85,8 +94,12 @@ public partial class MovementAnimationController : MonoBehaviour
     private float verticalVelocity;
     private float movementMagnitudeVelocity;
     private int upperBodyAttackLayerIndex = -1;
+    private int torchGripLayerIndex = -1;
     private int kickLayerIndex = -1;
+    private int shieldGripLayerIndex = -1;
     private int emoteLayerIndex = -1;
+    private int activeShieldBlockReactionStateHash;
+    private float activeShieldBlockReactionRequestTime;
 
     private void Awake()
     {
@@ -155,10 +168,22 @@ public partial class MovementAnimationController : MonoBehaviour
             lastDrawAnimationSequence = playerMovement.DrawAnimationSequence;
         }
 
+        if (playerMovement.LitTorchAnimationSequence != lastLitTorchAnimationSequence)
+        {
+            PlayLitTorchAnimation(playerMovement.LitTorchAnimationHand);
+            lastLitTorchAnimationSequence = playerMovement.LitTorchAnimationSequence;
+        }
+
         if (playerMovement.DamageAnimationSequence != lastDamageAnimationSequence)
         {
             PlayDamageAnimation(playerMovement.CurrentDamageAnimationType);
             lastDamageAnimationSequence = playerMovement.DamageAnimationSequence;
+        }
+
+        if (playerMovement.ShieldBlockAnimationSequence != lastShieldBlockAnimationSequence)
+        {
+            PlayShieldBlockReactionAnimation();
+            lastShieldBlockAnimationSequence = playerMovement.ShieldBlockAnimationSequence;
         }
 
         if (playerMovement.EmoteAnimationSequence != lastEmoteAnimationSequence)
@@ -179,6 +204,7 @@ public partial class MovementAnimationController : MonoBehaviour
         UpdateUpperBodyAttackAnimationState();
         UpdateKickAnimationState();
         UpdateEmoteAnimationState(isGrounded, isJumpQueued);
+        UpdateShieldBlockReactionAnimationState();
 
         SetBoolIfExists(MovementAnimatorSemantic.IsGrounded, "IsGrounded", isGrounded);
         SetBoolIfExists(MovementAnimatorSemantic.IsCrouching, "IsCrouching", isCrouching);
@@ -188,6 +214,10 @@ public partial class MovementAnimationController : MonoBehaviour
         SetBoolIfExists(MovementAnimatorSemantic.RightHandOccupied, "IsRightHandOccupied", playerMovement.IsRightHandOccupied);
         SetBoolIfExists(MovementAnimatorSemantic.LeftHandOccupied, "IsLeftHandOccupied", playerMovement.IsLeftHandOccupied);
         SetBoolIfExists(MovementAnimatorSemantic.LeftTorchEquipped, "IsLeftTorchEquipped", playerMovement.IsLeftHandTorchEquipped);
+        SetBoolIfExists(MovementAnimatorSemantic.ShieldGuarding, "IsShieldGuarding", playerMovement.IsShieldGuarding);
+        SetBoolIfExists(MovementAnimatorSemantic.ShieldBlocking, "IsShieldBlocking", playerMovement.IsShieldBlocking);
+        SetBoolIfExists(MovementAnimatorSemantic.RightShieldGuarding, "IsRightShieldGuarding", playerMovement.IsShieldGuarding && playerMovement.ShieldGuardHand == HandType.Right);
+        SetBoolIfExists(MovementAnimatorSemantic.LeftShieldGuarding, "IsLeftShieldGuarding", playerMovement.IsShieldGuarding && playerMovement.ShieldGuardHand == HandType.Left);
 
         SetFloatDirectIfExists(MovementAnimatorSemantic.Horizontal, "Horizontal", horizontal);
         SetFloatDirectIfExists(MovementAnimatorSemantic.Vertical, "Vertical", vertical);
@@ -216,7 +246,9 @@ public partial class MovementAnimationController : MonoBehaviour
         lastLandingAnimationSequence = playerMovement.LandingAnimationSequence;
         lastPickupAnimationSequence = playerMovement.PickupAnimationSequence;
         lastDrawAnimationSequence = playerMovement.DrawAnimationSequence;
+        lastLitTorchAnimationSequence = playerMovement.LitTorchAnimationSequence;
         lastDamageAnimationSequence = playerMovement.DamageAnimationSequence;
+        lastShieldBlockAnimationSequence = playerMovement.ShieldBlockAnimationSequence;
         lastEmoteAnimationSequence = playerMovement.EmoteAnimationSequence;
         hasInitializedAnimatorState = true;
         wasGrounded = isGrounded;
@@ -225,6 +257,8 @@ public partial class MovementAnimationController : MonoBehaviour
         ResetTriggerIfExists(MovementAnimatorSemantic.JumpTrigger, "Jump");
         ResetTriggerIfExists(MovementAnimatorSemantic.LandTrigger, "Land");
         ResetTriggerIfExists(MovementAnimatorSemantic.ThumbsUpTrigger, "ThumbsUp");
+        ResetTriggerIfExists(MovementAnimatorSemantic.ShieldBlockTrigger, "ShieldBlock");
+        ResetTriggerIfExists(MovementAnimatorSemantic.LitTorchTrigger, "LitTorch");
         ResetTriggerIfExists(MovementAnimatorSemantic.CrouchEnterTrigger, "CrouchEnter");
         ResetTriggerIfExists(MovementAnimatorSemantic.CrouchExitTrigger, "CrouchExit");
         ResetTriggerIfExists(MovementAnimatorSemantic.IdleTurnLeftTrigger, "IdleTurnLeft");
@@ -272,6 +306,8 @@ public partial class MovementAnimationController : MonoBehaviour
         ResetTriggerIfExists(MovementAnimatorSemantic.JumpTrigger, "Jump");
         ResetTriggerIfExists(MovementAnimatorSemantic.LandTrigger, "Land");
         ResetTriggerIfExists(MovementAnimatorSemantic.ThumbsUpTrigger, "ThumbsUp");
+        ResetTriggerIfExists(MovementAnimatorSemantic.ShieldBlockTrigger, "ShieldBlock");
+        ResetTriggerIfExists(MovementAnimatorSemantic.LitTorchTrigger, "LitTorch");
         ResetTriggerIfExists(MovementAnimatorSemantic.CrouchEnterTrigger, "CrouchEnter");
         ResetTriggerIfExists(MovementAnimatorSemantic.CrouchExitTrigger, "CrouchExit");
         ResetTriggerIfExists(MovementAnimatorSemantic.IdleTurnLeftTrigger, "IdleTurnLeft");
@@ -428,6 +464,21 @@ public partial class MovementAnimationController : MonoBehaviour
         Debug.LogWarning($"MovementAnimationController: state '{statePath}' nao foi encontrado.", gameObject);
     }
 
+    public void PlayLitTorchAnimation(HandType hand)
+    {
+        CacheAnimatorLayerIndices();
+        SetLayerWeightIfNeeded(torchGripLayerIndex, 1f);
+
+        ResetTriggerIfExists(MovementAnimatorSemantic.LitTorchTrigger, "LitTorch");
+        if (SetTriggerIfExists(MovementAnimatorSemantic.LitTorchTrigger, "LitTorch"))
+            return;
+
+        if (TryPlayStateOnLayer(torchGripLayerIndex, LitTorchStatePath, 0.05f) || TryPlayState("Lit a Torch", 0.05f))
+            return;
+
+        Debug.LogWarning($"MovementAnimationController: state '{LitTorchStatePath}' nao foi encontrado.", gameObject);
+    }
+
     public void PlayDamageAnimation(PlayerDamageAnimationType type)
     {
         if (type == PlayerDamageAnimationType.None)
@@ -446,6 +497,68 @@ public partial class MovementAnimationController : MonoBehaviour
 
         if (!TryPlayState(statePath, 0.05f))
             Debug.LogWarning($"MovementAnimationController: state '{statePath}' nao foi encontrado.", gameObject);
+    }
+
+    public void PlayShieldBlockReactionAnimation()
+    {
+        if (playerMovement == null || !playerMovement.IsShieldGuarding)
+            return;
+
+        CacheAnimatorLayerIndices();
+        ResetTriggerIfExists(MovementAnimatorSemantic.ShieldBlockTrigger, "ShieldBlock");
+        if (SetTriggerIfExists(MovementAnimatorSemantic.ShieldBlockTrigger, "ShieldBlock"))
+            return;
+
+        if (TryPlayStateOnLayer(shieldGripLayerIndex, ShieldBlockReactionStatePath, 0.04f))
+        {
+            activeShieldBlockReactionStateHash = Animator.StringToHash(ShieldBlockReactionStatePath);
+            activeShieldBlockReactionRequestTime = Time.time;
+            SetLayerWeightIfNeeded(shieldGripLayerIndex, 1f);
+            return;
+        }
+
+        if (!TryPlayState("Shield Damage Receive", 0.04f))
+            Debug.LogWarning($"MovementAnimationController: state '{ShieldBlockReactionStatePath}' nao foi encontrado.", gameObject);
+    }
+
+    private void UpdateShieldBlockReactionAnimationState()
+    {
+        if (activeShieldBlockReactionStateHash == 0)
+            return;
+
+        CacheAnimatorLayerIndices();
+        if (animator == null || shieldGripLayerIndex < 0 || shieldGripLayerIndex >= animator.layerCount)
+        {
+            activeShieldBlockReactionStateHash = 0;
+            return;
+        }
+
+        if (animator.IsInTransition(shieldGripLayerIndex))
+            return;
+
+        AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(shieldGripLayerIndex);
+        if (currentState.fullPathHash != activeShieldBlockReactionStateHash)
+        {
+            activeShieldBlockReactionStateHash = 0;
+            return;
+        }
+
+        bool finished = currentState.normalizedTime >= 1f;
+        bool fallbackElapsed = currentState.length <= 0.001f
+            && Time.time - activeShieldBlockReactionRequestTime >= ShieldBlockReactionFallbackReturnTime;
+        if (!finished && !fallbackElapsed)
+            return;
+
+        activeShieldBlockReactionStateHash = 0;
+        activeShieldBlockReactionRequestTime = 0f;
+
+        if (playerMovement == null || !playerMovement.IsShieldGuarding)
+            return;
+
+        if (TryPlayStateOnLayer(shieldGripLayerIndex, ShieldGripStatePath, 0.05f))
+            return;
+
+        TryPlayStateOnLayer(shieldGripLayerIndex, ShieldGripAlternateStatePath, 0.05f);
     }
 
     public void PlayEmoteAnimation(PlayerEmoteType type)

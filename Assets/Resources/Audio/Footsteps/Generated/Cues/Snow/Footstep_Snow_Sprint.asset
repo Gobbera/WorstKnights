@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a1055a6b9a79d40bcad2eec8cb41ae, type: 3}
+  m_Name: Footstep_Snow_Sprint
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCue
+  cueId: 
+  clips:
+  - {fileID: 8300000, guid: 6ed60d26e9b63494aa186a23d910cfe8, type: 3}
+  - {fileID: 8300000, guid: 2518f7ac3fb5c094eb7f3494547dca64, type: 3}
+  - {fileID: 8300000, guid: 6d8cbeae1cc5dcb40bd1064681211059, type: 3}
+  - {fileID: 8300000, guid: 1117ec3a4264b0a4998eda9efc588d34, type: 3}
+  - {fileID: 8300000, guid: 20018cf3e169edd4eab1801917df7e76, type: 3}
+  - {fileID: 8300000, guid: b96ae5c1b4d420f4d97df12df2b04c3b, type: 3}
+  - {fileID: 8300000, guid: d353df4fd68f2884488c5e7cbe1ebcb2, type: 3}
+  - {fileID: 8300000, guid: 6edca185a4d3ba94aa11e1c92af3ca4d, type: 3}
+  - {fileID: 8300000, guid: 8ae3cc4609aef2745bc4778e5d9bf024, type: 3}
+  - {fileID: 8300000, guid: 80dc5f2116a9e924daa171dd5fc9a66c, type: 3}
+  - {fileID: 8300000, guid: 1cacf06a281a3f140a56c8766da08d36, type: 3}
+  - {fileID: 8300000, guid: ba6dc99376c85b4468a50ff05f135162, type: 3}
+  - {fileID: 8300000, guid: 4c784f2380314b24a822b2dd4fe062ab, type: 3}
+  - {fileID: 8300000, guid: 055d3b4f4ee12a34e837f1261703644e, type: 3}
+  - {fileID: 8300000, guid: ea7026b9fb96c374994996dba54ba526, type: 3}
+  - {fileID: 8300000, guid: 35f5fb2541d6e124ba5e61b1b007a300, type: 3}
+  - {fileID: 8300000, guid: 2bdf0af42858712489d89032417482a0, type: 3}
+  - {fileID: 8300000, guid: 8246f3c3f6373334d8bdd41eeb0b3945, type: 3}
+  - {fileID: 8300000, guid: 32074fca44eace649a885ce0e7f5aaaf, type: 3}
+  - {fileID: 8300000, guid: f20b2086edb0fa14194625121c56cecc, type: 3}
+  - {fileID: 8300000, guid: 763409ee05f3fce4a8e83df52710a28e, type: 3}
+  mixerGroup: {fileID: 0}
+  space: 1
+  replication: 0
+  anchor: 0
+  loop: 0
+  baseVolume: 0.14
+  randomVolumeRange: {x: 0.95, y: 1.05}
+  basePitch: 1
+  randomPitchRange: {x: 0.95, y: 1.12}
+  spatialBlend: 1
+  spread: 0
+  minDistance: 1
+  maxDistance: 15
+  cooldown: 0

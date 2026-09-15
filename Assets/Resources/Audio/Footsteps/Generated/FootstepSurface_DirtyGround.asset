@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca8a5ecadacf4ff0bb613c9379cb05e9, type: 3}
+  m_Name: FootstepSurface_DirtyGround
+  m_EditorClassIdentifier: Assembly-CSharp::FootstepSurfaceDefinition
+  defaultCue: {fileID: 11400000, guid: f3e928c3b2ea70942b1c83da4da3d0f4, type: 2}
+  walk: {fileID: 11400000, guid: f3e928c3b2ea70942b1c83da4da3d0f4, type: 2}
+  sprint: {fileID: 11400000, guid: b2dec7fc8050a5f47905660200b63701, type: 2}
+  crouch: {fileID: 11400000, guid: cbc627d958a676543bff7ae75e6b54e1, type: 2}
+  enemyWalk: {fileID: 11400000, guid: ebf038338ffc8eb458733e47db8cef68, type: 2}
+  jump: {fileID: 0}
+  land: {fileID: 0}

@@ -14,6 +14,8 @@ public struct ItemDefinitionAuthoringData
 {
     public string ItemName;
     public Sprite UiSprite;
+    public AudioCue InventorySelectAudioCue;
+    public AudioCue UseAudioCue;
     public HandRequirement HandRequirement;
     public HandType PreferredHand;
     public ItemUseType UseType;
@@ -77,6 +79,8 @@ public static class InventoryItemAuthoringUtility
         SerializedObject serializedItem = new SerializedObject(itemDefinition);
         serializedItem.FindProperty("itemName").stringValue = string.IsNullOrWhiteSpace(data.ItemName) ? itemDefinition.name : data.ItemName.Trim();
         serializedItem.FindProperty("uiSprite").objectReferenceValue = data.UiSprite;
+        serializedItem.FindProperty("inventorySelectAudioCue").objectReferenceValue = data.InventorySelectAudioCue;
+        serializedItem.FindProperty("useAudioCue").objectReferenceValue = data.UseAudioCue;
         serializedItem.FindProperty("handRequirement").enumValueIndex = (int)data.HandRequirement;
         serializedItem.FindProperty("preferredHand").enumValueIndex = (int)ResolveStoredPreferredHand(data.HandRequirement, data.PreferredHand);
         serializedItem.FindProperty("useType").enumValueIndex = (int)data.UseType;
@@ -96,6 +100,8 @@ public static class InventoryItemAuthoringUtility
         ItemPickupColliderShape colliderShape,
         Color outlineColor,
         float outlineWidth,
+        AudioCue inventorySelectAudioCue,
+        AudioCue useAudioCue,
         bool addRigidbody,
         out string prefabPath)
     {
@@ -110,6 +116,7 @@ public static class InventoryItemAuthoringUtility
         {
             WorldPickupItem pickupItem = root.AddComponent<WorldPickupItem>();
             pickupItem.SetItemDefinition(itemDefinition);
+            pickupItem.SetAudioCues(inventorySelectAudioCue, useAudioCue);
 
             InstantiateModelChild(root.transform, modelSource);
             EnsureOutline(root, outlineColor, outlineWidth);
@@ -117,7 +124,8 @@ public static class InventoryItemAuthoringUtility
                 EnsureRigidbody(root);
             EnsureGripPoints(pickupItem);
             RebuildPickupColliderFromRenderers(pickupItem, colliderShape);
-            EnsureDropCollisionFromPickup(pickupItem);
+            EnsureRootCollisionFromPickup(pickupItem);
+            EnsureItemReactionSetup(root);
 
             GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             AssetDatabase.SaveAssets();
@@ -139,17 +147,25 @@ public static class InventoryItemAuthoringUtility
         GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
         try
         {
+            bool createdPickupItem = false;
             WorldPickupItem pickupItem = root.GetComponent<WorldPickupItem>();
             if (pickupItem == null)
+            {
                 pickupItem = root.AddComponent<WorldPickupItem>();
+                createdPickupItem = true;
+            }
 
             if (itemDefinition != null)
                 pickupItem.SetItemDefinition(itemDefinition);
 
+            if (createdPickupItem && itemDefinition != null)
+                pickupItem.SetAudioCues(itemDefinition.InventorySelectAudioCue, itemDefinition.UseAudioCue);
+
             EnsureOutline(root, outlineColor, outlineWidth);
             EnsureRigidbody(root);
             EnsureGripPoints(pickupItem);
-            EnsureDropCollisionFromPickup(pickupItem);
+            EnsureRootCollisionFromPickup(pickupItem);
+            EnsureItemReactionSetup(root);
             EditorUtility.SetDirty(root);
             EditorUtility.SetDirty(pickupItem);
             PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
@@ -214,6 +230,11 @@ public static class InventoryItemAuthoringUtility
 
     public static void EnsureDropCollisionFromPickup(WorldPickupItem pickupItem)
     {
+        EnsureRootCollisionFromPickup(pickupItem);
+    }
+
+    public static void EnsureRootCollisionFromPickup(WorldPickupItem pickupItem)
+    {
         if (pickupItem == null)
             return;
 
@@ -221,16 +242,43 @@ public static class InventoryItemAuthoringUtility
         if (pickupCollider == null)
             return;
 
-        Transform dropHost = EnsureDirectChild(pickupItem.transform, DropCollisionName);
-        CopyLocalTransform(pickupCollider.transform, dropHost);
-
-        Collider dropCollider = CopyCollider(dropHost.gameObject, pickupCollider);
+        Collider dropCollider = CopyColliderToRoot(pickupItem.gameObject, pickupCollider);
         if (dropCollider == null)
             return;
 
         dropCollider.isTrigger = false;
         dropCollider.enabled = true;
-        EditorUtility.SetDirty(dropHost.gameObject);
+        DestroyLegacyDropCollisionChild(pickupItem.transform);
+        EditorUtility.SetDirty(dropCollider);
+        EditorUtility.SetDirty(pickupItem.gameObject);
+    }
+
+    public static void EnsureItemReactionSetup(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        ReactionSignalReceiver receiver = root.GetComponent<ReactionSignalReceiver>();
+        if (receiver == null)
+            receiver = root.AddComponent<ReactionSignalReceiver>();
+
+        ReactionSignalEmitter emitter = root.GetComponent<ReactionSignalEmitter>();
+        if (emitter == null)
+            emitter = root.AddComponent<ReactionSignalEmitter>();
+
+        CollisionReactionSignalBridge collisionBridge = root.GetComponent<CollisionReactionSignalBridge>();
+        if (collisionBridge == null && root.GetComponent<Collider>() != null)
+            collisionBridge = root.AddComponent<CollisionReactionSignalBridge>();
+
+        SetObjectReference(emitter, "signalReceiver", receiver);
+        if (collisionBridge != null)
+            SetObjectReference(collisionBridge, "signalEmitter", emitter);
+
+        EditorUtility.SetDirty(receiver);
+        EditorUtility.SetDirty(emitter);
+        if (collisionBridge != null)
+            EditorUtility.SetDirty(collisionBridge);
+        EditorUtility.SetDirty(root);
     }
 
     public static Rigidbody EnsureRigidbody(GameObject root)
@@ -610,32 +658,38 @@ public static class InventoryItemAuthoringUtility
         }
     }
 
-    private static Collider CopyCollider(GameObject hostObject, Collider sourceCollider)
+    private static Collider CopyColliderToRoot(GameObject rootObject, Collider sourceCollider)
     {
+        if (rootObject == null || sourceCollider == null)
+            return null;
+
+        Transform rootTransform = rootObject.transform;
         if (sourceCollider is BoxCollider sourceBox)
         {
-            BoxCollider boxCollider = EnsureCollider<BoxCollider>(hostObject);
-            boxCollider.center = sourceBox.center;
-            boxCollider.size = sourceBox.size;
+            BoxCollider boxCollider = EnsureCollider<BoxCollider>(rootObject);
+            boxCollider.center = rootTransform.InverseTransformPoint(sourceBox.transform.TransformPoint(sourceBox.center));
+            boxCollider.size = Vector3.Scale(sourceBox.size, GetRelativeAbsScale(sourceBox.transform, rootTransform));
             boxCollider.sharedMaterial = sourceBox.sharedMaterial;
             return boxCollider;
         }
 
         if (sourceCollider is SphereCollider sourceSphere)
         {
-            SphereCollider sphereCollider = EnsureCollider<SphereCollider>(hostObject);
-            sphereCollider.center = sourceSphere.center;
-            sphereCollider.radius = sourceSphere.radius;
+            SphereCollider sphereCollider = EnsureCollider<SphereCollider>(rootObject);
+            Vector3 relativeScale = GetRelativeAbsScale(sourceSphere.transform, rootTransform);
+            sphereCollider.center = rootTransform.InverseTransformPoint(sourceSphere.transform.TransformPoint(sourceSphere.center));
+            sphereCollider.radius = sourceSphere.radius * Mathf.Max(relativeScale.x, relativeScale.y, relativeScale.z);
             sphereCollider.sharedMaterial = sourceSphere.sharedMaterial;
             return sphereCollider;
         }
 
         if (sourceCollider is CapsuleCollider sourceCapsule)
         {
-            CapsuleCollider capsuleCollider = EnsureCollider<CapsuleCollider>(hostObject);
-            capsuleCollider.center = sourceCapsule.center;
-            capsuleCollider.radius = sourceCapsule.radius;
-            capsuleCollider.height = sourceCapsule.height;
+            CapsuleCollider capsuleCollider = EnsureCollider<CapsuleCollider>(rootObject);
+            Vector3 relativeScale = GetRelativeAbsScale(sourceCapsule.transform, rootTransform);
+            capsuleCollider.center = rootTransform.InverseTransformPoint(sourceCapsule.transform.TransformPoint(sourceCapsule.center));
+            capsuleCollider.radius = sourceCapsule.radius * GetCapsuleRadiusScale(sourceCapsule.direction, relativeScale);
+            capsuleCollider.height = sourceCapsule.height * GetAxisScale(sourceCapsule.direction, relativeScale);
             capsuleCollider.direction = sourceCapsule.direction;
             capsuleCollider.sharedMaterial = sourceCapsule.sharedMaterial;
             return capsuleCollider;
@@ -661,8 +715,66 @@ public static class InventoryItemAuthoringUtility
         for (int i = 0; i < colliders.Length; i++)
         {
             Collider collider = colliders[i];
-            if (collider != null && collider.GetType() != colliderTypeToKeep)
+            if (collider != null && !collider.isTrigger && collider.GetType() != colliderTypeToKeep)
                 UnityEngine.Object.DestroyImmediate(collider);
+        }
+    }
+
+    private static void DestroyLegacyDropCollisionChild(Transform root)
+    {
+        Transform legacyChild = FindDirectChildByName(root, DropCollisionName);
+        if (legacyChild != null)
+            UnityEngine.Object.DestroyImmediate(legacyChild.gameObject);
+    }
+
+    private static void SetObjectReference(UnityEngine.Object target, string propertyName, UnityEngine.Object value)
+    {
+        if (target == null || string.IsNullOrWhiteSpace(propertyName))
+            return;
+
+        SerializedObject serializedObject = new SerializedObject(target);
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property != null)
+            property.objectReferenceValue = value;
+
+        serializedObject.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static Vector3 GetRelativeAbsScale(Transform source, Transform root)
+    {
+        Vector3 sourceScale = GetAbsoluteLossyScale(source);
+        Vector3 rootScale = GetAbsoluteLossyScale(root);
+        return new Vector3(
+            SafeDivide(sourceScale.x, rootScale.x),
+            SafeDivide(sourceScale.y, rootScale.y),
+            SafeDivide(sourceScale.z, rootScale.z));
+    }
+
+    private static float GetCapsuleRadiusScale(int direction, Vector3 scale)
+    {
+        switch (direction)
+        {
+            case 0:
+                return Mathf.Max(scale.y, scale.z);
+            case 2:
+                return Mathf.Max(scale.x, scale.y);
+            case 1:
+            default:
+                return Mathf.Max(scale.x, scale.z);
+        }
+    }
+
+    private static float GetAxisScale(int direction, Vector3 scale)
+    {
+        switch (direction)
+        {
+            case 0:
+                return scale.x;
+            case 2:
+                return scale.z;
+            case 1:
+            default:
+                return scale.y;
         }
     }
 

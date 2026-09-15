@@ -26,6 +26,7 @@ public class PlayerPickupInteractor : MonoBehaviour
     [SerializeField] private LayerMask interactionMask = Physics.DefaultRaycastLayers;
     [SerializeField] private Camera interactionCamera;
     [SerializeField] private HandEquipmentController handEquipmentController;
+    [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PhotonView photonView;
     [Header("Pickup Outline")]
     [SerializeField] private bool highlightPickupUnderAim = true;
@@ -185,6 +186,12 @@ public class PlayerPickupInteractor : MonoBehaviour
             return false;
 
         return TryExecuteHeldItemInteraction(interactable, hand, itemDefinition, actionKey);
+    }
+
+    public bool TriggerLitTorchAnimation(HandType hand)
+    {
+        ResolveReferences();
+        return playerMovement != null && playerMovement.TriggerLitTorchAnimation(hand);
     }
 
     public bool TryPickupItem()
@@ -873,6 +880,12 @@ public class PlayerPickupInteractor : MonoBehaviour
 
         if (handEquipmentController == null)
             handEquipmentController = GetComponent<HandEquipmentController>();
+
+        if (playerMovement == null)
+            playerMovement = GetComponent<PlayerMovement>();
+
+        if (playerMovement == null)
+            playerMovement = GetComponentInParent<PlayerMovement>();
 
         if (interactionCamera != null)
             return;

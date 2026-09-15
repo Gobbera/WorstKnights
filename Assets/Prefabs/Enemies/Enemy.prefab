@@ -57,6 +57,9 @@ GameObject:
   - component: {fileID: 483004001000000010}
   - component: {fileID: 483004001000000011}
   - component: {fileID: 483004001000000012}
+  - component: {fileID: 483004001000000013}
+  - component: {fileID: 483004001000000015}
+  - component: {fileID: 483004001000000014}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -78,6 +81,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 900421584499501913}
+  - {fileID: 7357790825103340617}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &8938766655594501055
@@ -96,7 +100,7 @@ MeshRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1510896961024084334}
   m_Enabled: 0
-  m_CastShadows: 1
+  m_CastShadows: 2
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
@@ -407,9 +411,17 @@ MonoBehaviour:
   signalEntries:
   - signalId: Hit
     feedbackOrigin: {fileID: 0}
-    audioCue: {fileID: 11400000, guid: ceb6517111d86484aaca898ba076d4f2, type: 2}
+    audioCue: {fileID: 11400000, guid: 30014b3cc0d22dd4a8c16115a81248e5, type: 2}
     effectPrefab: {fileID: 3451279753407673077, guid: 21ec746de78787842a80661b40fbf62f, type: 3}
     effectLifetime: 1
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+  - signalId: Hit
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: ca0942170795a1b40b6578fabcb76fec, type: 2}
+    effectPrefab: {fileID: 0}
+    effectLifetime: 5
     onSignalReceived:
       m_PersistentCalls:
         m_Calls: []
@@ -443,6 +455,95 @@ MonoBehaviour:
   photonView: {fileID: 483004001000000001}
   signalId: Hit
   broadcastInMultiplayer: 1
+--- !u!114 &483004001000000013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510896961024084334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e92c090fa320082408ddb50720f2d161, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioEmitter
+  playbackAnchor: {fileID: 3531053784142162700}
+  stopLoopingCueOnDisable: 1
+--- !u!114 &483004001000000015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510896961024084334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c39cbce15564270aa22b3e1d27e05dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FootstepPlaybackController
+  audioEmitter: {fileID: 483004001000000013}
+  surfaceResolver: {fileID: 0}
+  characterProfile: {fileID: 0}
+  footstepAnchor: {fileID: 7357790825103340617}
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  probeOriginLift: 0.35
+  probeDistance: 1.5
+  footstepHeightOffset: 0
+  verboseLogging: 0
+--- !u!114 &483004001000000014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510896961024084334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbc1a664531a4bf9a15fbf8a0cc1aa2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyFootstepAudioController
+  enemyBrain: {fileID: 483004001000000003}
+  enemyMotor: {fileID: 483004001000000004}
+  enemyHealth: {fileID: 483004001000000006}
+  footstepPlayback: {fileID: 483004001000000015}
+  surfaceFallbackCue: {fileID: 0}
+  minPlanarSpeed: 0.15
+  metersPerStep: 1.2
+  onlyWhenChasing: 1
+  verboseLogging: 0
+--- !u!1 &7107680277941255748
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7357790825103340617}
+  m_Layer: 0
+  m_Name: FootstepAudioAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7357790825103340617
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7107680277941255748}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3531053784142162700}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &6390094998217993860
 PrefabInstance:
   m_ObjectHideFlags: 0

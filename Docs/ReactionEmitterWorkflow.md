@@ -407,6 +407,8 @@ Use em portais, volumes de area, sensores, checkpoints, zonas de puzzle ou qualq
 
 Use em itens fisicos, flechas, projeteis, objetos arremessados ou qualquer objeto que deve reagir quando bate em algo.
 
+`Tools/Inventory/Item Authoring Tool` ja cria esse stack em itens novos: o collider fisico fica no root do prefab, enquanto `PickupTrigger` continua separado apenas para interacao/outline. Para itens criados pela ferramenta, volte ao `ReactionSignalReceiver` somente para configurar as entries, audio e efeitos que cada colisao deve disparar.
+
 #### O que o setup adiciona
 
 - `ReactionSignalReceiver` se ainda nao existir

@@ -109,6 +109,7 @@ public class AudioEmitter : MonoBehaviour
 [RequireComponent(typeof(PlayerMovement))]
 [RequireComponent(typeof(AudioEmitter))]
 [RequireComponent(typeof(PhotonView))]
+[RequireComponent(typeof(FootstepPlaybackController))]
 public partial class PlayerAudioController : MonoBehaviour
 {
     private const string DefaultProfileResourcePath = "Audio/PlayerAudioProfile_Default";
@@ -120,7 +121,7 @@ public partial class PlayerAudioController : MonoBehaviour
     [SerializeField] private AudioEmitter audioEmitter;
     [SerializeField] private PhotonView photonView;
     [SerializeField] private PlayerAudioProfile profile;
-    [SerializeField] private Transform footstepAnchor;
+    [SerializeField] private FootstepPlaybackController footstepPlayback;
     [SerializeField] private Transform attackAnchor;
 
     [Header("Debug")]
@@ -163,11 +164,11 @@ public partial class PlayerAudioController : MonoBehaviour
         if (photonView == null)
             photonView = GetComponent<PhotonView>();
 
+        if (footstepPlayback == null)
+            footstepPlayback = GetComponent<FootstepPlaybackController>();
+
         if (profile == null)
             profile = Resources.Load<PlayerAudioProfile>(DefaultProfileResourcePath);
-
-        if (footstepAnchor == null)
-            footstepAnchor = transform;
 
         if (attackAnchor == null)
             attackAnchor = FindChildTransformByName(RightHandSocketName) ?? FindChildTransformByName(LegacyRightHandSocketName) ?? transform;
@@ -201,30 +202,31 @@ public partial class PlayerAudioController : MonoBehaviour
         if (playerMovement.JumpAnimationSequence != lastJumpSequence)
         {
             lastJumpSequence = playerMovement.JumpAnimationSequence;
-            PlayAttached(profile != null ? profile.Jump : null, footstepAnchor);
+            PlayFootstepActionAudio(FootstepGait.Jump, profile != null ? profile.Jump : null);
             ResetFootstepState();
         }
 
         if (playerMovement.LandingAnimationSequence != lastLandingSequence)
         {
             lastLandingSequence = playerMovement.LandingAnimationSequence;
-            PlayAttached(profile != null ? profile.Land : null, footstepAnchor);
+            PlayFootstepActionAudio(FootstepGait.Land, profile != null ? profile.Land : null);
             ResetFootstepState();
         }
     }
 
     private void UpdateFootsteps(float deltaTime)
     {
-        if (playerMovement == null || profile == null || deltaTime <= 0f)
+        if (playerMovement == null || profile == null || footstepPlayback == null || deltaTime <= 0f)
             return;
 
-        if (!ShouldEmitFootsteps(playerMovement.CurrentState, out PlayerAudioProfile.FootstepSettings settings))
+        MovementState movementState = playerMovement.CurrentState;
+        if (!ShouldEmitFootsteps(movementState, out PlayerAudioProfile.FootstepSettings settings))
         {
             ResetFootstepState();
             return;
         }
 
-        if (settings == null || settings.Cue == null)
+        if (settings == null)
             return;
 
         float metersPerStep = Mathf.Max(0.1f, settings.MetersPerStep);
@@ -232,8 +234,8 @@ public partial class PlayerAudioController : MonoBehaviour
 
         while (footstepDistanceAccumulator >= metersPerStep)
         {
-            Vector3 footstepPosition = GetFootstepPosition();
-            audioEmitter.PlayAtPosition(settings.Cue, footstepPosition);
+            footstepPlayback.PlayFootstep(GetFootstepGait(movementState), settings.Cue, profile.FootstepHeightOffset);
+
             footstepDistanceAccumulator -= metersPerStep;
         }
     }
@@ -265,11 +267,27 @@ public partial class PlayerAudioController : MonoBehaviour
         return playerMovement.PlanarSpeed >= Mathf.Max(0f, settings.MinPlanarSpeed);
     }
 
-    private Vector3 GetFootstepPosition()
+    private void PlayFootstepActionAudio(FootstepGait gait, AudioCue fallbackCue)
     {
-        Transform anchor = footstepAnchor != null ? footstepAnchor : transform;
+        if (footstepPlayback == null)
+            return;
+
         float heightOffset = profile != null ? profile.FootstepHeightOffset : 0f;
-        return anchor.position + Vector3.up * heightOffset;
+        footstepPlayback.PlayFootstep(gait, fallbackCue, heightOffset);
+    }
+
+    private static FootstepGait GetFootstepGait(MovementState movementState)
+    {
+        switch (movementState)
+        {
+            case MovementState.sprinting:
+                return FootstepGait.Sprint;
+            case MovementState.crouching:
+                return FootstepGait.Crouch;
+            case MovementState.walking:
+            default:
+                return FootstepGait.Walk;
+        }
     }
 
     private void PlayAttached(AudioCue cue, Transform anchor)

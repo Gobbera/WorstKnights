@@ -48,7 +48,8 @@ public static class PrototypePickupPrefabConfigurator
             InventoryItemAuthoringUtility.EnsureRigidbody(prefabRoot);
             InventoryItemAuthoringUtility.EnsureGripPoints(pickupItem);
             InventoryItemAuthoringUtility.RebuildPickupColliderFromRenderers(pickupItem, colliderShape);
-            InventoryItemAuthoringUtility.EnsureDropCollisionFromPickup(pickupItem);
+            InventoryItemAuthoringUtility.EnsureRootCollisionFromPickup(pickupItem);
+            InventoryItemAuthoringUtility.EnsureItemReactionSetup(prefabRoot);
 
             Outline outline = prefabRoot.GetComponent<Outline>();
             if (outline == null)

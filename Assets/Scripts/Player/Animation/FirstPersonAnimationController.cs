@@ -19,6 +19,7 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
     private const string PickUpItemLeftTriggerParameter = "PickUpItemLeft";
     private const string RightDrawTriggerParameter = "RightDraw";
     private const string LeftDrawTriggerParameter = "LeftDraw";
+    private const string LitTorchTriggerParameter = "LitTorch";
     private const string ThumbsUpTriggerParameter = "ThumbsUp";
     private const string PointTriggerParameter = "Point";
     private const string IsGroundedParameter = "IsGrounded";
@@ -28,8 +29,15 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
     private const string IsRightHandOccupiedParameter = "IsRightHandOccupied";
     private const string IsLeftHandOccupiedParameter = "IsLeftHandOccupied";
     private const string IsLeftTorchEquippedParameter = "IsLeftTorchEquipped";
+    private const string IsShieldGuardingParameter = "IsShieldGuarding";
+    private const string IsShieldBlockingParameter = "IsShieldBlocking";
+    private const string IsRightShieldGuardingParameter = "IsRightShieldGuarding";
+    private const string IsLeftShieldGuardingParameter = "IsLeftShieldGuarding";
+    private const string IsShieldBlockReactingParameter = "IsShieldBlockReacting";
+    private const string ShieldBlockTriggerParameter = "ShieldBlock";
     private const float PendingActionGraceTime = 0.25f;
     private const float ActionExitNormalizedTime = 1f;
+    private const float ShieldBlockReactionFallbackReturnTime = 0.25f;
     private const float MovingParameterThreshold = 0.1f;
 
     [Header("References")]
@@ -61,6 +69,9 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
     [SerializeField] private string leftHandGripWalkState = "FPS Left Arm.Left Hand Grip Walk";
     [SerializeField] private string torchGripState = "FPS Left Arm.Torch Grip";
     [SerializeField] private string torchGripWalkState = "FPS Left Arm.Torch Grip Walk";
+    [SerializeField] private string shieldGripState = "FPS Left Arm.Shield Grip";
+    [SerializeField] private string shieldBlockReactionState = "FPS Left Arm.Shield Damage Receive";
+    [SerializeField] private string litTorchState = "FPS Left Arm.Lit a Torch";
     [SerializeField] private string leftDrawState = "FPS Left Arm.Left Draw";
     [SerializeField] private string pickupLeftState = "FPS Left Arm.Pick_Up_Item_Left";
 
@@ -69,16 +80,21 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
     private int lastAttackAnimationSequence;
     private int lastPickupAnimationSequence;
     private int lastDrawAnimationSequence;
+    private int lastLitTorchAnimationSequence;
     private int lastEmoteAnimationSequence;
+    private int lastShieldBlockAnimationSequence;
     private int activeActionStateHash;
     private int requestedStateHash;
     private int baseLayerIndex = -1;
     private int rightArmLayerIndex = -1;
     private int leftArmLayerIndex = -1;
+    private int activeShieldBlockReactionStateHash;
     private float activeActionRequestTime;
+    private float activeShieldBlockReactionRequestTime;
     private string requestedStatePath;
     private RuntimeAnimatorController cachedParameterController;
     private bool hasInitialized;
+    private bool shieldBlockReactionReachedState;
 
     private void Awake()
     {
@@ -92,6 +108,9 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
         requestedStateHash = 0;
         requestedStatePath = string.Empty;
         activeActionRequestTime = 0f;
+        activeShieldBlockReactionStateHash = 0;
+        activeShieldBlockReactionRequestTime = 0f;
+        shieldBlockReactionReachedState = false;
     }
 
     private void Update()
@@ -107,6 +126,7 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
         UpdateAnimatorContextParameters();
         UpdateLayerWeights();
         TryPlayTriggeredAction();
+        UpdateShieldBlockReactionReturn();
     }
 
     private void ResolveReferences()
@@ -119,6 +139,9 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
             activeActionStateHash = 0;
             requestedStateHash = 0;
             requestedStatePath = string.Empty;
+            activeShieldBlockReactionStateHash = 0;
+            activeShieldBlockReactionRequestTime = 0f;
+            shieldBlockReactionReachedState = false;
             ClearAnimatorParameterCache();
             ClearAnimatorLayerCache();
             hasInitialized = false;
@@ -211,7 +234,9 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
         lastAttackAnimationSequence = playerMovement.AttackAnimationSequence;
         lastPickupAnimationSequence = playerMovement.PickupAnimationSequence;
         lastDrawAnimationSequence = playerMovement.DrawAnimationSequence;
+        lastLitTorchAnimationSequence = playerMovement.LitTorchAnimationSequence;
         lastEmoteAnimationSequence = playerMovement.EmoteAnimationSequence;
+        lastShieldBlockAnimationSequence = playerMovement.ShieldBlockAnimationSequence;
         hasInitialized = true;
 
         UpdateAnimatorContextParameters();
@@ -292,6 +317,12 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
 
     private bool TryPlayTriggeredAction()
     {
+        if (playerMovement.ShieldBlockAnimationSequence != lastShieldBlockAnimationSequence)
+        {
+            lastShieldBlockAnimationSequence = playerMovement.ShieldBlockAnimationSequence;
+            return TryRequestShieldBlockReaction();
+        }
+
         if (playerMovement.AttackAnimationSequence != lastAttackAnimationSequence)
         {
             lastAttackAnimationSequence = playerMovement.AttackAnimationSequence;
@@ -314,6 +345,12 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
                 ? LeftDrawTriggerParameter
                 : RightDrawTriggerParameter;
             return TrySetTriggerParameterIfExists(triggerParameter, true);
+        }
+
+        if (playerMovement.LitTorchAnimationSequence != lastLitTorchAnimationSequence)
+        {
+            lastLitTorchAnimationSequence = playerMovement.LitTorchAnimationSequence;
+            return TryRequestLitTorchAnimation(playerMovement.LitTorchAnimationHand);
         }
 
         if (playerMovement.EmoteAnimationSequence != lastEmoteAnimationSequence)
@@ -404,6 +441,9 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
 
         bool useHeldItemWalkState = ShouldUseHeldItemWalkState();
 
+        if (playerMovement.IsShieldGuarding && playerMovement.ShieldGuardHand == HandType.Left)
+            return shieldGripState;
+
         if (playerMovement.IsLeftHandTorchEquipped)
             return useHeldItemWalkState ? torchGripWalkState : torchGripState;
 
@@ -453,6 +493,10 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
         SetBoolParameterIfExists(IsRightHandOccupiedParameter, playerMovement.IsRightHandOccupied);
         SetBoolParameterIfExists(IsLeftHandOccupiedParameter, playerMovement.IsLeftHandOccupied);
         SetBoolParameterIfExists(IsLeftTorchEquippedParameter, playerMovement.IsLeftHandTorchEquipped);
+        SetBoolParameterIfExists(IsShieldGuardingParameter, playerMovement.IsShieldGuarding);
+        SetBoolParameterIfExists(IsShieldBlockingParameter, playerMovement.IsShieldBlocking);
+        SetBoolParameterIfExists(IsRightShieldGuardingParameter, playerMovement.IsShieldGuarding && playerMovement.ShieldGuardHand == HandType.Right);
+        SetBoolParameterIfExists(IsLeftShieldGuardingParameter, playerMovement.IsShieldGuarding && playerMovement.ShieldGuardHand == HandType.Left);
         SetFloatParameterIfExists(MovementMagnitudeParameter, movementMagnitude);
     }
 
@@ -570,6 +614,10 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
                 return TrySetTriggerParameterIfExists(ThumbsUpTriggerParameter, forceRestart);
             case "Emote_Point":
                 return TrySetTriggerParameterIfExists(PointTriggerParameter, forceRestart);
+            case "Shield Damage Receive":
+                return TryRequestShieldBlockReaction();
+            case "Lit a Torch":
+                return TryRequestLitTorchAnimation(HandType.Left);
             default:
                 return CanDriveSustainedStateFromContext(shortStateName);
         }
@@ -581,6 +629,101 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
             return false;
 
         return TrySetTriggerParameterIfExists(AttackTriggerParameter, forceRestart);
+    }
+
+    private bool TryRequestShieldBlockReaction()
+    {
+        if (playerMovement == null || !playerMovement.IsShieldGuarding)
+            return false;
+
+        CacheAnimatorLayerIndices();
+        bool hasReactionState = TryResolveStatePath(animator, shieldBlockReactionState, leftArmLayerIndex, out _, out int reactionStateHash);
+        if (hasReactionState)
+            BeginShieldBlockReactionTracking(reactionStateHash);
+
+        if (TrySetTriggerParameterIfExists(ShieldBlockTriggerParameter, true))
+            return true;
+
+        if (PlayStateOnLayer(shieldBlockReactionState, leftArmLayerIndex, true))
+        {
+            activeShieldBlockReactionStateHash = requestedStateHash;
+            activeShieldBlockReactionRequestTime = Time.time;
+            shieldBlockReactionReachedState = false;
+            return true;
+        }
+
+        ClearShieldBlockReactionTracking();
+        return false;
+    }
+
+    private bool TryRequestLitTorchAnimation(HandType hand)
+    {
+        CacheAnimatorLayerIndices();
+        if (TrySetTriggerParameterIfExists(LitTorchTriggerParameter, true))
+            return true;
+
+        return PlayStateOnLayer(litTorchState, leftArmLayerIndex, true);
+    }
+
+    private void UpdateShieldBlockReactionReturn()
+    {
+        if (activeShieldBlockReactionStateHash == 0)
+            return;
+
+        CacheAnimatorLayerIndices();
+        if (animator == null || leftArmLayerIndex < 0 || leftArmLayerIndex >= animator.layerCount)
+        {
+            ClearShieldBlockReactionTracking();
+            return;
+        }
+
+        if (animator.IsInTransition(leftArmLayerIndex))
+        {
+            AnimatorStateInfo nextState = animator.GetNextAnimatorStateInfo(leftArmLayerIndex);
+            if (nextState.fullPathHash == activeShieldBlockReactionStateHash)
+                shieldBlockReactionReachedState = true;
+
+            return;
+        }
+
+        AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(leftArmLayerIndex);
+        if (currentState.fullPathHash != activeShieldBlockReactionStateHash)
+        {
+            if (!shieldBlockReactionReachedState
+                && Time.time - activeShieldBlockReactionRequestTime <= PendingActionGraceTime)
+            {
+                return;
+            }
+
+            ClearShieldBlockReactionTracking();
+            return;
+        }
+
+        shieldBlockReactionReachedState = true;
+        bool finished = currentState.normalizedTime >= ActionExitNormalizedTime;
+        bool fallbackElapsed = currentState.length <= 0.001f
+            && Time.time - activeShieldBlockReactionRequestTime >= ShieldBlockReactionFallbackReturnTime;
+        if (!finished && !fallbackElapsed)
+            return;
+
+        ClearShieldBlockReactionTracking();
+        PlayStateOnLayer(ResolveLeftArmSustainedState(), leftArmLayerIndex, false);
+    }
+
+    private void BeginShieldBlockReactionTracking(int reactionStateHash)
+    {
+        activeShieldBlockReactionStateHash = reactionStateHash;
+        activeShieldBlockReactionRequestTime = Time.time;
+        shieldBlockReactionReachedState = false;
+        SetBoolParameterIfExists(IsShieldBlockReactingParameter, true);
+    }
+
+    private void ClearShieldBlockReactionTracking()
+    {
+        activeShieldBlockReactionStateHash = 0;
+        activeShieldBlockReactionRequestTime = 0f;
+        shieldBlockReactionReachedState = false;
+        SetBoolParameterIfExists(IsShieldBlockReactingParameter, false);
     }
 
     private bool CanDriveSustainedStateFromContext(string shortStateName)
@@ -629,6 +772,8 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
                     && HasBoolParameter(IsMovingParameter)
                     && HasBoolParameter(IsSprintingParameter)
                     && HasBoolParameter(IsGroundedParameter);
+            case "Shield Grip":
+                return HasBoolParameter(IsLeftShieldGuardingParameter);
             default:
                 return false;
         }
@@ -641,8 +786,11 @@ public sealed class FirstPersonAnimationController : MonoBehaviour
         ResetTriggerParameterIfExists(PickUpItemLeftTriggerParameter);
         ResetTriggerParameterIfExists(RightDrawTriggerParameter);
         ResetTriggerParameterIfExists(LeftDrawTriggerParameter);
+        ResetTriggerParameterIfExists(LitTorchTriggerParameter);
         ResetTriggerParameterIfExists(ThumbsUpTriggerParameter);
         ResetTriggerParameterIfExists(PointTriggerParameter);
+        ResetTriggerParameterIfExists(ShieldBlockTriggerParameter);
+        SetBoolParameterIfExists(IsShieldBlockReactingParameter, false);
         SetIntParameterIfExists(AttackComboStepParameter, 1);
     }
 

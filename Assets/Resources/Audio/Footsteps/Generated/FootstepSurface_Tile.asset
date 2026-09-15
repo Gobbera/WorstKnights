@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca8a5ecadacf4ff0bb613c9379cb05e9, type: 3}
+  m_Name: FootstepSurface_Tile
+  m_EditorClassIdentifier: Assembly-CSharp::FootstepSurfaceDefinition
+  defaultCue: {fileID: 11400000, guid: fe7cfd29e229eed4184239f346564dee, type: 2}
+  walk: {fileID: 11400000, guid: fe7cfd29e229eed4184239f346564dee, type: 2}
+  sprint: {fileID: 11400000, guid: 65d68e37f5ed5f84597babc59b1e634b, type: 2}
+  crouch: {fileID: 11400000, guid: 61cecb3c15604a245a285ee73cf76515, type: 2}
+  enemyWalk: {fileID: 11400000, guid: 908c1a82a7f00b64e9d8f468764e588d, type: 2}
+  jump: {fileID: 11400000, guid: 04d07251022625f4b85680fcac9f7bf8, type: 2}
+  land: {fileID: 11400000, guid: d7595534d9e07104cb730581973b6eae, type: 2}

@@ -7,6 +7,10 @@ public class ItemDefinition : ScriptableObject
     [SerializeField] private string itemName = "Item";
     [SerializeField] private Sprite uiSprite;
 
+    [Header("Audio")]
+    [SerializeField] private AudioCue inventorySelectAudioCue;
+    [SerializeField] private AudioCue useAudioCue;
+
     [Header("Equip Rules")]
     [SerializeField] private HandRequirement handRequirement = HandRequirement.Any;
     [SerializeField] private HandType preferredHand = HandType.Right;
@@ -23,6 +27,8 @@ public class ItemDefinition : ScriptableObject
 
     public string ItemName => string.IsNullOrWhiteSpace(itemName) ? name : itemName;
     public Sprite UiSprite => uiSprite;
+    public AudioCue InventorySelectAudioCue => inventorySelectAudioCue;
+    public AudioCue UseAudioCue => useAudioCue;
     public HandRequirement HandRequirement => handRequirement;
     public HandType PreferredHand => preferredHand;
     public ItemUseType UseType => useType;

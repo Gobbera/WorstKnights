@@ -191,7 +191,16 @@ public partial class PlayerMovement
     {
         float modifiedSpeed = ApplyAttackMovementSpeedMultiplier(baseSpeed);
         modifiedSpeed = ApplyKickMovementSpeedMultiplier(modifiedSpeed);
+        modifiedSpeed = ApplyShieldGuardMovementSpeedMultiplier(modifiedSpeed);
         return ApplyFallMovementSpeedMultiplier(modifiedSpeed);
+    }
+
+    private float ApplyShieldGuardMovementSpeedMultiplier(float baseSpeed)
+    {
+        if (!IsShieldGuarding)
+            return baseSpeed;
+
+        return baseSpeed * Mathf.Clamp01(ShieldGuardSpeedMultiplier);
     }
 
     private float ApplyFallMovementSpeedMultiplier(float baseSpeed)

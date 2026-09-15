@@ -17,6 +17,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
     private string newItemName = "New Item";
     private GameObject newModelSource;
     private Sprite newUiSprite;
+    private AudioCue newInventorySelectAudioCue;
+    private AudioCue newUseAudioCue;
     private HandRequirement newHandRequirement = HandRequirement.Any;
     private HandType newPreferredHand = HandType.Right;
     private ItemUseType newUseType = ItemUseType.None;
@@ -44,6 +46,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
     private Transform editDraftLeftGripPoint;
     private string editDraftItemName = "Item";
     private Sprite editDraftUiSprite;
+    private AudioCue editDraftInventorySelectAudioCue;
+    private AudioCue editDraftUseAudioCue;
     private HandRequirement editDraftHandRequirement = HandRequirement.Any;
     private HandType editDraftPreferredHand = HandType.Right;
     private ItemUseType editDraftUseType = ItemUseType.None;
@@ -112,6 +116,11 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Pickup", EditorStyles.boldLabel);
         newColliderShape = (ItemPickupColliderShape)EditorGUILayout.EnumPopup("Collider Shape", newColliderShape);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Pickup Audio", EditorStyles.boldLabel);
+        newInventorySelectAudioCue = (AudioCue)EditorGUILayout.ObjectField("Inventory Select Audio Cue", newInventorySelectAudioCue, typeof(AudioCue), false);
+        newUseAudioCue = (AudioCue)EditorGUILayout.ObjectField("Use Audio Cue", newUseAudioCue, typeof(AudioCue), false);
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Physics", EditorStyles.boldLabel);
@@ -215,7 +224,7 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             ResetEditDraft();
         }
 
-        if (GUILayout.Button("Collision"))
+        if (GUILayout.Button("Gerar Collision No Root"))
         {
             MutatePrefab(editPrefab, root =>
             {
@@ -223,7 +232,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
                 if (pickupItem == null)
                     pickupItem = root.AddComponent<WorldPickupItem>();
 
-                InventoryItemAuthoringUtility.EnsureDropCollisionFromPickup(pickupItem);
+                InventoryItemAuthoringUtility.EnsureRootCollisionFromPickup(pickupItem);
+                InventoryItemAuthoringUtility.EnsureItemReactionSetup(root);
                 EditorUtility.SetDirty(root);
                 EditorUtility.SetDirty(pickupItem);
             });
@@ -246,7 +256,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
                 if (!InventoryItemAuthoringUtility.RebuildPickupColliderFromRenderers(pickupItem, editColliderShape))
                     Debug.LogWarning("[InventoryItemAuthoringTool] Nao foi possivel calcular bounds do visual para recriar o PickupTrigger.", root);
 
-                InventoryItemAuthoringUtility.EnsureDropCollisionFromPickup(pickupItem);
+                InventoryItemAuthoringUtility.EnsureRootCollisionFromPickup(pickupItem);
+                InventoryItemAuthoringUtility.EnsureItemReactionSetup(root);
             });
 
             editPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
@@ -268,6 +279,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             typeof(ItemDefinition),
             false);
         editDraftNetworkSceneId = EditorGUILayout.TextField("Network Scene Id", editDraftNetworkSceneId);
+        editDraftInventorySelectAudioCue = (AudioCue)EditorGUILayout.ObjectField("Inventory Select Audio Cue", editDraftInventorySelectAudioCue, typeof(AudioCue), false);
+        editDraftUseAudioCue = (AudioCue)EditorGUILayout.ObjectField("Use Audio Cue", editDraftUseAudioCue, typeof(AudioCue), false);
         if (InventoryItemAuthoringUtility.ShouldUseGripPoint(editDraftHandRequirement, HandType.Right))
         {
             editDraftRightGripPoint = (Transform)EditorGUILayout.ObjectField(
@@ -412,6 +425,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
         SerializedObject serializedPickup = new SerializedObject(pickupAsset);
         editDraftItemDefinition = serializedPickup.FindProperty("itemDefinition")?.objectReferenceValue as ItemDefinition;
         editDraftNetworkSceneId = serializedPickup.FindProperty("networkSceneId")?.stringValue ?? string.Empty;
+        AudioCue pickupInventorySelectAudioCue = serializedPickup.FindProperty("inventorySelectAudioCue")?.objectReferenceValue as AudioCue;
+        AudioCue pickupUseAudioCue = serializedPickup.FindProperty("useAudioCue")?.objectReferenceValue as AudioCue;
         editDraftRightGripPoint = serializedPickup
             .FindProperty("rightHandPose")
             ?.FindPropertyRelative("gripPoint")
@@ -422,6 +437,12 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             ?.objectReferenceValue as Transform;
 
         LoadItemDefinitionDraft(editDraftItemDefinition);
+        editDraftInventorySelectAudioCue = pickupInventorySelectAudioCue != null
+            ? pickupInventorySelectAudioCue
+            : editDraftInventorySelectAudioCue;
+        editDraftUseAudioCue = pickupUseAudioCue != null
+            ? pickupUseAudioCue
+            : editDraftUseAudioCue;
     }
 
     private void LoadItemDefinitionDraft(ItemDefinition itemDefinition)
@@ -431,6 +452,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
         {
             editDraftItemName = "Item";
             editDraftUiSprite = null;
+            editDraftInventorySelectAudioCue = null;
+            editDraftUseAudioCue = null;
             editDraftHandRequirement = HandRequirement.Any;
             editDraftPreferredHand = HandType.Right;
             editDraftUseType = ItemUseType.None;
@@ -445,6 +468,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
         SerializedObject serializedItem = new SerializedObject(itemDefinition);
         editDraftItemName = serializedItem.FindProperty("itemName")?.stringValue ?? itemDefinition.ItemName;
         editDraftUiSprite = serializedItem.FindProperty("uiSprite")?.objectReferenceValue as Sprite;
+        editDraftInventorySelectAudioCue = serializedItem.FindProperty("inventorySelectAudioCue")?.objectReferenceValue as AudioCue;
+        editDraftUseAudioCue = serializedItem.FindProperty("useAudioCue")?.objectReferenceValue as AudioCue;
         editDraftHandRequirement = (HandRequirement)(serializedItem.FindProperty("handRequirement")?.enumValueIndex ?? (int)itemDefinition.HandRequirement);
         editDraftPreferredHand = (HandType)(serializedItem.FindProperty("preferredHand")?.enumValueIndex ?? (int)itemDefinition.PreferredHand);
         editDraftPreferredHand = InventoryItemAuthoringUtility.ResolveStoredPreferredHand(editDraftHandRequirement, editDraftPreferredHand);
@@ -483,6 +508,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
                 {
                     ItemName = editDraftItemName,
                     UiSprite = editDraftUiSprite,
+                    InventorySelectAudioCue = editDraftInventorySelectAudioCue,
+                    UseAudioCue = editDraftUseAudioCue,
                     HandRequirement = editDraftHandRequirement,
                     PreferredHand = storedPreferredHand,
                     UseType = editDraftUseType,
@@ -512,6 +539,14 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             if (networkSceneIdProperty != null)
                 networkSceneIdProperty.stringValue = editDraftNetworkSceneId ?? string.Empty;
 
+            SerializedProperty inventorySelectAudioCueProperty = serializedPickup.FindProperty("inventorySelectAudioCue");
+            if (inventorySelectAudioCueProperty != null)
+                inventorySelectAudioCueProperty.objectReferenceValue = editDraftInventorySelectAudioCue;
+
+            SerializedProperty useAudioCueProperty = serializedPickup.FindProperty("useAudioCue");
+            if (useAudioCueProperty != null)
+                useAudioCueProperty.objectReferenceValue = editDraftUseAudioCue;
+
             SetGripPointProperty(
                 serializedPickup,
                 "rightHandPose",
@@ -527,6 +562,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             serializedPickup.ApplyModifiedPropertiesWithoutUndo();
 
             InventoryItemAuthoringUtility.EnsureGripPoints(prefabPickup);
+            InventoryItemAuthoringUtility.EnsureRootCollisionFromPickup(prefabPickup);
+            InventoryItemAuthoringUtility.EnsureItemReactionSetup(root);
 
             EditorUtility.SetDirty(root);
             EditorUtility.SetDirty(prefabPickup);
@@ -731,7 +768,10 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
         bool hasLeftGrip = FindDirectChildByName(prefabAsset.transform, InventoryItemAuthoringUtility.LeftGripName) != null;
         bool hasFirstPersonRightGrip = FindDirectChildByName(prefabAsset.transform, InventoryItemAuthoringUtility.FirstPersonRightGripName) != null;
         bool hasFirstPersonLeftGrip = FindDirectChildByName(prefabAsset.transform, InventoryItemAuthoringUtility.FirstPersonLeftGripName) != null;
-        bool hasDropCollision = HasActiveDropCollision(prefabAsset.transform);
+        bool hasRootCollision = HasActiveRootCollision(prefabAsset);
+        bool hasReactionReceiver = prefabAsset.GetComponent<ReactionSignalReceiver>() != null;
+        bool hasReactionEmitter = prefabAsset.GetComponent<ReactionSignalEmitter>() != null;
+        bool hasCollisionBridge = prefabAsset.GetComponent<CollisionReactionSignalBridge>() != null;
         HandRequirement handRequirement = pickupAsset != null && pickupAsset.ItemDefinition != null
             ? pickupAsset.ItemDefinition.HandRequirement
             : HandRequirement.Any;
@@ -744,7 +784,10 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
         DrawGripPointStatus(InventoryItemAuthoringUtility.FirstPersonRightGripName, handRequirement, HandType.Right, hasFirstPersonRightGrip);
         DrawGripPointStatus(InventoryItemAuthoringUtility.LeftGripName, handRequirement, HandType.Left, hasLeftGrip);
         DrawGripPointStatus(InventoryItemAuthoringUtility.FirstPersonLeftGripName, handRequirement, HandType.Left, hasFirstPersonLeftGrip);
-        DrawStatusRow("DropCollision", hasDropCollision);
+        DrawStatusRow("Root Collision", hasRootCollision);
+        DrawStatusRow("ReactionSignalReceiver", hasReactionReceiver);
+        DrawStatusRow("ReactionSignalEmitter", hasReactionEmitter);
+        DrawStatusRow("CollisionReactionSignalBridge", hasCollisionBridge);
     }
 
     private static bool HasWorldRigidbody(GameObject prefabAsset)
@@ -756,11 +799,20 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             && itemRigidbody.detectCollisions;
     }
 
-    private static bool HasActiveDropCollision(Transform root)
+    private static bool HasActiveRootCollision(GameObject prefabAsset)
     {
-        Transform dropCollision = FindDirectChildByName(root, InventoryItemAuthoringUtility.DropCollisionName);
-        Collider collider = dropCollision != null ? dropCollision.GetComponent<Collider>() : null;
-        return collider != null && collider.enabled && !collider.isTrigger;
+        if (prefabAsset == null)
+            return false;
+
+        Collider[] colliders = prefabAsset.GetComponents<Collider>();
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider collider = colliders[i];
+            if (collider != null && collider.enabled && !collider.isTrigger)
+                return true;
+        }
+
+        return false;
     }
 
     private static void DrawGripPointStatus(string label, HandRequirement handRequirement, HandType hand, bool exists)
@@ -797,6 +849,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
         {
             ItemName = newItemName,
             UiSprite = newUiSprite,
+            InventorySelectAudioCue = newInventorySelectAudioCue,
+            UseAudioCue = newUseAudioCue,
             HandRequirement = newHandRequirement,
             PreferredHand = InventoryItemAuthoringUtility.ResolveStoredPreferredHand(newHandRequirement, newPreferredHand),
             UseType = newUseType,
@@ -814,6 +868,8 @@ public class InventoryItemAuthoringToolWindow : EditorWindow
             newColliderShape,
             newOutlineColor,
             newOutlineWidth,
+            newInventorySelectAudioCue,
+            newUseAudioCue,
             newAddRigidbody,
             out string prefabPath);
 

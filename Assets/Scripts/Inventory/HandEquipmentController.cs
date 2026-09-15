@@ -19,7 +19,9 @@ public class HandEquipmentController : MonoBehaviour
     private const string FirstPersonRightHandBoneName = "Hand.R";
     private const string FirstPersonLeftHandBoneName = "Hand.L";
     private const string DefaultTorchItemResourcePath = "Items/Torch";
+    private const string DefaultShieldItemResourcePath = "Items/Shield";
     private const string TorchItemFallbackName = "Torch";
+    private const string ShieldItemFallbackName = "Shield";
     private const float DeathDropScatterRadius = 0.45f;
     private const float DeathDropVelocityMultiplier = 0.45f;
 
@@ -51,6 +53,7 @@ public class HandEquipmentController : MonoBehaviour
     [SerializeField] private PhotonView photonView;
     [SerializeField] private PlayerPickupInteractor pickupInteractor;
     [SerializeField] private ItemDefinition torchItemDefinition;
+    [SerializeField] private ItemDefinition shieldItemDefinition;
     [SerializeField] private bool prototypeLocalOnly;
 
     [Header("First Person Item Sockets")]
@@ -62,6 +65,11 @@ public class HandEquipmentController : MonoBehaviour
     [Header("Item Use")]
     [SerializeField] private KeyCode rightHandUseKey = KeyCode.Mouse0;
     [SerializeField] private KeyCode leftHandUseKey = KeyCode.Mouse1;
+
+    [Header("Shield Guard")]
+    [SerializeField] [Min(0f)] private float shieldBlockActivationDelay = 0.5f;
+    [SerializeField] [Range(0f, 1f)] private float shieldGuardSpeedMultiplier = 0.3f;
+
     [Header("Drop")]
     [SerializeField] private KeyCode dropKey = KeyCode.G;
     [SerializeField] [Min(0.25f)] private float dropDistance = 1.25f;
@@ -92,6 +100,15 @@ public class HandEquipmentController : MonoBehaviour
     private int pendingMeleeTrailSlotIndex = InvalidSlotIndex;
     private int lastMeleeTrailAttackSequence;
     private bool hasPendingMeleeTrail;
+    private bool shieldGuardHeld;
+    private bool shieldBlockActive;
+    private HandType shieldGuardHand = HandType.Left;
+    private float shieldGuardStartedAt;
+    private float activeShieldBlockActivationDelay;
+    private WorldPickupItem appliedShieldGuardPickupSource;
+    private bool hasAppliedShieldGuardHitboxState;
+    private bool appliedShieldGuarding;
+    private bool appliedShieldBlocking;
 
     public event Action StateChanged;
 
@@ -149,6 +166,7 @@ public class HandEquipmentController : MonoBehaviour
     private void Update()
     {
         UpdatePendingMeleeTrailPlayback();
+        UpdateReplicatedShieldGuardState();
 
         if (!HasLocalAuthority())
             return;
@@ -156,8 +174,19 @@ public class HandEquipmentController : MonoBehaviour
         HandleRuntimeInput();
     }
 
+    private void OnDisable()
+    {
+        if (HasLocalAuthority())
+            StopShieldGuard();
+        else
+            SetAllShieldGuardHitboxes(false, false);
+    }
+
     public void HandleRuntimeInput()
     {
+        if (UpdateShieldGuardInput())
+            return;
+
         if (Input.GetKeyDown(KeyCode.Alpha1))
             ToggleActiveSlot(HandType.Right);
 
@@ -224,6 +253,8 @@ public class HandEquipmentController : MonoBehaviour
         if (!HasLocalAuthority())
             return 0;
 
+        StopShieldGuard();
+
         int totalDropCount = CountDeathDroppableSlots();
         if (totalDropCount <= 0)
             return 0;
@@ -250,6 +281,8 @@ public class HandEquipmentController : MonoBehaviour
 
         if (!HasLocalAuthority())
             return 0;
+
+        StopShieldGuard();
 
         int totalDropCount = CountActiveEquippedSlots();
         if (totalDropCount <= 0)
@@ -346,8 +379,13 @@ public class HandEquipmentController : MonoBehaviour
             return false;
         }
 
+        WorldPickupItem activePickupSource = GetPickupSources(hand)[activeIndex];
+        AudioCue useAudioCue = ResolveItemUseAudioCue(itemDefinition, activePickupSource);
         if (pickupInteractor != null && pickupInteractor.TryInteractWithHeldItem(hand, itemDefinition, GetUseKey(hand)))
+        {
+            PlayItemAudioCue(useAudioCue, activePickupSource);
             return true;
+        }
 
         switch (itemDefinition.UseType)
         {
@@ -368,6 +406,7 @@ public class HandEquipmentController : MonoBehaviour
                     return false;
 
                 BeginInventoryItemActionLock();
+                PlayItemUseAudio(hand, itemDefinition);
                 Debug.Log($"[HandEquipmentController] Item usado: {itemDefinition.ItemName} pela mao {GetHandLabel(hand)}.");
                 if (itemDefinition.ConsumeOnUse)
                     ConsumeActiveSlot(hand, $"{itemDefinition.ItemName} foi consumido.");
@@ -392,6 +431,7 @@ public class HandEquipmentController : MonoBehaviour
             playerMeleeAttack.SetNextAttackItem(itemDefinition);
 
         HandleAcceptedMeleeTrailRequest(hand, activeIndex, previousAttackSequence);
+        PlayItemUseAudio(hand, itemDefinition);
         Debug.Log($"[HandEquipmentController] Item usado: {itemDefinition.ItemName} pela mao {GetHandLabel(hand)}.");
         return true;
     }
@@ -424,6 +464,7 @@ public class HandEquipmentController : MonoBehaviour
         }
 
         BeginInventoryItemActionLock();
+        PlayItemUseAudio(hand, itemDefinition);
 
         if (itemDefinition.ConsumeOnUse)
             ConsumeActiveSlot(hand, $"{itemDefinition.ItemName} foi consumido apos o uso.");
@@ -445,6 +486,7 @@ public class HandEquipmentController : MonoBehaviour
                 return false;
 
             Debug.Log($"[HandEquipmentController] Tocha {(torchIsLit ? "acesa" : "apagada")} pela mao {GetHandLabel(hand)}.");
+            PlayItemUseAudio(hand, itemDefinition);
             return true;
         }
 
@@ -452,6 +494,7 @@ public class HandEquipmentController : MonoBehaviour
             return false;
 
         BeginInventoryItemActionLock();
+        PlayItemUseAudio(hand, itemDefinition);
         Debug.Log($"[HandEquipmentController] Item usado: {itemDefinition.ItemName} pela mao {GetHandLabel(hand)}.");
         if (itemDefinition.ConsumeOnUse)
             ConsumeActiveSlot(hand, $"{itemDefinition.ItemName} foi consumido.");
@@ -549,6 +592,197 @@ public class HandEquipmentController : MonoBehaviour
     private static TorchFlameController ResolveTorchFlameController(WorldPickupItem pickupItem)
     {
         return pickupItem != null ? pickupItem.GetComponentInChildren<TorchFlameController>(true) : null;
+    }
+
+    private bool UpdateShieldGuardInput()
+    {
+        if (!HasLocalAuthority())
+            return false;
+
+        bool rightHeld = IsShieldGuardInputHeld(HandType.Right);
+        bool leftHeld = IsShieldGuardInputHeld(HandType.Left);
+
+        if (shieldGuardHeld)
+        {
+            bool stillHoldingGuardHand = shieldGuardHand == HandType.Right ? rightHeld : leftHeld;
+            if (!stillHoldingGuardHand || !CanContinueShieldGuard(shieldGuardHand))
+            {
+                StopShieldGuard();
+                return false;
+            }
+
+            bool shouldBlock = Time.time >= shieldGuardStartedAt + activeShieldBlockActivationDelay;
+            if (shieldBlockActive != shouldBlock)
+            {
+                shieldBlockActive = shouldBlock;
+                ApplyShieldGuardState();
+            }
+
+            return true;
+        }
+
+        if (rightHeld && TryStartShieldGuard(HandType.Right))
+            return true;
+
+        if (leftHeld && TryStartShieldGuard(HandType.Left))
+            return true;
+
+        return false;
+    }
+
+    private bool IsShieldGuardInputHeld(HandType hand)
+    {
+        KeyCode useKey = GetUseKey(hand);
+        return useKey != KeyCode.None
+            && Input.GetKey(useKey)
+            && IsShieldActiveItem(hand);
+    }
+
+    private bool TryStartShieldGuard(HandType hand)
+    {
+        if (!HasLocalAuthority() || !IsShieldActiveItem(hand))
+            return false;
+
+        ItemDefinition itemDefinition = GetItem(hand, GetActiveSlotIndex(hand));
+        if (!CanBeginInventoryItemAction($"Uso defensivo de '{itemDefinition.ItemName}'"))
+            return false;
+
+        shieldGuardHeld = true;
+        shieldBlockActive = false;
+        shieldGuardHand = hand;
+        shieldGuardStartedAt = Time.time;
+        activeShieldBlockActivationDelay = ResolveShieldBlockActivationDelay(hand);
+        ApplyShieldGuardState();
+        PlayItemUseAudio(hand, itemDefinition);
+        return true;
+    }
+
+    private bool CanContinueShieldGuard(HandType hand)
+    {
+        if (!HasLocalAuthority() || !IsShieldActiveItem(hand))
+            return false;
+
+        return playerHealth == null || playerHealth.IsAlive;
+    }
+
+    private void StopShieldGuard()
+    {
+        shieldGuardHeld = false;
+        shieldBlockActive = false;
+        ApplyShieldGuardState();
+    }
+
+    private void ApplyShieldGuardState()
+    {
+        if (playerMovement != null)
+            playerMovement.SetShieldGuardState(shieldGuardHeld, shieldBlockActive, shieldGuardHand, shieldGuardSpeedMultiplier);
+
+        ApplyShieldGuardHitboxState(shieldGuardHeld, shieldBlockActive, shieldGuardHand);
+    }
+
+    private void UpdateReplicatedShieldGuardState()
+    {
+        if (HasLocalAuthority())
+            return;
+
+        if (playerMovement == null)
+            ResolveReferences();
+
+        if (playerMovement == null)
+            return;
+
+        ApplyShieldGuardHitboxState(
+            playerMovement.IsShieldGuarding,
+            playerMovement.IsShieldBlocking,
+            playerMovement.ShieldGuardHand);
+    }
+
+    private void ApplyShieldGuardHitboxState(bool guarding, bool blocking, HandType hand)
+    {
+        WorldPickupItem guardPickupSource = guarding ? ResolveActivePickupSource(hand) : null;
+        bool effectiveBlocking = guarding && blocking && guardPickupSource != null;
+
+        if (hasAppliedShieldGuardHitboxState
+            && appliedShieldGuardPickupSource == guardPickupSource
+            && appliedShieldGuarding == guarding
+            && appliedShieldBlocking == effectiveBlocking)
+        {
+            return;
+        }
+
+        if (appliedShieldGuardPickupSource != null && appliedShieldGuardPickupSource != guardPickupSource)
+            SetShieldGuardHitboxes(appliedShieldGuardPickupSource, false, false, playerHealth);
+
+        if (!guarding)
+            SetAllShieldGuardHitboxes(false, false);
+        else
+            SetShieldGuardHitboxes(guardPickupSource, true, effectiveBlocking, playerHealth);
+
+        appliedShieldGuardPickupSource = guardPickupSource;
+        appliedShieldGuarding = guarding;
+        appliedShieldBlocking = effectiveBlocking;
+        hasAppliedShieldGuardHitboxState = true;
+    }
+
+    private WorldPickupItem ResolveActivePickupSource(HandType hand)
+    {
+        int activeIndex = GetActiveSlotIndex(hand);
+        if (!IsValidSlotIndex(activeIndex))
+            return null;
+
+        return GetPickupSources(hand)[activeIndex];
+    }
+
+    private float ResolveShieldBlockActivationDelay(HandType hand)
+    {
+        float resolvedDelay = Mathf.Max(0f, shieldBlockActivationDelay);
+        WorldPickupItem pickupSource = ResolveActivePickupSource(hand);
+        if (pickupSource == null)
+            return resolvedDelay;
+
+        ShieldGuardHitbox[] guardHitboxes = pickupSource.GetComponentsInChildren<ShieldGuardHitbox>(true);
+        for (int i = 0; i < guardHitboxes.Length; i++)
+        {
+            ShieldGuardHitbox guardHitbox = guardHitboxes[i];
+            if (guardHitbox != null && guardHitbox.TryGetBlockActivationDelay(out float activationDelay))
+                return activationDelay;
+        }
+
+        return resolvedDelay;
+    }
+
+    private void SetAllShieldGuardHitboxes(bool guarding, bool blocking)
+    {
+        SetShieldGuardHitboxes(rightHandPickupSources, guarding, blocking, playerHealth);
+        SetShieldGuardHitboxes(leftHandPickupSources, guarding, blocking, playerHealth);
+        SetShieldGuardHitboxes(rightHandFirstPersonVisuals, false, false, playerHealth);
+        SetShieldGuardHitboxes(leftHandFirstPersonVisuals, false, false, playerHealth);
+    }
+
+    private static void SetShieldGuardHitboxes(WorldPickupItem[] pickupItems, bool guarding, bool blocking, PlayerHealth ownerHealth)
+    {
+        if (pickupItems == null)
+            return;
+
+        for (int i = 0; i < pickupItems.Length; i++)
+            SetShieldGuardHitboxes(pickupItems[i], guarding, blocking, ownerHealth);
+    }
+
+    private static void SetShieldGuardHitboxes(WorldPickupItem pickupItem, bool guarding, bool blocking, PlayerHealth ownerHealth)
+    {
+        if (pickupItem == null)
+            return;
+
+        ShieldGuardHitbox[] guardHitboxes = pickupItem.GetComponentsInChildren<ShieldGuardHitbox>(true);
+        for (int i = 0; i < guardHitboxes.Length; i++)
+        {
+            ShieldGuardHitbox guardHitbox = guardHitboxes[i];
+            if (guardHitbox == null)
+                continue;
+
+            guardHitbox.SetOwnerHealth(ownerHealth);
+            guardHitbox.SetGuardState(guarding, blocking);
+        }
     }
 
     private bool TryEquipAnyHand(ItemDefinition itemDefinition, WorldPickupItem pickupItem)
@@ -671,6 +905,9 @@ public class HandEquipmentController : MonoBehaviour
     {
         if (slotIndex < 0 || slotIndex >= SlotsPerHand)
             return;
+
+        if (shieldGuardHeld && shieldGuardHand == hand && slotIndex == GetActiveSlotIndex(hand))
+            StopShieldGuard();
 
         ItemDefinition[] slots = GetSlots(hand);
         slots[slotIndex] = null;
@@ -812,6 +1049,9 @@ public class HandEquipmentController : MonoBehaviour
 
         if (torchItemDefinition == null)
             torchItemDefinition = Resources.Load<ItemDefinition>(DefaultTorchItemResourcePath);
+
+        if (shieldItemDefinition == null)
+            shieldItemDefinition = Resources.Load<ItemDefinition>(DefaultShieldItemResourcePath);
 
         ResolveHandSockets();
         ResolveFirstPersonItemSockets();
@@ -1746,6 +1986,26 @@ public class HandEquipmentController : MonoBehaviour
         return string.Equals(itemDefinition.ItemName, TorchItemFallbackName, StringComparison.OrdinalIgnoreCase);
     }
 
+    private bool IsShieldActiveItem(HandType hand)
+    {
+        int activeIndex = GetActiveSlotIndex(hand);
+        if (!IsValidSlotIndex(activeIndex))
+            return false;
+
+        return IsShieldItem(GetItem(hand, activeIndex));
+    }
+
+    private bool IsShieldItem(ItemDefinition itemDefinition)
+    {
+        if (itemDefinition == null)
+            return false;
+
+        if (shieldItemDefinition != null && itemDefinition == shieldItemDefinition)
+            return true;
+
+        return string.Equals(itemDefinition.ItemName, ShieldItemFallbackName, StringComparison.OrdinalIgnoreCase);
+    }
+
     private bool TryResolveEquipRequest(ItemDefinition itemDefinition, out HandType hand, out int slotIndex)
     {
         hand = HandType.Right;
@@ -1858,6 +2118,12 @@ public class HandEquipmentController : MonoBehaviour
             slotIndex,
             previousActiveItem,
             previousActivePickup);
+        bool shouldPlaySelectAudio = ShouldPlayInventorySelectAudio(
+            hand,
+            previousSlotIndex,
+            slotIndex,
+            previousActiveItem,
+            previousActivePickup);
 
         if (logResult)
             Debug.Log($"[HandEquipmentController] Slot alternado: mao {GetHandLabel(hand)} agora esta no Slot {slotIndex + 1}.");
@@ -1866,6 +2132,9 @@ public class HandEquipmentController : MonoBehaviour
 
         if (shouldTriggerDrawAnimation)
             playerMovement.TriggerDrawAnimation(hand);
+
+        if (shouldPlaySelectAudio)
+            PlayInventorySelectAudio(GetItem(hand, slotIndex), GetPickupSources(hand)[slotIndex]);
 
         NotifyStateChanged();
         BroadcastInventorySnapshotIfNeeded();
@@ -1890,6 +2159,27 @@ public class HandEquipmentController : MonoBehaviour
             return false;
 
         WorldPickupItem nextActivePickup = GetPickupSources(hand)[nextSlotIndex];
+        if (nextActivePickup != null)
+            return nextActivePickup != previousActivePickup;
+
+        return nextActiveItem != previousActiveItem;
+    }
+
+    private bool ShouldPlayInventorySelectAudio(
+        HandType hand,
+        int previousSlotIndex,
+        int nextSlotIndex,
+        ItemDefinition previousActiveItem,
+        WorldPickupItem previousActivePickup)
+    {
+        if (!HasLocalAuthority() || previousSlotIndex == nextSlotIndex)
+            return false;
+
+        WorldPickupItem nextActivePickup = GetPickupSources(hand)[nextSlotIndex];
+        ItemDefinition nextActiveItem = GetItem(hand, nextSlotIndex);
+        if (ResolveInventorySelectAudioCue(nextActiveItem, nextActivePickup) == null)
+            return false;
+
         if (nextActivePickup != null)
             return nextActivePickup != previousActivePickup;
 
@@ -1974,6 +2264,8 @@ public class HandEquipmentController : MonoBehaviour
         if (HasLocalAuthority() && playerMovement != null)
             playerMovement.TriggerPickupAnimation(hand);
 
+        PlayInventorySelectAudio(itemDefinition, pickupItem);
+
         Debug.Log($"[HandEquipmentController] Item equipado: {itemDefinition.ItemName} no Slot {slotIndex + 1} da mao {GetHandLabel(hand)}.");
         RefreshEquippedVisuals();
         if (focusInEditor && HasLocalAuthority())
@@ -1981,6 +2273,58 @@ public class HandEquipmentController : MonoBehaviour
         NotifyStateChanged();
         BroadcastInventorySnapshotIfNeeded();
         return true;
+    }
+
+    private void PlayInventorySelectAudio(ItemDefinition itemDefinition, WorldPickupItem pickupSource)
+    {
+        PlayItemAudioCue(ResolveInventorySelectAudioCue(itemDefinition, pickupSource), pickupSource);
+    }
+
+    private void PlayItemUseAudio(HandType hand, ItemDefinition itemDefinition)
+    {
+        int activeIndex = GetActiveSlotIndex(hand);
+        WorldPickupItem pickupSource = IsValidSlotIndex(activeIndex) ? GetPickupSources(hand)[activeIndex] : null;
+        PlayItemAudioCue(ResolveItemUseAudioCue(itemDefinition, pickupSource), pickupSource);
+    }
+
+    private static AudioCue ResolveInventorySelectAudioCue(ItemDefinition itemDefinition, WorldPickupItem pickupSource)
+    {
+        if (pickupSource != null && pickupSource.InventorySelectAudioCue != null)
+            return pickupSource.InventorySelectAudioCue;
+
+        return itemDefinition != null ? itemDefinition.InventorySelectAudioCue : null;
+    }
+
+    private static AudioCue ResolveItemUseAudioCue(ItemDefinition itemDefinition, WorldPickupItem pickupSource)
+    {
+        if (pickupSource != null && pickupSource.UseAudioCue != null)
+            return pickupSource.UseAudioCue;
+
+        return itemDefinition != null ? itemDefinition.UseAudioCue : null;
+    }
+
+    private void PlayItemAudioCue(AudioCue cue, WorldPickupItem pickupSource)
+    {
+        if (!HasLocalAuthority() || cue == null)
+            return;
+
+        Transform anchor = pickupSource != null && pickupSource.gameObject.activeInHierarchy
+            ? pickupSource.transform
+            : transform;
+
+        if (cue.Is3D)
+        {
+            if (cue.Anchor == AudioPlaybackAnchor.FollowTransform && anchor != null)
+            {
+                GameAudioService.Play(cue, anchor);
+                return;
+            }
+
+            GameAudioService.Play(cue, anchor != null ? anchor.position : transform.position);
+            return;
+        }
+
+        GameAudioService.Play(cue);
     }
 
     private bool TryFindPickupSlot(WorldPickupItem pickupItem, out HandType hand, out int slotIndex)

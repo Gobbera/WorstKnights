@@ -18,7 +18,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -4
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.y
@@ -26,7 +26,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -4
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalRotation.w
@@ -59,10 +59,14 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2351b26f406fa8a4baa874f34a48b5d1, type: 2}
+      objectReference: {fileID: 2100000, guid: 993481e21127e7742ba85500285f1fbb, type: 2}
     - target: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_Name
       value: Floor_E
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -71,6 +75,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8904316140365637780}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5383898438232459942}
   m_SourcePrefab: {fileID: 100100000, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
 --- !u!1 &7545650795472292103 stripped
 GameObject:
@@ -98,3 +105,16 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 4, y: 0, z: 4}
   m_Center: {x: 2, y: 0, z: 2}
+--- !u!114 &5383898438232459942
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7545650795472292103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51eaf0e2055340d69a67e315f41f72ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FootstepSurface
+  surface: {fileID: 11400000, guid: a6c779af1ff816444971b3e018ad3395, type: 2}

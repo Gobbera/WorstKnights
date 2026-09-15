@@ -8,7 +8,7 @@ using UnityEditor;
 [RequireComponent(typeof(EnemySetup), typeof(EnemyHealth))]
 public class EnemyAttack : MonoBehaviour
 {
-    private const int MaxHitColliders = 16;
+    private const int MaxHitColliders = 32;
     private const int ArcGizmoSegments = 28;
     private const string DefaultAttackAnimationClipName = "Attack_01";
     private const string DefaultAttackStatePath = "Base Layer.Attack_01";
@@ -227,7 +227,7 @@ public class EnemyAttack : MonoBehaviour
             hitRange,
             hitBuffer,
             DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
-            QueryTriggerInteraction.Ignore);
+            QueryTriggerInteraction.Collide);
 
         for (int i = 0; i < hitCount; i++)
         {
@@ -238,6 +238,13 @@ public class EnemyAttack : MonoBehaviour
             if (hitCollider == null)
                 continue;
 
+            Vector3 hitPoint = ResolveForwardArcHitPoint(origin, attackForward, hitRange, hitCollider);
+            if (IsShieldGuardCollider(hitCollider))
+                continue;
+
+            if (hitCollider.isTrigger)
+                continue;
+
             PlayerHealth playerHealth = hitCollider.GetComponentInParent<PlayerHealth>();
             if (playerHealth == null || !playerHealth.IsAlive || !playerHealth.CanBeTargetedByEnemy)
                 continue;
@@ -246,13 +253,19 @@ public class EnemyAttack : MonoBehaviour
             if (!IsInsideForwardArc(planarOffset, attackForward, hitRange, minForwardDot))
                 continue;
 
-            if (!hitTargetsThisAttack.Add(playerHealth))
-                continue;
-
-            Vector3 hitPoint = ResolveForwardArcHitPoint(origin, attackForward, hitRange, hitCollider);
             Vector3 hitDirection = planarOffset.sqrMagnitude > 0.0001f
                 ? planarOffset.normalized
                 : attackForward;
+
+            if (hitTargetsThisAttack.Contains(playerHealth))
+                continue;
+
+            Vector3 shieldTraceTarget = ResolveShieldTraceTargetPoint(playerHealth, hitCollider, hitPoint);
+            if (TryBlockPlayerDamageWithShield(playerHealth, origin, shieldTraceTarget, hitDirection, Mathf.Max(0.05f, weaponHitRadius)))
+                continue;
+
+            if (!hitTargetsThisAttack.Add(playerHealth))
+                continue;
 
             if (!CanContinueActiveAttack())
                 return;
@@ -278,9 +291,10 @@ public class EnemyAttack : MonoBehaviour
             Mathf.Max(0.05f, weaponHitRadius),
             hitBuffer,
             DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
-            QueryTriggerInteraction.Ignore);
+            QueryTriggerInteraction.Collide);
 
         Vector3 hitOrigin = Vector3.Lerp(segmentStart, segmentEnd, 0.5f);
+
         for (int i = 0; i < hitCount; i++)
         {
             if (!CanContinueActiveAttack())
@@ -290,14 +304,26 @@ public class EnemyAttack : MonoBehaviour
             if (hitCollider == null)
                 continue;
 
+            Vector3 hitPoint = hitCollider.ClosestPoint(hitOrigin);
+            if (IsShieldGuardCollider(hitCollider))
+                continue;
+
+            if (hitCollider.isTrigger)
+                continue;
+
             PlayerHealth playerHealth = hitCollider.GetComponentInParent<PlayerHealth>();
             if (playerHealth == null || !playerHealth.IsAlive || !playerHealth.CanBeTargetedByEnemy)
                 continue;
 
-            if (!hitTargetsThisAttack.Add(playerHealth))
+            if (hitTargetsThisAttack.Contains(playerHealth))
                 continue;
 
-            Vector3 hitPoint = hitCollider.ClosestPoint(hitOrigin);
+            Vector3 shieldTraceTarget = ResolveShieldTraceTargetPoint(playerHealth, hitCollider, hitPoint);
+            if (TryBlockPlayerDamageWithShield(playerHealth, segmentStart, shieldTraceTarget, hitDirection, Mathf.Max(0.05f, weaponHitRadius)))
+                continue;
+
+            if (!hitTargetsThisAttack.Add(playerHealth))
+                continue;
 
             if (!CanContinueActiveAttack())
                 return;
@@ -310,6 +336,47 @@ public class EnemyAttack : MonoBehaviour
                 playerDamageAnimation,
                 playerCameraImpactType);
         }
+    }
+
+    private bool TryBlockPlayerDamageWithShield(
+        PlayerHealth playerHealth,
+        Vector3 attackOrigin,
+        Vector3 hitPoint,
+        Vector3 hitDirection,
+        float probeRadius)
+    {
+        if (!ShieldGuardHitbox.TryBlockEnemyHit(
+                playerHealth,
+                gameObject,
+                attackOrigin,
+                hitPoint,
+                hitDirection,
+                probeRadius,
+                out Vector3 shieldHitPoint))
+        {
+            return false;
+        }
+
+        hitTargetsThisAttack.Add(playerHealth);
+        playerHealth.ReceiveEnemyShieldBlock(gameObject, shieldHitPoint, hitDirection);
+        return true;
+    }
+
+    private static Vector3 ResolveShieldTraceTargetPoint(PlayerHealth playerHealth, Collider hitCollider, Vector3 fallbackHitPoint)
+    {
+        if (hitCollider != null)
+            return hitCollider.bounds.center;
+
+        return playerHealth != null ? playerHealth.transform.position : fallbackHitPoint;
+    }
+
+    private static bool IsShieldGuardCollider(Collider hitCollider)
+    {
+        if (hitCollider == null)
+            return false;
+
+        ShieldGuardHitbox shieldHitbox = hitCollider.GetComponentInParent<ShieldGuardHitbox>();
+        return shieldHitbox != null && shieldHitbox.ContainsBlockCollider(hitCollider);
     }
 
     private bool TryGetWeaponSegment(out Vector3 weaponBasePosition, out Vector3 weaponTipPosition, out Vector3 hitDirection)

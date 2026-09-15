@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
   itemName: Health Potion
   uiSprite: {fileID: 21300000, guid: 34a9121ce466e9f4bb916b372fcbc5cc, type: 3}
+  inventorySelectAudioCue: {fileID: 11400000, guid: 1fcbb895523c7934abf9ef9eb18ecda9, type: 2}
+  useAudioCue: {fileID: 11400000, guid: f50eec68fdfd58a41830cb510c714183, type: 2}
   handRequirement: 1
   preferredHand: 1
   useType: 2

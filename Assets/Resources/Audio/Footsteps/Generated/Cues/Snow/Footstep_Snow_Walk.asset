@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a1055a6b9a79d40bcad2eec8cb41ae, type: 3}
+  m_Name: Footstep_Snow_Walk
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCue
+  cueId: 
+  clips:
+  - {fileID: 8300000, guid: 05c42e498b8744744ad3fbf2055f3624, type: 3}
+  - {fileID: 8300000, guid: d82fc2cd4d9eb384ba34b3dc326990d9, type: 3}
+  - {fileID: 8300000, guid: 2c90e80473cc930448770f8a996062cb, type: 3}
+  - {fileID: 8300000, guid: 2efc5e4bb7b00ae4cbf739f7a1a4c3ff, type: 3}
+  - {fileID: 8300000, guid: 50dae6ac2eee7894fb8b48c192a50802, type: 3}
+  - {fileID: 8300000, guid: f80636348148ff84095ac896bff66d1c, type: 3}
+  - {fileID: 8300000, guid: c8a70ba7587aebd46a56ebb8006262f1, type: 3}
+  - {fileID: 8300000, guid: 8434b482ddca5934d813b9de555ff4ab, type: 3}
+  - {fileID: 8300000, guid: 0c1712eebdb3af2438eb4cd93140acc0, type: 3}
+  - {fileID: 8300000, guid: bf5c0a922b0cd2347a738c1d0f1a782a, type: 3}
+  - {fileID: 8300000, guid: 7f3ebf527276b484e8edae7846d33119, type: 3}
+  - {fileID: 8300000, guid: 3e069d60195c9de4a9f7765557397f30, type: 3}
+  - {fileID: 8300000, guid: 3c1967f6644f7ee4cb90dd9da24dd7da, type: 3}
+  - {fileID: 8300000, guid: bc42a9fc9dbd95442849a1d0a23dd41e, type: 3}
+  - {fileID: 8300000, guid: 4484cb0b05ef2ae4c9fffdbbbd82c5cd, type: 3}
+  - {fileID: 8300000, guid: 120931fb726356346926852e66a98948, type: 3}
+  - {fileID: 8300000, guid: 4f06448e52184d849bf63240240ddada, type: 3}
+  - {fileID: 8300000, guid: 3274935aa2ffdd543aea4fec89c08188, type: 3}
+  - {fileID: 8300000, guid: ee5109b2ca7428843a14b6a36dda384f, type: 3}
+  - {fileID: 8300000, guid: 27a83612c761cb54c9eaa211ed9a74f0, type: 3}
+  - {fileID: 8300000, guid: 4247388d57a4ce84096a96838717c4c8, type: 3}
+  - {fileID: 8300000, guid: 9929892c95e88f24ea67533fdec16e2e, type: 3}
+  - {fileID: 8300000, guid: 3f06dcd119362ab4e92a4141798a689e, type: 3}
+  - {fileID: 8300000, guid: bd926afca0aa8ab48b8abfc15454bc3d, type: 3}
+  mixerGroup: {fileID: 0}
+  space: 1
+  replication: 0
+  anchor: 0
+  loop: 0
+  baseVolume: 0.12
+  randomVolumeRange: {x: 0.95, y: 1.05}
+  basePitch: 1
+  randomPitchRange: {x: 0.95, y: 1.08}
+  spatialBlend: 1
+  spread: 0
+  minDistance: 1
+  maxDistance: 15
+  cooldown: 0

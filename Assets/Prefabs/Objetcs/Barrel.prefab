@@ -102,9 +102,9 @@ MonoBehaviour:
     spawnPoint: {fileID: 0}
     localPositionOffset: {x: 0, y: 0, z: 0}
     localEulerOffset: {x: 0, y: 0, z: 0}
-    lifetime: 15
+    lifetime: 0
     fadeOutDuration: 0
-    ignorePlayerCollision: 1
+    ignorePlayerCollision: 0
     ignoreEnemyCollision: 0
     useDebrisCollisionLayer: 0
 --- !u!114 &7771072656732376261
@@ -145,15 +145,15 @@ MonoBehaviour:
   signalEntries:
   - signalId: Damaged
     feedbackOrigin: {fileID: 0}
-    audioCue: {fileID: 11400000, guid: ceb6517111d86484aaca898ba076d4f2, type: 2}
+    audioCue: {fileID: 11400000, guid: c4ca939355b1378499b65d0b8f3c4c03, type: 2}
     effectPrefab: {fileID: 3451279753407673077, guid: 21ec746de78787842a80661b40fbf62f, type: 3}
-    effectLifetime: 0
+    effectLifetime: 1
     onSignalReceived:
       m_PersistentCalls:
         m_Calls: []
   - signalId: Destroyed
     feedbackOrigin: {fileID: 0}
-    audioCue: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: f6fc2b81d73358b47b58c692c241aa48, type: 2}
     effectPrefab: {fileID: 0}
     effectLifetime: 5
     onSignalReceived:
@@ -400,7 +400,11 @@ MonoBehaviour:
   surfacePlane: 0
   textureWorldSize: {x: 1, y: 1}
   tilingMultiplier: {x: 4, y: 4}
+  textureOffset: {x: 0, y: 0}
+  textureRotationDegrees: 0
   textureTilingProperty: _Texture_Tiling
+  textureOffsetProperty: _Texture_Offset
+  textureRotationProperty: _Texture_Rotation
   updateInPlayMode: 0
 --- !u!4 &8984423273424580493 stripped
 Transform:

@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a1055a6b9a79d40bcad2eec8cb41ae, type: 3}
+  m_Name: Footstep_Snow_Jump
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCue
+  cueId: 
+  clips:
+  - {fileID: 8300000, guid: 98c4e3843c58f504997fa8ff4ac446a0, type: 3}
+  - {fileID: 8300000, guid: 16eb595cb84df9743b43927e6e11f487, type: 3}
+  - {fileID: 8300000, guid: 158dda579f2238949af5b31b76fc9fb3, type: 3}
+  - {fileID: 8300000, guid: 5dd48630f909c61448c507f21d132af8, type: 3}
+  - {fileID: 8300000, guid: 8fa804ea73811dc408c5e1d86e6c922e, type: 3}
+  - {fileID: 8300000, guid: 6431605160c83d7468a5dc4cca267526, type: 3}
+  - {fileID: 8300000, guid: 7713ba384a2a8f44ab2eb40dee9ddaea, type: 3}
+  - {fileID: 8300000, guid: 5ff6d406771365f46aa326e7e91b10fe, type: 3}
+  - {fileID: 8300000, guid: 9da340c0b94731d4887cfa136e57ff09, type: 3}
+  - {fileID: 8300000, guid: 8ae7c91bec282be438a3815efac64b89, type: 3}
+  - {fileID: 8300000, guid: 1441d087c4f64a345b2c551256245ae8, type: 3}
+  mixerGroup: {fileID: 0}
+  space: 1
+  replication: 0
+  anchor: 0
+  loop: 0
+  baseVolume: 0.14
+  randomVolumeRange: {x: 0.95, y: 1.05}
+  basePitch: 1
+  randomPitchRange: {x: 0.95, y: 1.1}
+  spatialBlend: 1
+  spread: 0
+  minDistance: 1
+  maxDistance: 15
+  cooldown: 0

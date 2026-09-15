@@ -29,7 +29,8 @@ public static class PickupColliderNormalizationTools
                         continue;
                     }
 
-                    InventoryItemAuthoringUtility.EnsureDropCollisionFromPickup(pickupItem);
+                    InventoryItemAuthoringUtility.EnsureRootCollisionFromPickup(pickupItem);
+                    InventoryItemAuthoringUtility.EnsureItemReactionSetup(pickupItem.gameObject);
                     InventoryItemAuthoringUtility.EnsureRigidbody(pickupItem.gameObject);
                     prefabDirty = true;
                     updatedPickupCount++;
