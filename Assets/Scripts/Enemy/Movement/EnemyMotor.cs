@@ -56,6 +56,11 @@ public class EnemyMotor : MonoBehaviour
         CurrentPlanarSpeed = 0f;
     }
 
+    public void SetMoveSpeed(float speed)
+    {
+        moveSpeed = Mathf.Max(0f, speed);
+    }
+
     public void MoveTowards(Vector3 planarOffset, float deltaTime)
     {
         if (!isAlive)

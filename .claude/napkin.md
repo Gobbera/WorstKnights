@@ -250,8 +250,8 @@
 4. **[2026-08-07] Wall-only first-person bypass is now a fallback mode**
    Do instead: use `PlayerSetup.firstPersonOverlayDepthMode=WallLayerStencilBypass` only when hands should preserve scene depth except against objects on the `Wall` layer; otherwise keep `AlwaysOnTop`.
 
-5. **[2026-08-20] Player low-light assist is owner-local runtime lighting**
-   Do instead: keep `PlayerVisibilityAssistLight` on `Assets/Resources/Player.prefab`, let it create its own weak point light on the local `FP_Camera`, and suppress it from `HandEquipmentController.HasActiveEquippedLightSource()` rather than serializing/syncing a world light.
+5. **[2026-08-20] Player low-light assist should stay owner-local and compact**
+   Do instead: keep `PlayerVisibilityAssistLight` owner-local, tune its short-range `Point`/`Spot` mode on `FP_Camera`, use WK toon shader fill (`_WK_ToonFillIntensity`/`_WK_ToonFillColor`) only when a global darkness floor is desired, and suppress the assist light from `HandEquipmentController.HasActiveEquippedLightSource()`.
 
 6. **[2026-08-07] Layer temporary attack FOV over live movement FOV**
    Do instead: let locomotion FOV update first and have attack feedback resolve the current locomotion FOV each frame as its base, otherwise sprint-to-attack can snap back to a stale sprint FOV when the attack relaxes.

@@ -13,6 +13,8 @@ public class EnemySetup : MonoBehaviour
     [SerializeField] private EnemyHealth enemyHealth;
     [SerializeField] private EnemyBrain enemyBrain;
     [SerializeField] private EnemyMotor enemyMotor;
+    [SerializeField] private EnemyNavigation enemyNavigation;
+    [SerializeField] private EnemyPerception enemyPerception;
     [SerializeField] private EnemyAttack enemyAttack;
     [SerializeField] private EnemyAnimationController enemyAnimationController;
     [SerializeField] private EnemyNetworkSync enemyNetworkSync;
@@ -28,13 +30,15 @@ public class EnemySetup : MonoBehaviour
     public EnemyHealth EnemyHealth => enemyHealth;
     public EnemyBrain EnemyBrain => enemyBrain;
     public EnemyMotor EnemyMotor => enemyMotor;
+    public EnemyNavigation EnemyNavigation => enemyNavigation;
+    public EnemyPerception EnemyPerception => enemyPerception;
     public EnemyAttack EnemyAttack => enemyAttack;
     public EnemyAnimationController EnemyAnimationController => enemyAnimationController;
     public EnemyNetworkSync EnemyNetworkSync => enemyNetworkSync;
     public Transform AttackOrigin => attackOrigin != null ? attackOrigin : transform;
     public Animator Animator => animator;
     public Transform ModelRoot => modelRoot != null ? modelRoot : transform;
-    public bool HasAuthority => photonView == null || PhotonNetwork.OfflineMode || !PhotonNetwork.InRoom || photonView.IsMine;
+    public bool HasAuthority => HasLocalAuthority();
 
     private void Awake()
     {
@@ -62,6 +66,12 @@ public class EnemySetup : MonoBehaviour
 
         if (enemyMotor == null)
             enemyMotor = GetComponent<EnemyMotor>();
+
+        if (enemyNavigation == null)
+            enemyNavigation = GetComponent<EnemyNavigation>();
+
+        if (enemyPerception == null)
+            enemyPerception = GetComponent<EnemyPerception>();
 
         if (enemyAttack == null)
             enemyAttack = GetComponent<EnemyAttack>();
@@ -106,6 +116,7 @@ public class EnemySetup : MonoBehaviour
     public void ApplySimulationState(bool hasAuthority, bool isAlive)
     {
         enemyBrain?.SetSimulationEnabled(hasAuthority && isAlive);
+        enemyNavigation?.SetSimulationEnabled(hasAuthority && isAlive);
         enemyMotor?.SetAliveState(isAlive);
         enemyAttack?.SetAliveState(isAlive);
         EnsurePhysicsDefaults(hasAuthority, isAlive);
@@ -139,5 +150,16 @@ public class EnemySetup : MonoBehaviour
         }
 
         return null;
+    }
+
+    private bool HasLocalAuthority()
+    {
+        if (photonView == null || PhotonNetwork.OfflineMode || !PhotonNetwork.InRoom)
+            return true;
+
+        if (photonView.IsMine)
+            return true;
+
+        return photonView.IsRoomView && PhotonNetwork.IsMasterClient;
     }
 }

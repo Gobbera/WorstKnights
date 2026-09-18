@@ -7,6 +7,8 @@ public sealed class PlayerVisibilityAssistLight : MonoBehaviour
     private const string RuntimeLightName = "Visibility Assist Light";
     private const string DefaultAnchorName = "FP_Camera";
     private const float MinimumSourceRefreshInterval = 0.05f;
+    private static readonly int ToonFillIntensityId = Shader.PropertyToID("_WK_ToonFillIntensity");
+    private static readonly int ToonFillColorId = Shader.PropertyToID("_WK_ToonFillColor");
 
     [Header("References")]
     [Tooltip("PhotonView do player. Usado para garantir que a luz exista apenas no dono local.")]
@@ -35,6 +37,12 @@ public sealed class PlayerVisibilityAssistLight : MonoBehaviour
     [SerializeField] [Range(0f, 1f)] private float assistIntensity = 0.18f;
     [Tooltip("Alcance local da luz em metros.")]
     [SerializeField] [Min(0f)] private float assistRange = 3.2f;
+    [Tooltip("Tipo da luz auxiliar local.")]
+    [SerializeField] private LightType assistLightType = LightType.Spot;
+    [Tooltip("Abertura externa do cone quando a luz auxiliar for Spot.")]
+    [SerializeField] [Range(1f, 179f)] private float assistSpotAngle = 65f;
+    [Tooltip("Abertura interna do cone quando a luz auxiliar for Spot.")]
+    [SerializeField] [Range(0f, 179f)] private float assistInnerSpotAngle = 35f;
     [Tooltip("Cor da luz. Tons frios tendem a parecer percepcao/olhos, nao fogo.")]
     [SerializeField] private Color assistColor = new Color(0.68f, 0.76f, 0.9f, 1f);
     [Tooltip("Velocidade do fade ao ligar/desligar. Zero troca instantaneamente.")]
@@ -42,10 +50,19 @@ public sealed class PlayerVisibilityAssistLight : MonoBehaviour
     [Tooltip("Intervalo para checar se o item equipado tem luz ativa.")]
     [SerializeField] [Min(MinimumSourceRefreshInterval)] private float sourceRefreshInterval = 0.25f;
 
+    [Header("Shader Fill")]
+    [Tooltip("Aplica um preenchimento global no shader toon para evitar preto absoluto sem gastar slot de luz.")]
+    [SerializeField] private bool shaderFillEnabled = true;
+    [Tooltip("Piso minimo de iluminacao usado pelo shader WK toon.")]
+    [SerializeField] [Range(0f, 0.25f)] private float shaderFillIntensity = 0.035f;
+    [Tooltip("Cor do preenchimento global do shader WK toon.")]
+    [SerializeField] private Color shaderFillColor = new Color(0.68f, 0.76f, 0.9f, 1f);
+
     private float currentIntensity;
     private float targetIntensity;
     private float nextSourceRefreshTime;
     private bool subscribedToEquipment;
+    private bool shaderFillApplied;
 
     public bool AssistEnabled
     {
@@ -125,25 +142,33 @@ public sealed class PlayerVisibilityAssistLight : MonoBehaviour
     {
         UnsubscribeFromEquipment();
         DisableAssistLightImmediate();
+        ClearShaderFill();
     }
 
     private void OnDestroy()
     {
         UnsubscribeFromEquipment();
+        ClearShaderFill();
     }
 
     private void OnValidate()
     {
         assistIntensity = Mathf.Max(0f, assistIntensity);
         assistRange = Mathf.Max(0f, assistRange);
+        assistSpotAngle = Mathf.Clamp(assistSpotAngle, 1f, 179f);
+        assistInnerSpotAngle = Mathf.Clamp(assistInnerSpotAngle, 0f, assistSpotAngle);
         fadeSpeed = Mathf.Max(0f, fadeSpeed);
         sourceRefreshInterval = Mathf.Max(MinimumSourceRefreshInterval, sourceRefreshInterval);
+        shaderFillIntensity = Mathf.Max(0f, shaderFillIntensity);
 
         if (assistLight != null)
             ConfigureAssistLight();
 
         if (Application.isPlaying && applyInspectorChangesInPlayMode)
+        {
             RefreshTargetIntensity(force: false);
+            ApplyShaderFill();
+        }
     }
 
     private void Update()
@@ -151,11 +176,13 @@ public sealed class PlayerVisibilityAssistLight : MonoBehaviour
         if (!HasLocalAuthority())
         {
             DisableAssistLightImmediate();
+            ClearShaderFill();
             return;
         }
 
         ResolveReferences();
         SubscribeToEquipment();
+        ApplyShaderFill();
 
         if (assistLight == null && !assistEnabled)
             return;
@@ -223,6 +250,28 @@ public sealed class PlayerVisibilityAssistLight : MonoBehaviour
         assistLight.enabled = false;
     }
 
+    private void ApplyShaderFill()
+    {
+        if (!assistEnabled || !shaderFillEnabled || !HasLocalAuthority())
+        {
+            ClearShaderFill();
+            return;
+        }
+
+        Shader.SetGlobalFloat(ToonFillIntensityId, Mathf.Max(0f, shaderFillIntensity));
+        Shader.SetGlobalColor(ToonFillColorId, shaderFillColor);
+        shaderFillApplied = true;
+    }
+
+    private void ClearShaderFill()
+    {
+        if (!shaderFillApplied)
+            return;
+
+        Shader.SetGlobalFloat(ToonFillIntensityId, 0f);
+        shaderFillApplied = false;
+    }
+
     private void ResolveReferences()
     {
         if (photonView == null)
@@ -265,7 +314,13 @@ public sealed class PlayerVisibilityAssistLight : MonoBehaviour
 
         assistLight.transform.localPosition = localOffset;
         assistLight.transform.localRotation = Quaternion.identity;
-        assistLight.type = LightType.Point;
+        assistLight.type = assistLightType;
+        if (assistLight.type == LightType.Spot)
+        {
+            assistLight.spotAngle = Mathf.Clamp(assistSpotAngle, 1f, 179f);
+            assistLight.innerSpotAngle = Mathf.Clamp(assistInnerSpotAngle, 0f, assistLight.spotAngle);
+        }
+
         assistLight.color = assistColor;
         assistLight.range = Mathf.Max(0f, assistRange);
         assistLight.shadows = LightShadows.None;

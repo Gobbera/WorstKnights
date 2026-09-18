@@ -65,6 +65,21 @@ public class PlayerHealth : CombatHealth
         base.Awake();
     }
 
+    private void OnEnable()
+    {
+        EnemyTargetRegistry.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        EnemyTargetRegistry.Unregister(this);
+    }
+
+    private void OnDestroy()
+    {
+        EnemyTargetRegistry.Unregister(this);
+    }
+
     private void Start()
     {
         BroadcastLifeState();

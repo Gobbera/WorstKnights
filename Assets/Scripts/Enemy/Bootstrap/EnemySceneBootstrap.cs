@@ -1,5 +1,6 @@
 using UnityEngine;
 using Photon.Pun;
+using UnityEngine.AI;
 
 public static class EnemySceneBootstrap
 {
@@ -54,6 +55,21 @@ public static class EnemySceneBootstrap
 
         if (enemyObject.GetComponent<EnemyMotor>() == null)
             enemyObject.AddComponent<EnemyMotor>();
+
+        if (enemyObject.GetComponent<NavMeshAgent>() == null)
+            enemyObject.AddComponent<NavMeshAgent>();
+
+        if (enemyObject.GetComponent<EnemyNavigation>() == null)
+            enemyObject.AddComponent<EnemyNavigation>();
+
+        if (enemyObject.GetComponent<EnemyVision>() == null)
+            enemyObject.AddComponent<EnemyVision>();
+
+        if (enemyObject.GetComponent<EnemyHearing>() == null)
+            enemyObject.AddComponent<EnemyHearing>();
+
+        if (enemyObject.GetComponent<EnemyPerception>() == null)
+            enemyObject.AddComponent<EnemyPerception>();
 
         if (enemyObject.GetComponent<EnemyAttack>() == null)
             enemyObject.AddComponent<EnemyAttack>();

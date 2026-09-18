@@ -45,12 +45,12 @@ Light:
   m_Type: 2
   m_Color: {r: 1, g: 0.54, b: 0.22, a: 1}
   m_Intensity: 0
-  m_Range: 5
+  m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
-    m_Type: 1
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -445,7 +445,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 891dc49ea17c3f241ac7f3691c0a779b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 11
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 891dc49ea17c3f241ac7f3691c0a779b, type: 3}
       propertyPath: m_LocalPosition.y
@@ -453,7 +453,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 891dc49ea17c3f241ac7f3691c0a779b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 7.6581
+      value: 14.665
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 891dc49ea17c3f241ac7f3691c0a779b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -552,8 +552,8 @@ MonoBehaviour:
   flameLight: {fileID: 5391169610585311948}
   litOnAwake: 0
   deactivateFlameRootWhenUnlit: 1
-  baseIntensity: 1
-  baseRange: 5
+  baseIntensity: 0.4
+  baseRange: 10
   baseColor: {r: 1, g: 0.54, b: 0.22, a: 1}
   enableFlicker: 1
   intensityVariation: 0.1

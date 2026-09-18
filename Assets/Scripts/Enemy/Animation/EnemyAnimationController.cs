@@ -100,10 +100,25 @@ public class EnemyAnimationController : MonoBehaviour
         SetBoolIfExists("Dead", !isAlive);
         SetBoolIfExists("IsMoving", isMoving);
         SetBoolIfExists("Moving", isMoving);
-        SetBoolIfExists("IsAttacking", state == EnemyState.Attacking);
-        SetBoolIfExists("Attacking", state == EnemyState.Attacking);
-        SetBoolIfExists("IsChasing", state == EnemyState.Chasing);
-        SetBoolIfExists("Chasing", state == EnemyState.Chasing);
+        bool isAttacking = state == EnemyState.Attack;
+        bool isChasing = state == EnemyState.Chase;
+        bool isPatrolling = state == EnemyState.Patrol;
+        bool isAlert = state == EnemyState.Alert;
+        bool isSearching = state == EnemyState.Search;
+        bool isReturning = state == EnemyState.Return;
+
+        SetBoolIfExists("IsAttacking", isAttacking);
+        SetBoolIfExists("Attacking", isAttacking);
+        SetBoolIfExists("IsChasing", isChasing);
+        SetBoolIfExists("Chasing", isChasing);
+        SetBoolIfExists("IsPatrolling", isPatrolling);
+        SetBoolIfExists("Patrolling", isPatrolling);
+        SetBoolIfExists("IsAlert", isAlert);
+        SetBoolIfExists("Alert", isAlert);
+        SetBoolIfExists("IsSearching", isSearching);
+        SetBoolIfExists("Searching", isSearching);
+        SetBoolIfExists("IsReturning", isReturning);
+        SetBoolIfExists("Returning", isReturning);
         SetIntegerIfExists("State", (int)state);
         SetFloatIfExists("MoveSpeed", planarSpeed);
         SetFloatIfExists("Speed", planarSpeed);
@@ -205,7 +220,7 @@ public class EnemyAnimationController : MonoBehaviour
     {
         if (animator == null
             || !isAlive
-            || state == EnemyState.Attacking
+            || state == EnemyState.Attack
             || state == EnemyState.Dead
             || state == EnemyState.PreSpawn
             || state == EnemyState.Spawning)

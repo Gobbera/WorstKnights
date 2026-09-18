@@ -96,6 +96,8 @@ public class EnemyHealth : CombatHealth
         if (CurrentHealth > 0f)
             DamageSequence++;
 
+        NotifyBrainDamaged(damageInfo);
+
         if (suppressDamageKnockback)
             return;
 
@@ -265,10 +267,29 @@ public class EnemyHealth : CombatHealth
 
     private bool CanApplyDamageLocally()
     {
+        if (enemySetup == null)
+            enemySetup = GetComponent<EnemySetup>();
+
+        if (enemySetup != null)
+            return enemySetup.HasAuthority;
+
         return photonView == null
             || PhotonNetwork.OfflineMode
             || !PhotonNetwork.InRoom
-            || photonView.IsMine;
+            || photonView.IsMine
+            || photonView.IsRoomView && PhotonNetwork.IsMasterClient;
+    }
+
+    private void NotifyBrainDamaged(DamageInfo damageInfo)
+    {
+        if (CurrentHealth <= 0f)
+            return;
+
+        if (enemySetup == null)
+            enemySetup = GetComponent<EnemySetup>();
+
+        EnemyBrain enemyBrain = enemySetup != null ? enemySetup.EnemyBrain : GetComponent<EnemyBrain>();
+        enemyBrain?.NotifyDamaged(damageInfo);
     }
 
     private void TryScheduleDestroyOnDeath()

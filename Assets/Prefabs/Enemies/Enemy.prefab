@@ -49,6 +49,10 @@ GameObject:
   - component: {fileID: 483004001000000002}
   - component: {fileID: 483004001000000003}
   - component: {fileID: 483004001000000004}
+  - component: {fileID: 483004001000000016}
+  - component: {fileID: 483004001000000018}
+  - component: {fileID: 483004001000000019}
+  - component: {fileID: 483004001000000017}
   - component: {fileID: 483004001000000005}
   - component: {fileID: 483004001000000006}
   - component: {fileID: 483004001000000009}
@@ -232,6 +236,8 @@ MonoBehaviour:
   enemyHealth: {fileID: 483004001000000006}
   enemyBrain: {fileID: 483004001000000003}
   enemyMotor: {fileID: 483004001000000004}
+  enemyNavigation: {fileID: 483004001000000016}
+  enemyPerception: {fileID: 483004001000000017}
   enemyAttack: {fileID: 483004001000000005}
   enemyAnimationController: {fileID: 483004001000000007}
   enemyNetworkSync: {fileID: 483004001000000008}
@@ -250,14 +256,60 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 403f347bc5f54d3e81f351729d65feab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
-  detectionRange: 16
-  targetRefreshInterval: 0.25
   enemySetup: {fileID: 483004001000000002}
   enemyHealth: {fileID: 483004001000000006}
   enemyMotor: {fileID: 483004001000000004}
+  enemyNavigation: {fileID: 483004001000000016}
+  enemyPerception: {fileID: 483004001000000017}
   enemyAttack: {fileID: 483004001000000005}
   enemyAnimationController: {fileID: 483004001000000007}
   requireSpawnAnimation: 1
+  spawnTriggerMode: 0
+  defaultState: 6
+  returnToPatrol: 1
+  idleDuration: 1
+  patrolPoints: []
+  patrolMode: 0
+  patrolSpeed: 2
+  patrolWaitTime: 1
+  patrolStoppingDistance: 0.35
+  startAtNearestPatrolPoint: 1
+  alertDuration: 1.5
+  moveToAlertPosition: 1
+  alertSpeed: 2.5
+  alertStoppingDistance: 0.75
+  chaseSpeed: 3.25
+  maxChaseDistance: 22
+  chaseDestinationUpdateInterval: 0.25
+  chaseStoppingDistance: 1.1
+  lostSightGraceDuration: 0.4
+  combatLostSightGraceDuration: 6
+  combatMemoryDuration: 6
+  combatMemoryAwarenessRadius: 10
+  combatMemoryRequiresLineOfSight: 1
+  combatSearchDuration: 8
+  combatSearchRadius: 4
+  combatSearchPointCount: 5
+  combatSearchPointWaitTime: 0.8
+  combatSearchSpeed: 3
+  enableCloseAwareness: 1
+  closeAwarenessRadius: 3
+  closeAwarenessRequiresLineOfSight: 1
+  searchDuration: 4
+  searchRadius: 3
+  searchPointCount: 3
+  searchSpeed: 2.5
+  searchStoppingDistance: 0.75
+  searchPointWaitTime: 0.6
+  returnSpeed: 2.75
+  returnStoppingDistance: 0.75
+  drawDebugGizmos: 1
+  drawDebugLabels: 1
+  lastKnownPositionColor: {r: 0.2, g: 0.65, b: 1, a: 0.9}
+  investigationPositionColor: {r: 1, g: 0.55, b: 0.05, a: 0.9}
+  destinationColor: {r: 0.25, g: 1, b: 0.35, a: 0.9}
+  closeAwarenessColor: {r: 0.1, g: 0.95, b: 1, a: 0.9}
+  combatMemoryColor: {r: 1, g: 0.1, b: 0.85, a: 0.9}
 --- !u!114 &483004001000000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -274,6 +326,89 @@ MonoBehaviour:
   stopDistance: 0.8
   turnSpeed: 10
   enemySetup: {fileID: 483004001000000002}
+--- !u!114 &483004001000000016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510896961024084334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9911b4e9e474ef9b8d5e911ecdca487, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyNavigation
+  enemySetup: {fileID: 483004001000000002}
+  enemyMotor: {fileID: 483004001000000004}
+  navMeshAgent: {fileID: 0}
+  useNavMeshAgent: 1
+  createAgentAtRuntime: 1
+  useDirectMovementFallback: 1
+  samplePositionDistance: 2
+  destinationRefreshDistance: 0.35
+  reachedDistanceTolerance: 0.15
+--- !u!114 &483004001000000018
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510896961024084334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df50cdb92ad44683859522d5717d2088, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyVision
+  enemySetup: {fileID: 483004001000000002}
+  eyeTransform: {fileID: 0}
+  enableVision: 1
+  viewDistance: 16
+  viewAngle: 110
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  detectionUpdateInterval: 0.2
+  eyeHeightFallback: 1.55
+  drawVisionGizmo: 1
+  visionGizmoColor: {r: 1, g: 0.85, b: 0.05, a: 0.9}
+--- !u!114 &483004001000000019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510896961024084334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 385e4d5b28c04fd4a91bbe123a1b6d48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHearing
+  enemySetup: {fileID: 483004001000000002}
+  enableHearing: 1
+  hearingMultiplier: 1
+  minimumAudibleIntensity: 0.05
+  drawHearingGizmo: 1
+  previewHearingRadius: 12
+  hearingGizmoColor: {r: 0.2, g: 0.65, b: 1, a: 0.25}
+--- !u!114 &483004001000000017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510896961024084334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76192bcbf38244b48f0e7026b7870080, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyPerception
+  enemySetup: {fileID: 483004001000000002}
+  enemyHealth: {fileID: 483004001000000006}
+  enemyVision: {fileID: 483004001000000018}
+  enemyHearing: {fileID: 483004001000000019}
 --- !u!114 &483004001000000005
 MonoBehaviour:
   m_ObjectHideFlags: 0

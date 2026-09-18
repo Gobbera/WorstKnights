@@ -98,7 +98,7 @@ MonoBehaviour:
     ignorePlayerCollision: 1
     ignoreEnemyCollision: 1
     useDebrisCollisionLayer: 1
-  - prefab: {fileID: 9132474299022300489, guid: 3d1349cc30163b242b63c3221c3a7085, type: 3}
+  - prefab: {fileID: 0}
     spawnPoint: {fileID: 0}
     localPositionOffset: {x: 0, y: 0, z: 0}
     localEulerOffset: {x: 0, y: 0, z: 0}

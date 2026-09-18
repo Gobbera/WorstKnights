@@ -88,7 +88,7 @@ public class EnemyFootstepAudioController : MonoBehaviour
         if (enemyHealth != null && !enemyHealth.IsAlive)
             return false;
 
-        if (onlyWhenChasing && enemyBrain != null && enemyBrain.CurrentState != EnemyState.Chasing)
+        if (onlyWhenChasing && enemyBrain != null && enemyBrain.CurrentState != EnemyState.Chase)
             return false;
 
         return enemyMotor != null && enemyMotor.CurrentPlanarSpeed >= Mathf.Max(0f, minPlanarSpeed);

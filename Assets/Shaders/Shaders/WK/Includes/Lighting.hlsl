@@ -1,6 +1,9 @@
 #ifndef CUSTOM_LIGHTING_INCLUDED
 #define CUSTOM_LIGHTING_INCLUDED
 
+float _WK_ToonFillIntensity;
+float3 _WK_ToonFillColor;
+
 void CalculateMainLight_float(float3 WorldPos, out float3 Direction, out float3 Color, out half DistanceAtten, out half ShadowAtten) {
 #ifdef SHADERGRAPH_PREVIEW
     Direction = half3(0.5, 0.5, 0);
@@ -41,6 +44,14 @@ void AddAdditionalLights_float(float Smoothness, float3 WorldPosition, float3 Wo
         Diffuse += thisDiffuse;
         Specular += thisSpecular;
         Color += light.color * (thisDiffuse + thisSpecular);
+    }
+
+    half litTotal = Diffuse + Specular;
+    half fillTarget = saturate((half)_WK_ToonFillIntensity);
+    half fillAmount = max((half)0, fillTarget - litTotal);
+    if (fillAmount > 0) {
+        Diffuse += fillAmount;
+        Color += _WK_ToonFillColor * fillAmount;
     }
 #endif
 
