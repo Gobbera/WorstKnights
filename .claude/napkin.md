@@ -68,6 +68,28 @@
 10. **[2026-05-21] Menu lobby refresh must handle stale Photon connections**
    Do instead: when re-entering the menu, if the client is still connected but outside a room, join the lobby directly or disconnect first; never wait on `!PhotonNetwork.IsConnected` unless this scene actually triggered a disconnect.
 
+## Enemy Navigation & Procedural Animation
+1. **[2026-09-25] Stalker enemies should stay as enemy-base extensions**
+   Do instead: tune `EnemyBrain` with `GlobalWander`, long combat memory/search, and `Max Chase Distance = 0`, then use `EnemyHealth.preventDeath` for stun-only defeat while keeping `EnemyAttack` disabled until special abilities own damage.
+
+2. **[2026-09-25] Large-enemy tight passages should be authored traversal volumes**
+   Do instead: keep the Beholder's real collider presence, use NavMesh radius/bake to reject impossible doors, add `EnemyTraversalVolume` side points with destination-across-side checks, exit-side rearm cooldown, auto-resolved or explicit `DoorController` gate, enemy-open/inside-volume player interaction locks, closed-door in-volume retry, dynamic `DoorNavMeshObstacleController` carving for open blocking doors, door-obstruction probes before opening/reorienting, passive `DoorEnemyObstructionSensor` solid-contact evidence, and only a strict closed-door stuck-inside-trigger auto-open fallback before using temporary traversal-only capsule shrink.
+
+3. **[2026-09-25] Combat masks must follow gameplay layers**
+   Do instead: whenever moving enemies/players to dedicated layers, update `PlayerMeleeAttack.hitMask` to include `Enemy`/`Player` and `EnemyAttack.hitMask` to include `Player`; otherwise overlaps stop finding combat colliders before damage code runs.
+
+4. **[2026-09-25] Enemy separation belongs to layers plus NavMesh avoidance**
+   Do instead: put enemy roots/colliders on the `Enemy` layer, disable `Enemy x Enemy` in the Physics matrix, and keep authored `NavMeshAgent` avoidance/radius values aligned so enemies avoid each other without Rigidbody pushing.
+
+5. **[2026-09-25] Floating enemies need vertical ground anchoring**
+   Do instead: keep gravity off for hover-style enemies, but add an authority-only ground-probe anchor that preserves the initial floor offset, uses a forward movement probe plus tangent slope velocity for ramps, applies a low-friction capsule material, corrects Rigidbody `Y` after movement, and zeros vertical velocity before trying `FreezePositionY`.
+
+6. **[2026-09-25] Large enemies need authored NavMesh radius parity**
+   Do instead: keep a real `NavMeshAgent` component saved on enemy prefabs, tune its radius/height/baseOffset in Prefab or Scene Mode, leave `EnemyNavigation.Configure Agent From Capsule` off unless intentionally regenerating from the collider, and rebake with the larger radius or a dedicated agent before changing motor code.
+
+7. **[2026-09-25] Beholder eye tracking is an animation overlay**
+   Do instead: when the Beholder is not actively tracking a target, do not write eye-bone rotations; when tracking, blend from the Animator's current bone rotation in `LateUpdate` so idle/patrol clips stay authoritative.
+
 ## Movement & Actions
 1. **[2026-04-07] Player probes and state decisions must stay aligned with the real capsule**
    Do instead: derive casts from the `CapsuleCollider`, refresh grounding before controller state decisions that can set `MovementState.air`, and keep the player capsule on a low-friction physics material.
@@ -216,57 +238,57 @@
 3. **[2026-08-13] Enemy attack commitment should be separate from hit reach**
    Do instead: tune enemy AI with a larger serialized attack-start radius and keep damage tied to weapon/contact hit windows, so backing out of exact melee range cannot force endless chase loops.
 
-4. **[2026-08-05] Player melee attack tuning lives per combo step**
+4. **[2026-09-24] Non-melee enemies still need the attack contract**
+   Do instead: keep `EnemyAttack` on special enemies for brain/network/animation references, but set `Attack Enabled` off until their dedicated ability component owns damage.
+
+5. **[2026-08-05] Player melee attack tuning lives per combo step**
    Do instead: tune `PlayerMeleeAttack.attackConfigs` on `Assets/Resources/Player.prefab`; each combo step chooses `Ball`, `Arc`, or `Box` hit shape and owns timing, swing audio/delay, impact VFX angle, and camera feedback instead of changing one global attack value.
 
-5. **[2026-05-21] Enemy death cleanup must be scheduled on every client, not only on the authority object**
+6. **[2026-05-21] Enemy death cleanup must be scheduled on every client, not only on the authority object**
    Do instead: when an enemy can die under Photon, schedule destruction through an `RPC` to all clients and also destroy on replicated death application, otherwise remote clients can keep a dead corpse in scene.
 
-6. **[2026-07-27] Enemy Rigidbody physics is authority-only**
+7. **[2026-07-27] Enemy Rigidbody physics is authority-only**
    Do instead: keep authoritative living enemies dynamic with gravity and keep remote/non-living enemies kinematic with replicated transforms, otherwise kick upward force or remote sync can be canceled.
 
-7. **[2026-07-06] Remote enemy simulation handoff must precede replicated state application**
+8. **[2026-07-06] Remote enemy simulation handoff must precede replicated state application**
    Do instead: disable remote AI idempotently before applying replicated `EnemyState`, planar speed, attack sequence, and damage sequence; calling `SetSimulationEnabled(false)` afterward resets the remote brain to Idle and stops its animation every frame.
 
-8. **[2026-05-21] Damage knockback must be integrated with movement controllers, not only Rigidbody force**
+9. **[2026-05-21] Damage knockback must be integrated with movement controllers, not only Rigidbody force**
    Do instead: route hit reactions through `PlayerMovement` and `EnemyMotor`, because their movement loops and speed clamps can cancel a raw impulse on the next tick.
 
-9. **[2026-05-22] Combat movement penalties need explicit replicated state**
+10. **[2026-05-22] Combat movement penalties need explicit replicated state**
    Do instead: when an attack or hit temporarily changes locomotion speed, sync a compact boolean/sequence for that modifier so remote locomotion scaling and animation match the authority player instead of inferring only from base movement state.
 
-10. **[2026-06-17] Player health replication must cover every local health mutation path**
-   Do instead: route fall damage, PvP hits, and future owner-local damage through a helper that broadcasts `PlayerHealth` state after `ApplyDamage`, instead of relying only on death or enemy-only RPC paths.
-
 ## Camera & Ownership
-1. **[2026-08-31] Local ragdoll view must leave first-person hierarchy**
+1. **[2026-09-25] New gameplay render layers must be in player camera masks**
+   Do instead: when adding layers like `Door` or moving the character body to `Player`, keep `Assets/Resources/Player.prefab` `FP_Camera.cullingMask` rendering that world layer; the hands camera should stay limited to `FirstPersonView`.
+
+2. **[2026-08-31] Local ragdoll view must leave first-person hierarchy**
    Do instead: while owner ragdoll is active, hide FPS-only renderers, switch to a detached orbital `TP_Camera` that follows the ragdoll body, disable camera `MouseLook` during physics, then restore `FP_Camera`/`Hands Camera` and `PlayerPerspectiveVisibility` on recovery.
 
-2. **[2026-08-31] Close skinned character parts can vanish from renderer bounds**
+3. **[2026-08-31] Close skinned character parts can vanish from renderer bounds**
    Do instead: for characters near the camera, attach `SkinnedMeshCullingStabilizer` or set `SkinnedMeshRenderer.updateWhenOffscreen`, disable dynamic occlusion, and enlarge local bounds; only use FP overlay-layer fixes for owner-only first-person meshes.
 
-3. **[2026-08-20] FPS hands/items default to a true URP overlay camera**
+4. **[2026-08-20] FPS hands/items default to a true URP overlay camera**
    Do instead: keep `FP_Camera` as Base without `FirstPersonView`, keep `Hands Camera` as Overlay rendering only `FirstPersonView` with `clearDepth=true`, and let `WallRenderFeature` skip itself in this mode to avoid duplicate first-person draws.
 
-4. **[2026-08-07] Wall-only first-person bypass is now a fallback mode**
+5. **[2026-08-07] Wall-only first-person bypass is now a fallback mode**
    Do instead: use `PlayerSetup.firstPersonOverlayDepthMode=WallLayerStencilBypass` only when hands should preserve scene depth except against objects on the `Wall` layer; otherwise keep `AlwaysOnTop`.
 
-5. **[2026-08-20] Player low-light assist should stay owner-local and compact**
+6. **[2026-08-20] Player low-light assist should stay owner-local and compact**
    Do instead: keep `PlayerVisibilityAssistLight` owner-local, tune its short-range `Point`/`Spot` mode on `FP_Camera`, use WK toon shader fill (`_WK_ToonFillIntensity`/`_WK_ToonFillColor`) only when a global darkness floor is desired, and suppress the assist light from `HandEquipmentController.HasActiveEquippedLightSource()`.
 
-6. **[2026-08-07] Layer temporary attack FOV over live movement FOV**
+7. **[2026-08-07] Layer temporary attack FOV over live movement FOV**
    Do instead: let locomotion FOV update first and have attack feedback resolve the current locomotion FOV each frame as its base, otherwise sprint-to-attack can snap back to a stale sprint FOV when the attack relaxes.
 
-7. **[2026-08-04] Player look pose must target FP camera input and TP model bones explicitly**
+8. **[2026-08-04] Player look pose must target FP camera input and TP model bones explicitly**
    Do instead: resolve `MouseLook` from the GameObject named `FP_Camera`, resolve procedural bones from the TP `Model` animator, and never let `FPS_Model` or inactive `TP_Camera` satisfy look-pose/camera marker searches.
 
-8. **[2026-08-05] Attack aim and head look need complementary pitch handoff**
+9. **[2026-08-05] Attack aim and head look need complementary pitch handoff**
    Do instead: while `Upper Body Attack` pitch releases, feed normal head-look the remaining camera-limited pitch so spine/chest do not hold the attack pose and then correct late.
 
-9. **[2026-09-01] Perspective visibility must account for the global `FirstPersonView` overlay**
+10. **[2026-09-01] Perspective visibility must account for the global `FirstPersonView` overlay**
    Do instead: use the `PlayerPerspectiveVisibility` Elements list on `Assets/Resources/Player.prefab`, resolve final renderer visibility by target specificity, and force-hide owner-only roots/layer renderers such as `Separated_UpperBody` on remote player instances so the local Hands Camera cannot draw them.
-
-10. **[2026-07-03] First-person camera height is finalized by `HeadBobController`**
-   Do instead: when crouch changes the capsule or model height but the view stays fixed, adjust the camera's base local position in `HeadBobController` rather than only touching `PlayerMovement` or collider scaling.
 
 ## Rendering & Materials
 1. **[2026-09-08] WK toon shadows come from custom Unlit lighting**

@@ -110,4 +110,33 @@ public class EnemyPerceptionTests
             Object.DestroyImmediate(enemy);
         }
     }
+
+    [Test]
+    public void EnemyAttack_Disabled_DoesNotStartCommonAttack()
+    {
+        GameObject enemy = new GameObject("Enemy");
+        GameObject player = new GameObject("Player");
+
+        enemy.AddComponent<EnemyHealth>();
+        enemy.AddComponent<EnemySetup>();
+        EnemyAttack attack = enemy.AddComponent<EnemyAttack>();
+        PlayerHealth playerHealth = player.AddComponent<PlayerHealth>();
+
+        try
+        {
+            SerializedObject serializedObject = new SerializedObject(attack);
+            serializedObject.FindProperty("attackEnabled").boolValue = false;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+
+            Assert.That(attack.CanStartAttack, Is.False);
+            Assert.That(attack.AttackStartRange, Is.EqualTo(0f));
+            Assert.That(attack.TryAttack(playerHealth, Vector3.forward), Is.False);
+            Assert.That(attack.AttackSequence, Is.EqualTo(0));
+        }
+        finally
+        {
+            Object.DestroyImmediate(player);
+            Object.DestroyImmediate(enemy);
+        }
+    }
 }

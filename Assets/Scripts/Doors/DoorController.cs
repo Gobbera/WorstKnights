@@ -9,6 +9,7 @@ using UnityEngine;
 public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IPlayerInteractionPromptProvider, IPlayerInteractionPromptPlacementProvider, IPlayerHeldItemInteractionProvider
 {
     private const string RoomPropertyKeyPrefix = "door:";
+    private const string EnemyInteractionLockRoomPropertySuffix = ":enemyLockUntil";
     private const float MotionEndpointEpsilon = 0.0001f;
 
     public enum DoorStartupState
@@ -46,6 +47,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     [SerializeField] [HideInInspector] private string networkSceneId = string.Empty;
     [SerializeField] private bool prototypeLocalOnly;
     [SerializeField] [Min(0f)] private float interactionCooldown = 0.35f;
+    [Tooltip("How long players are blocked from interacting with this door after an enemy opens it.")]
+    [SerializeField] [Min(0f)] private float enemyOpenPlayerInteractionLockDuration = 4f;
     [Header("Interaction Prompt")]
     [SerializeField] private string openInteractionPrompt = "Press [{key}] to open the door";
     [SerializeField] private string closeInteractionPrompt = "Press [{key}] to close the door";
@@ -92,15 +95,19 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private bool signalPermanentOpenLatched;
     private float destroyExecuteTime = float.NegativeInfinity;
     private float nextAllowedInteractionTime = float.NegativeInfinity;
+    private float enemyPlayerInteractionLockUntil = float.NegativeInfinity;
+    private readonly HashSet<EnemyTraversalController> enemyTraversalInteractionBlockers = new HashSet<EnemyTraversalController>();
 
     public int InteractionPriority => 100;
     public string DisplayName => string.IsNullOrWhiteSpace(doorName) ? gameObject.name : doorName;
     public Transform MovingPart => movingPart;
     public bool IsOpen => isOpen;
     public bool IsLocked => isLocked;
+    public int CurrentOpenRotationDirection => openRotationDirection;
     public bool IsMoving => motionMode != DoorMotionMode.Destroy
         && movingPart != null
         && Mathf.Abs(openProgress - (isOpen ? 1f : 0f)) > MotionEndpointEpsilon;
+    public bool SupportsDirectionalOpen => motionMode == DoorMotionMode.Rotate && movingPart != null;
     public bool SupportsPasscodeEntry => UsesLockConfiguration && lockMode == DoorLockMode.Passcode;
     public event Action<DoorController> Squeaking;
     public event Action<DoorController> Opened;
@@ -128,6 +135,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private void OnValidate()
     {
         interactionCooldown = Mathf.Max(0f, interactionCooldown);
+        enemyOpenPlayerInteractionLockDuration = Mathf.Max(0f, enemyOpenPlayerInteractionLockDuration);
         ResolveReferences();
     }
 
@@ -165,6 +173,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     public override void OnDisable()
     {
+        enemyTraversalInteractionBlockers.Clear();
         UnsubscribeSignalSources();
         base.OnDisable();
     }
@@ -199,6 +208,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         promptTemplate = string.Empty;
         ResolveReferences();
 
+        if (IsPlayerInteractionBlockedByEnemy())
+            return false;
+
         if (HasLatchedPermanentSignalOpenState)
             return false;
 
@@ -222,6 +234,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     public bool TryGetHeldItemInteractionPrompt(PlayerHeldItemInteractionContext context, out string promptTemplate)
     {
         promptTemplate = string.Empty;
+        if (IsPlayerInteractionBlockedByEnemy())
+            return false;
+
         if (!CanUseHeldKey(context, logFailures: false))
             return false;
 
@@ -231,6 +246,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     public bool TryInteractWithHeldItem(PlayerHeldItemInteractionContext context)
     {
+        if (IsPlayerInteractionBlockedByEnemy())
+            return false;
+
         if (IsInteractionCooldownActive())
             return CanUseHeldKey(context, logFailures: false);
 
@@ -249,6 +267,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     public bool TrySubmitPasscode(string submittedPasscode, PlayerPickupInteractor interactor = null)
     {
+        if (IsPlayerInteractionBlockedByEnemy())
+            return false;
+
         if (!UsesLockConfiguration || lockMode != DoorLockMode.Passcode || !isLocked)
             return false;
 
@@ -277,6 +298,36 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         return RequestSetDoorState(true, isLocked);
     }
 
+    public bool RequestOpenAwayFrom(Vector3 interactorWorldPosition)
+    {
+        return RequestSetDoorState(true, isLocked, ResolveOpenRotationDirection(interactorWorldPosition));
+    }
+
+    public bool RequestOpenByEnemy(Vector3 enemyWorldPosition)
+    {
+        bool changedState = RequestSetDoorState(true, isLocked, ResolveOpenRotationDirection(enemyWorldPosition));
+        if (changedState)
+            ArmEnemyPlayerInteractionLock(enemyOpenPlayerInteractionLockDuration);
+
+        return changedState;
+    }
+
+    public void RegisterEnemyTraversalInteractionBlocker(EnemyTraversalController traversalController)
+    {
+        if (traversalController == null)
+            return;
+
+        enemyTraversalInteractionBlockers.Add(traversalController);
+    }
+
+    public void UnregisterEnemyTraversalInteractionBlocker(EnemyTraversalController traversalController)
+    {
+        if (traversalController == null)
+            return;
+
+        enemyTraversalInteractionBlockers.Remove(traversalController);
+    }
+
     public bool RequestClose()
     {
         return RequestSetDoorState(false, isLocked);
@@ -290,6 +341,19 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     public bool RequestUnlock()
     {
         return RequestSetDoorState(isOpen, false);
+    }
+
+    public int ResolveOpenRotationDirectionFromWorldPosition(Vector3 interactorWorldPosition)
+    {
+        return ResolveOpenRotationDirection(interactorWorldPosition);
+    }
+
+    public bool WouldChangeOpenDirectionFromWorldPosition(Vector3 interactorWorldPosition)
+    {
+        if (!SupportsDirectionalOpen)
+            return false;
+
+        return openRotationDirection != ResolveOpenRotationDirection(interactorWorldPosition);
     }
 
     private bool TryHandleLockedInteraction(PlayerPickupInteractor interactor)
@@ -408,11 +472,16 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private bool RequestSetDoorState(bool targetOpen, bool targetLocked, PlayerPickupInteractor interactor = null)
     {
-        NormalizeRequestedDoorState(ref targetOpen, ref targetLocked);
-
         int targetOpenRotationDirection = targetOpen
             ? ResolveOpenRotationDirection(interactor)
             : openRotationDirection;
+        return RequestSetDoorState(targetOpen, targetLocked, targetOpenRotationDirection);
+    }
+
+    private bool RequestSetDoorState(bool targetOpen, bool targetLocked, int targetOpenRotationDirection)
+    {
+        NormalizeRequestedDoorState(ref targetOpen, ref targetLocked);
+
         bool rotationDirectionChanged = targetOpen
             && motionMode == DoorMotionMode.Rotate
             && openRotationDirection != targetOpenRotationDirection;
@@ -746,15 +815,22 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private int ResolveOpenRotationDirection(PlayerPickupInteractor interactor)
     {
+        if (interactor == null)
+            return 1;
+
+        return ResolveOpenRotationDirection(interactor.transform.position);
+    }
+
+    private int ResolveOpenRotationDirection(Vector3 interactorWorldPosition)
+    {
         if (!openAwayFromInteractor
             || motionMode != DoorMotionMode.Rotate
-            || interactor == null
             || movingPart == null)
         {
             return 1;
         }
 
-        Vector3 interactorLocalPosition = WorldToMotionSpace(interactor.transform.position);
+        Vector3 interactorLocalPosition = WorldToMotionSpace(interactorWorldPosition);
         Vector3 closedDoorNormal = closedLocalRotation * Vector3.forward;
         if (closedDoorNormal.sqrMagnitude <= 0.0001f)
             return ResolveOpenRotationDirectionByDistance(interactorLocalPosition);
@@ -930,7 +1006,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private bool IsInteractionCooldownActive()
     {
-        return interactionCooldown > 0f && Time.time < nextAllowedInteractionTime;
+        return IsPlayerInteractionBlockedByEnemy()
+            || (interactionCooldown > 0f && Time.time < nextAllowedInteractionTime);
     }
 
     private void ArmInteractionCooldown()
@@ -939,6 +1016,64 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
             return;
 
         nextAllowedInteractionTime = Mathf.Max(nextAllowedInteractionTime, Time.time + interactionCooldown);
+    }
+
+    private bool IsEnemyPlayerInteractionLockActive()
+    {
+        return Application.isPlaying && Time.time < enemyPlayerInteractionLockUntil;
+    }
+
+    private bool IsPlayerInteractionBlockedByEnemy()
+    {
+        return IsEnemyPlayerInteractionLockActive()
+            || IsEnemyTraversalInteractionBlockActive();
+    }
+
+    private bool IsEnemyTraversalInteractionBlockActive()
+    {
+        CleanupEnemyTraversalInteractionBlockers();
+        return enemyTraversalInteractionBlockers.Count > 0;
+    }
+
+    private void CleanupEnemyTraversalInteractionBlockers()
+    {
+        if (enemyTraversalInteractionBlockers.Count == 0)
+            return;
+
+        enemyTraversalInteractionBlockers.RemoveWhere(IsInvalidEnemyTraversalInteractionBlocker);
+    }
+
+    private static bool IsInvalidEnemyTraversalInteractionBlocker(EnemyTraversalController traversalController)
+    {
+        return traversalController == null || !traversalController.isActiveAndEnabled;
+    }
+
+    private void ArmEnemyPlayerInteractionLock(float duration)
+    {
+        float safeDuration = Mathf.Max(0f, duration);
+        if (safeDuration <= 0f || !Application.isPlaying)
+            return;
+
+        ApplyEnemyPlayerInteractionLock(safeDuration);
+
+        if (ShouldUsePhotonViewSync())
+        {
+            photonView.RPC(nameof(RpcArmEnemyPlayerInteractionLock), RpcTarget.Others, safeDuration);
+            return;
+        }
+
+        PublishEnemyInteractionLock(safeDuration);
+    }
+
+    private void ApplyEnemyPlayerInteractionLock(float duration)
+    {
+        float safeDuration = Mathf.Max(0f, duration);
+        if (safeDuration <= 0f || !Application.isPlaying)
+            return;
+
+        float lockUntil = Time.time + safeDuration;
+        enemyPlayerInteractionLockUntil = Mathf.Max(enemyPlayerInteractionLockUntil, lockUntil);
+        nextAllowedInteractionTime = Mathf.Max(nextAllowedInteractionTime, lockUntil);
     }
 
     private bool ShouldUsePhotonViewSync()
@@ -971,6 +1106,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     {
         base.OnJoinedRoom();
         TryApplyRoomSyncedState();
+        TryApplyRoomSyncedEnemyInteractionLock();
     }
 
     public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
@@ -981,20 +1117,20 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
             return;
 
         string propertyKey = BuildRoomPropertyKey();
-        if (!propertiesThatChanged.TryGetValue(propertyKey, out object propertyValue))
-            return;
-
-        if (!TryDecodeDoorState(
-            propertyValue,
-            out bool targetOpen,
-            out bool targetLocked,
-            out bool permanentSignalOpenLatched,
-            out int targetOpenRotationDirection))
+        if (propertiesThatChanged.TryGetValue(propertyKey, out object propertyValue)
+            && TryDecodeDoorState(
+                propertyValue,
+                out bool targetOpen,
+                out bool targetLocked,
+                out bool permanentSignalOpenLatched,
+                out int targetOpenRotationDirection))
         {
-            return;
+            ApplyRoomSyncedState(targetOpen, targetLocked, permanentSignalOpenLatched, targetOpenRotationDirection);
         }
 
-        ApplyRoomSyncedState(targetOpen, targetLocked, permanentSignalOpenLatched, targetOpenRotationDirection);
+        string enemyLockPropertyKey = BuildEnemyInteractionLockPropertyKey();
+        if (propertiesThatChanged.TryGetValue(enemyLockPropertyKey, out object enemyLockPropertyValue))
+            ApplyRoomSyncedEnemyInteractionLock(enemyLockPropertyValue);
     }
 
     private void PublishRoomSyncedState(bool targetOpen, bool targetLocked, int targetOpenRotationDirection)
@@ -1005,6 +1141,22 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         Hashtable roomState = new Hashtable
         {
             { BuildRoomPropertyKey(), EncodeDoorState(targetOpen, targetLocked, signalPermanentOpenLatched, targetOpenRotationDirection) }
+        };
+        PhotonNetwork.CurrentRoom.SetCustomProperties(roomState);
+    }
+
+    private void PublishEnemyInteractionLock(float duration)
+    {
+        if (!ShouldUseRoomPropertySync() || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        int safeDurationMilliseconds = Mathf.CeilToInt(Mathf.Max(0f, duration) * 1000f);
+        if (safeDurationMilliseconds <= 0)
+            return;
+
+        Hashtable roomState = new Hashtable
+        {
+            { BuildEnemyInteractionLockPropertyKey(), PhotonNetwork.ServerTimestamp + safeDurationMilliseconds }
         };
         PhotonNetwork.CurrentRoom.SetCustomProperties(roomState);
     }
@@ -1030,6 +1182,29 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         ApplyRoomSyncedState(targetOpen, targetLocked, permanentSignalOpenLatched, targetOpenRotationDirection);
     }
 
+    private void TryApplyRoomSyncedEnemyInteractionLock()
+    {
+        if (!ShouldUseRoomPropertySync() || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(BuildEnemyInteractionLockPropertyKey(), out object propertyValue))
+            return;
+
+        ApplyRoomSyncedEnemyInteractionLock(propertyValue);
+    }
+
+    private void ApplyRoomSyncedEnemyInteractionLock(object propertyValue)
+    {
+        if (propertyValue is not int lockUntilServerTimestamp)
+            return;
+
+        int remainingMilliseconds = lockUntilServerTimestamp - PhotonNetwork.ServerTimestamp;
+        if (remainingMilliseconds <= 0)
+            return;
+
+        ApplyEnemyPlayerInteractionLock(remainingMilliseconds / 1000f);
+    }
+
     private void ApplyRoomSyncedState(bool targetOpen, bool targetLocked, bool permanentSignalOpenLatched, int targetOpenRotationDirection)
     {
         signalPermanentOpenLatched = permanentSignalOpenLatched;
@@ -1039,6 +1214,11 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private string BuildRoomPropertyKey()
     {
         return RoomPropertyKeyPrefix + NetworkSceneId;
+    }
+
+    private string BuildEnemyInteractionLockPropertyKey()
+    {
+        return BuildRoomPropertyKey() + EnemyInteractionLockRoomPropertySuffix;
     }
 
     private void EnsureNetworkSceneId()
@@ -1132,6 +1312,12 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private void RpcApplyDoorStateWithDirection(bool targetOpen, bool targetLocked, int targetOpenRotationDirection)
     {
         ApplyDoorState(targetOpen, targetLocked, targetOpenRotationDirection);
+    }
+
+    [PunRPC]
+    private void RpcArmEnemyPlayerInteractionLock(float duration)
+    {
+        ApplyEnemyPlayerInteractionLock(duration);
     }
 
     [ContextMenu("Open Door")]

@@ -11,5 +11,7 @@ public enum EnemyState
     Patrol = 6,
     Alert = 7,
     Search = 8,
-    Return = 9
+    Return = 9,
+    Stunned = 10,
+    Traversal = 11
 }

@@ -23,6 +23,12 @@ public sealed class EnemyAttackState : EnemyAIState
             return;
         }
 
+        if (!Brain.CanStartAttack)
+        {
+            Brain.ChangeState(ResolveFallbackState());
+            return;
+        }
+
         if (!Brain.HasValidTarget)
         {
             Brain.ClearCurrentTarget();
@@ -50,5 +56,13 @@ public sealed class EnemyAttackState : EnemyAIState
             return;
 
         Brain.StopNavigation();
+    }
+
+    private EnemyState ResolveFallbackState()
+    {
+        if (Brain.HasValidTarget)
+            return EnemyState.Chase;
+
+        return Brain.HasLastKnownTargetPosition ? EnemyState.Search : EnemyState.Return;
     }
 }

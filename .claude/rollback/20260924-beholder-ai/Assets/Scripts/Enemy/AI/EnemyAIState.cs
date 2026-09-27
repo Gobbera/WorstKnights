@@ -1,0 +1,50 @@
+public abstract class EnemyAIState
+{
+    protected EnemyAIState(EnemyBrain brain)
+    {
+        Brain = brain;
+    }
+
+    protected EnemyBrain Brain { get; }
+    public abstract EnemyState StateId { get; }
+
+    public virtual void Enter()
+    {
+    }
+
+    public virtual void Tick(float deltaTime)
+    {
+    }
+
+    public virtual void Exit()
+    {
+    }
+
+    protected bool TryChaseVisibleTarget()
+    {
+        if (!Brain.TryRefreshVisibleTarget()
+            && !Brain.TryRefreshCombatMemoryTarget()
+            && !Brain.TryRefreshCloseAwarenessTarget())
+        {
+            return false;
+        }
+
+        Brain.ChangeState(EnemyState.Chase);
+        return true;
+    }
+
+    protected bool TryAlertFromNoise()
+    {
+        if (!Brain.TryConsumeHeardNoise(out NoiseEvent noiseEvent))
+            return false;
+
+        Brain.SetInvestigationPosition(noiseEvent.Position);
+        Brain.ChangeState(EnemyState.Alert);
+        return true;
+    }
+
+    protected void ReturnOrIdle()
+    {
+        Brain.ChangeState(Brain.ShouldReturnToPatrol ? EnemyState.Return : Brain.ResolveDefaultBehaviorState());
+    }
+}

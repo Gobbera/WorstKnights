@@ -11,9 +11,18 @@ public sealed class EnemyNavigation : MonoBehaviour
 
     [Header("NavMesh")]
     [SerializeField] private bool useNavMeshAgent = true;
-    [SerializeField] private bool createAgentAtRuntime = true;
+    [SerializeField] private bool createAgentAtRuntime;
     [SerializeField] private bool useDirectMovementFallback = true;
     [SerializeField] [Min(0f)] private float samplePositionDistance = 2f;
+    [SerializeField] private bool configureAgentFromCapsule;
+    [SerializeField] [Min(0f)] private float agentRadiusPadding;
+    [SerializeField] [Min(0.1f)] private float minimumAgentHeight = 0.1f;
+
+    [Header("Runtime Agent Overrides")]
+    [SerializeField] private bool forceManualAgentTransformSync = true;
+    [SerializeField] private bool applyRuntimeAvoidanceSettings;
+    [SerializeField] private ObstacleAvoidanceType obstacleAvoidance = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+    [SerializeField] [Range(0, 99)] private int avoidancePriority = 50;
 
     [Header("Destination")]
     [SerializeField] [Min(0f)] private float destinationRefreshDistance = 0.35f;
@@ -173,6 +182,17 @@ public sealed class EnemyNavigation : MonoBehaviour
         return navMeshAgent.pathStatus != NavMeshPathStatus.PathInvalid;
     }
 
+    public bool ForceRepath()
+    {
+        if (!hasDestination || !simulationEnabled)
+            return false;
+
+        if (CanUseAgent())
+            return SetAgentDestination(currentDestination);
+
+        return useDirectMovementFallback;
+    }
+
     public bool TrySamplePosition(Vector3 candidatePosition, float maxDistance, out Vector3 sampledPosition)
     {
         if (NavMesh.SamplePosition(candidatePosition, out NavMeshHit hit, Mathf.Max(0f, maxDistance), NavMesh.AllAreas))
@@ -254,10 +274,37 @@ public sealed class EnemyNavigation : MonoBehaviour
         if (navMeshAgent == null)
             return;
 
-        navMeshAgent.updatePosition = false;
-        navMeshAgent.updateRotation = false;
-        navMeshAgent.updateUpAxis = true;
-        navMeshAgent.autoRepath = true;
+        ConfigureAgentShapeFromCapsule();
+        if (forceManualAgentTransformSync)
+        {
+            navMeshAgent.updatePosition = false;
+            navMeshAgent.updateRotation = false;
+        }
+
+        if (applyRuntimeAvoidanceSettings)
+        {
+            navMeshAgent.obstacleAvoidanceType = obstacleAvoidance;
+            navMeshAgent.avoidancePriority = Mathf.Clamp(avoidancePriority, 0, 99);
+        }
+    }
+
+    private void ConfigureAgentShapeFromCapsule()
+    {
+        if (!configureAgentFromCapsule)
+            return;
+
+        CapsuleCollider capsule = enemySetup != null ? enemySetup.Capsule : GetComponent<CapsuleCollider>();
+        if (capsule == null)
+            return;
+
+        Bounds capsuleBounds = capsule.bounds;
+        float radius = Mathf.Max(capsuleBounds.extents.x, capsuleBounds.extents.z) + Mathf.Max(0f, agentRadiusPadding);
+        float height = Mathf.Max(minimumAgentHeight, capsuleBounds.size.y);
+        float baseOffset = Mathf.Max(0f, capsuleBounds.min.y - transform.position.y);
+
+        navMeshAgent.radius = Mathf.Max(0.01f, radius);
+        navMeshAgent.height = height;
+        navMeshAgent.baseOffset = baseOffset;
     }
 
     private void ResolveReferences()

@@ -60,6 +60,9 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
         if (currentHealth > 0f)
             return;
 
+        if (TryPreventDeath(damageInfo))
+            return;
+
         IsAlive = false;
         OnDied(damageInfo);
     }
@@ -102,6 +105,12 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
         invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + Mathf.Max(0f, duration));
     }
 
+    protected void KeepAliveAtHealth(float health)
+    {
+        currentHealth = Mathf.Clamp(health, 1f, Mathf.Max(1f, maxHealth));
+        IsAlive = true;
+    }
+
     public void ApplyReplicatedState(float replicatedHealth, bool replicatedIsAlive)
     {
         currentHealth = Mathf.Clamp(replicatedHealth, 0f, Mathf.Max(1f, maxHealth));
@@ -121,6 +130,11 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
 
     protected virtual void OnDied(DamageInfo damageInfo)
     {
+    }
+
+    protected virtual bool TryPreventDeath(DamageInfo damageInfo)
+    {
+        return false;
     }
 
     protected virtual void OnReplicatedStateApplied()

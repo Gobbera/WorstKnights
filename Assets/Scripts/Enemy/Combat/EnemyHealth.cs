@@ -9,6 +9,12 @@ public class EnemyHealth : CombatHealth
     [SerializeField] private bool destroyOnDeath = true;
     [SerializeField] [Min(0f)] private float destroyDelay = 0f;
 
+    [Header("Non-Lethal Defeat")]
+    [SerializeField] private bool preventDeath;
+    [SerializeField] [Min(1f)] private float preventedDeathHealth = 1f;
+    [SerializeField] [Min(0f)] private float preventedDeathStunDuration = 5f;
+    [SerializeField] [Min(0f)] private float preventedDeathInvulnerabilityDuration = 1f;
+
     private EnemySetup enemySetup;
     private PhotonView photonView;
     private bool destroyScheduled;
@@ -93,7 +99,7 @@ public class EnemyHealth : CombatHealth
 
     protected override void OnDamaged(DamageInfo damageInfo)
     {
-        if (CurrentHealth > 0f)
+        if (CurrentHealth > 0f || preventDeath)
             DamageSequence++;
 
         NotifyBrainDamaged(damageInfo);
@@ -109,6 +115,25 @@ public class EnemyHealth : CombatHealth
 
         EnemyMotor enemyMotor = enemySetup != null ? enemySetup.EnemyMotor : GetComponent<EnemyMotor>();
         enemyMotor?.ApplyDamageKnockback(velocityChange, controlLockDuration);
+    }
+
+    protected override bool TryPreventDeath(DamageInfo damageInfo)
+    {
+        if (!preventDeath)
+            return false;
+
+        KeepAliveAtHealth(preventedDeathHealth);
+        SetInvulnerableFor(preventedDeathInvulnerabilityDuration);
+
+        if (enemySetup == null)
+            enemySetup = GetComponent<EnemySetup>();
+
+        EnemyAttack enemyAttack = enemySetup != null ? enemySetup.EnemyAttack : GetComponent<EnemyAttack>();
+        enemyAttack?.CancelCurrentAttack();
+
+        EnemyBrain enemyBrain = enemySetup != null ? enemySetup.EnemyBrain : GetComponent<EnemyBrain>();
+        enemyBrain?.ApplyStun(preventedDeathStunDuration);
+        return true;
     }
 
     protected override void OnDied(DamageInfo damageInfo)
@@ -282,7 +307,7 @@ public class EnemyHealth : CombatHealth
 
     private void NotifyBrainDamaged(DamageInfo damageInfo)
     {
-        if (CurrentHealth <= 0f)
+        if (CurrentHealth <= 0f && !preventDeath)
             return;
 
         if (enemySetup == null)

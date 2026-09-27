@@ -36,6 +36,16 @@ public class EnemyBrain : MonoBehaviour
     [SerializeField] [Min(0f)] private float patrolWaitTime = 1f;
     [SerializeField] [Min(0f)] private float patrolStoppingDistance = 0.35f;
     [SerializeField] private bool startAtNearestPatrolPoint = true;
+    [SerializeField] private bool useGeneratedHomePatrol;
+    [SerializeField] [Min(0f)] private float generatedHomePatrolRadius = 4f;
+    [SerializeField] [Min(2)] private int generatedHomePatrolPointCount = 4;
+
+    [Header("Global Patrol")]
+    [SerializeField] private Transform globalPatrolCenter;
+    [SerializeField] [Min(0f)] private float globalPatrolRadius = 32f;
+    [SerializeField] [Min(0f)] private float globalPatrolMinimumDistance = 8f;
+    [SerializeField] [Min(0.1f)] private float globalPatrolSampleDistance = 8f;
+    [SerializeField] [Min(1)] private int globalPatrolSampleAttempts = 12;
 
     [Header("Alert")]
     [SerializeField] [Min(0f)] private float alertDuration = 1.5f;
@@ -103,6 +113,8 @@ public class EnemyBrain : MonoBehaviour
     private EnemyState externalStateOverride = EnemyState.PreSpawn;
     private float lastCombatAwarenessTime = float.NegativeInfinity;
     private bool hasCombatAwareness;
+    private float stunnedUntil = float.NegativeInfinity;
+    private int traversalLockCount;
 
     public EnemyState CurrentState => externalStateOverrideActive ? externalStateOverride : (stateMachine != null ? stateMachine.CurrentStateId : EnemyState.Idle);
     public PlayerHealth CurrentTarget => currentTarget;
@@ -112,10 +124,14 @@ public class EnemyBrain : MonoBehaviour
     public bool HasLastKnownTargetPosition => hasLastKnownTargetPosition;
     public bool HasInvestigationPosition => hasInvestigationPosition;
     public bool HasValidTarget => currentTarget != null && currentTarget.CanBeTargetedByEnemy;
-    public bool HasPatrolPoints => CountValidPatrolPoints() > 0;
+    public bool HasPatrolPoints => CountResolvedPatrolPoints() > 0;
     public bool ShouldReturnToPatrol => returnToPatrol;
     public bool MoveToAlertPosition => moveToAlertPosition;
     public bool IsAttackLocked => enemyAttack != null && enemyAttack.IsAttackLocked;
+    public bool CanStartAttack => enemyAttack != null && enemyAttack.CanStartAttack;
+    public bool IsStunned => Time.time < stunnedUntil;
+    public bool IsTraversing => traversalLockCount > 0;
+    public float StunRemaining => Mathf.Max(0f, stunnedUntil - Time.time);
     public float IdleDuration => Mathf.Max(0f, idleDuration);
     public float PatrolSpeed => Mathf.Max(0f, patrolSpeed);
     public float PatrolWaitTime => Mathf.Max(0f, patrolWaitTime);
@@ -191,6 +207,19 @@ public class EnemyBrain : MonoBehaviour
             return;
         }
 
+        if (IsStunned)
+        {
+            StopNavigation();
+            SetExternalState(EnemyState.Stunned);
+            return;
+        }
+
+        if (IsTraversing)
+        {
+            SetExternalState(EnemyState.Traversal);
+            return;
+        }
+
         ClearExternalState();
         EnsureBehaviorState();
 
@@ -209,6 +238,7 @@ public class EnemyBrain : MonoBehaviour
         {
             ClearCurrentTarget();
             ClearCombatAwareness();
+            traversalLockCount = 0;
             StopNavigation();
             enemyNavigation?.SetSimulationEnabled(false);
             if (enemyHealth != null && !enemyHealth.IsAlive)
@@ -260,6 +290,39 @@ public class EnemyBrain : MonoBehaviour
         EnsureBehaviorState(forceReset: true);
     }
 
+    public void ApplyStun(float duration)
+    {
+        float safeDuration = Mathf.Max(0f, duration);
+        if (safeDuration <= 0f)
+            return;
+
+        stunnedUntil = Mathf.Max(stunnedUntil, Time.time + safeDuration);
+        StopNavigation();
+        SetExternalState(EnemyState.Stunned);
+    }
+
+    public void BeginTraversal()
+    {
+        traversalLockCount++;
+        StopNavigation();
+        SetExternalState(EnemyState.Traversal);
+    }
+
+    public void EndTraversal()
+    {
+        if (traversalLockCount <= 0)
+            return;
+
+        traversalLockCount--;
+        if (traversalLockCount > 0)
+            return;
+
+        if (CurrentState == EnemyState.Traversal)
+            ClearExternalState();
+
+        EnsureBehaviorState();
+    }
+
     public void NotifyDamaged(DamageInfo damageInfo)
     {
         ResolveReferences();
@@ -292,7 +355,35 @@ public class EnemyBrain : MonoBehaviour
 
     public void ChangeState(EnemyState state)
     {
-        ClearExternalState();
+        bool preserveStunOverride = externalStateOverrideActive
+            && externalStateOverride == EnemyState.Stunned
+            && IsStunned
+            && state != EnemyState.Stunned
+            && state != EnemyState.Dead;
+        bool preserveTraversalOverride = externalStateOverrideActive
+            && externalStateOverride == EnemyState.Traversal
+            && IsTraversing
+            && state != EnemyState.Traversal
+            && state != EnemyState.Stunned
+            && state != EnemyState.Dead;
+
+        if (!preserveStunOverride && !preserveTraversalOverride)
+            ClearExternalState();
+
+        if (state == EnemyState.Stunned)
+        {
+            StopNavigation();
+            SetExternalState(EnemyState.Stunned);
+            return;
+        }
+
+        if (state == EnemyState.Traversal)
+        {
+            StopNavigation();
+            SetExternalState(EnemyState.Traversal);
+            return;
+        }
+
         if (stateMachine == null)
             stateMachine = new EnemyStateMachine(this);
 
@@ -311,7 +402,9 @@ public class EnemyBrain : MonoBehaviour
             || defaultState == EnemyState.Alert
             || defaultState == EnemyState.Dead
             || defaultState == EnemyState.PreSpawn
-            || defaultState == EnemyState.Spawning)
+            || defaultState == EnemyState.Spawning
+            || defaultState == EnemyState.Stunned
+            || defaultState == EnemyState.Traversal)
         {
             return HasPatrolPoints ? EnemyState.Patrol : EnemyState.Idle;
         }
@@ -494,7 +587,7 @@ public class EnemyBrain : MonoBehaviour
 
     public bool TryAttackCurrentTarget()
     {
-        if (enemyAttack == null || !HasValidTarget)
+        if (enemyAttack == null || !enemyAttack.CanStartAttack || !HasValidTarget)
             return false;
 
         Vector3 planarOffset = Vector3.ProjectOnPlane(currentTarget.transform.position - transform.position, Vector3.up);
@@ -507,7 +600,7 @@ public class EnemyBrain : MonoBehaviour
 
     public bool IsCurrentTargetInsideAttackStartRange()
     {
-        if (!HasValidTarget || enemyAttack == null)
+        if (!HasValidTarget || enemyAttack == null || !enemyAttack.CanStartAttack)
             return false;
 
         Vector3 planarOffset = Vector3.ProjectOnPlane(currentTarget.transform.position - transform.position, Vector3.up);
@@ -580,9 +673,15 @@ public class EnemyBrain : MonoBehaviour
 
     public int ResolveInitialPatrolIndex()
     {
-        int count = CountValidPatrolPoints();
+        int count = CountResolvedPatrolPoints();
         if (count <= 0)
             return -1;
+
+        if (ShouldUseGeneratedHomePatrol())
+            return 0;
+
+        if (ShouldUseGlobalPatrol())
+            return 0;
 
         if (!startAtNearestPatrolPoint)
             return 0;
@@ -608,9 +707,15 @@ public class EnemyBrain : MonoBehaviour
 
     public int ResolveNextPatrolIndex(int currentIndex)
     {
-        int count = CountValidPatrolPoints();
+        int count = CountResolvedPatrolPoints();
         if (count <= 0)
             return -1;
+
+        if (ShouldUseGeneratedHomePatrol())
+            return ResolveNextGeneratedPatrolIndex(currentIndex, count);
+
+        if (ShouldUseGlobalPatrol())
+            return 0;
 
         if (patrolMode == EnemyPatrolMode.Random && count > 1)
             return ResolveRandomPatrolIndex(currentIndex);
@@ -629,6 +734,12 @@ public class EnemyBrain : MonoBehaviour
     public bool TryGetPatrolPointPosition(int index, out Vector3 position)
     {
         position = Vector3.zero;
+        if (ShouldUseGeneratedHomePatrol())
+            return TryGetGeneratedPatrolPointPosition(index, out position);
+
+        if (ShouldUseGlobalPatrol())
+            return TryGetGlobalPatrolPointPosition(out position);
+
         if (patrolPoints == null || index < 0 || index >= patrolPoints.Length || patrolPoints[index] == null)
             return false;
 
@@ -638,6 +749,12 @@ public class EnemyBrain : MonoBehaviour
 
     public float ResolvePatrolWaitTime(int index)
     {
+        if (ShouldUseGeneratedHomePatrol())
+            return PatrolWaitTime;
+
+        if (ShouldUseGlobalPatrol())
+            return PatrolWaitTime;
+
         if (patrolPoints != null && index >= 0 && index < patrolPoints.Length && patrolPoints[index] != null)
         {
             EnemyPatrolPoint patrolPoint = patrolPoints[index].GetComponent<EnemyPatrolPoint>();
@@ -650,6 +767,9 @@ public class EnemyBrain : MonoBehaviour
 
     public bool TryGetReturnPosition(out Vector3 returnPosition)
     {
+        if (returnToPatrol && ShouldUseGlobalPatrol() && TryGetGlobalPatrolPointPosition(out returnPosition))
+            return true;
+
         if (returnToPatrol && HasPatrolPoints)
         {
             int patrolIndex = ResolveInitialPatrolIndex();
@@ -816,6 +936,18 @@ public class EnemyBrain : MonoBehaviour
         externalStateOverrideActive = false;
     }
 
+    private int CountResolvedPatrolPoints()
+    {
+        if (ShouldUseGlobalPatrol())
+            return 1;
+
+        int configuredPatrolPointCount = CountValidPatrolPoints();
+        if (configuredPatrolPointCount > 0)
+            return configuredPatrolPointCount;
+
+        return ShouldUseGeneratedHomePatrol() ? Mathf.Max(2, generatedHomePatrolPointCount) : 0;
+    }
+
     private int CountValidPatrolPoints()
     {
         if (patrolPoints == null)
@@ -829,6 +961,118 @@ public class EnemyBrain : MonoBehaviour
         }
 
         return count;
+    }
+
+    private bool ShouldUseGeneratedHomePatrol()
+    {
+        return CountValidPatrolPoints() == 0
+            && patrolMode != EnemyPatrolMode.GlobalWander
+            && useGeneratedHomePatrol
+            && generatedHomePatrolRadius > 0f
+            && generatedHomePatrolPointCount >= 2;
+    }
+
+    private bool ShouldUseGlobalPatrol()
+    {
+        return patrolMode == EnemyPatrolMode.GlobalWander
+            && globalPatrolRadius > 0f;
+    }
+
+    private int ResolveNextGeneratedPatrolIndex(int currentIndex, int count)
+    {
+        if (patrolMode == EnemyPatrolMode.Random && count > 1)
+        {
+            for (int attempt = 0; attempt < 8; attempt++)
+            {
+                int candidateIndex = UnityEngine.Random.Range(0, count);
+                if (candidateIndex != currentIndex)
+                    return candidateIndex;
+            }
+        }
+
+        return (currentIndex + 1 + count) % count;
+    }
+
+    private bool TryGetGeneratedPatrolPointPosition(int index, out Vector3 position)
+    {
+        int count = Mathf.Max(2, generatedHomePatrolPointCount);
+        if (index < 0 || index >= count)
+        {
+            position = Vector3.zero;
+            return false;
+        }
+
+        float angle = 360f * index / count;
+        Vector3 direction = homeRotation * (Quaternion.AngleAxis(angle, Vector3.up) * Vector3.forward);
+        Vector3 planarDirection = Vector3.ProjectOnPlane(direction, Vector3.up);
+        if (planarDirection.sqrMagnitude <= 0.0001f)
+            planarDirection = Quaternion.AngleAxis(angle, Vector3.up) * Vector3.forward;
+
+        position = homePosition + planarDirection.normalized * generatedHomePatrolRadius;
+        return true;
+    }
+
+    private bool TryGetGlobalPatrolPointPosition(out Vector3 position)
+    {
+        position = Vector3.zero;
+
+        float radius = Mathf.Max(0f, globalPatrolRadius);
+        if (radius <= 0f)
+            return false;
+
+        Vector3 center = globalPatrolCenter != null ? globalPatrolCenter.position : homePosition;
+        float minimumDistance = Mathf.Min(Mathf.Max(0f, globalPatrolMinimumDistance), radius);
+        float sampleDistance = Mathf.Max(0.1f, globalPatrolSampleDistance);
+        int attempts = Mathf.Max(1, globalPatrolSampleAttempts);
+        bool hasFallback = false;
+        Vector3 fallback = center;
+        bool requireNavigationSample = enemyNavigation != null && enemyNavigation.HasUsableAgent;
+
+        for (int attempt = 0; attempt < attempts; attempt++)
+        {
+            Vector3 candidate = center + ResolveRandomPlanarOffset(minimumDistance, radius);
+            bool sampledNavigation = TrySampleNavigationPosition(candidate, sampleDistance, out Vector3 sampledPosition);
+            if (sampledNavigation)
+                candidate = sampledPosition;
+            else if (requireNavigationSample)
+                continue;
+
+            if (!hasFallback)
+            {
+                fallback = candidate;
+                hasFallback = true;
+            }
+
+            if (minimumDistance <= 0f || IsFarEnoughFromCurrentPosition(candidate, minimumDistance))
+            {
+                position = candidate;
+                return true;
+            }
+        }
+
+        if (hasFallback)
+        {
+            position = fallback;
+            return true;
+        }
+
+        return false;
+    }
+
+    private Vector3 ResolveRandomPlanarOffset(float minimumDistance, float radius)
+    {
+        float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+        float distance = radius > minimumDistance
+            ? UnityEngine.Random.Range(minimumDistance, radius)
+            : radius;
+
+        return new Vector3(Mathf.Cos(angle) * distance, 0f, Mathf.Sin(angle) * distance);
+    }
+
+    private bool IsFarEnoughFromCurrentPosition(Vector3 position, float minimumDistance)
+    {
+        Vector3 planarOffset = Vector3.ProjectOnPlane(position - transform.position, Vector3.up);
+        return planarOffset.sqrMagnitude >= minimumDistance * minimumDistance;
     }
 
     private int ResolveRandomPatrolIndex(int currentIndex)

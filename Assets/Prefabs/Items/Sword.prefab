@@ -78,7 +78,7 @@ GameObject:
   - component: {fileID: 7014019411817586477}
   - component: {fileID: 4860545721033579551}
   - component: {fileID: 1034609494136353517}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Sword
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -118,6 +118,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldPickupItem
   itemDefinition: {fileID: 11400000, guid: 36a27eec9ee1dd94e95a29b4b39901b7, type: 2}
+  inventorySelectAudioCue: {fileID: 0}
+  useAudioCue: {fileID: 0}
   networkSceneId: 
   pickupColliderHost: {fileID: 3304105155123711384}
   rightHandPose:

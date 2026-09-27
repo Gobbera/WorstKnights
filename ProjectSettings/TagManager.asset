@@ -13,13 +13,13 @@ TagManager:
   - Water
   - UI
   - Hands
-  - 
+  - Object
   - FirstPersonView
   - Wall
   - DestructibleDebris
-  - 
-  - 
-  - 
+  - Enemy
+  - Door
+  - Player
   - 
   - 
   - 

@@ -20,6 +20,10 @@ Os valores citados como exemplo sao os valores atuais do `Assets/Prefabs/Enemies
 
 Normalmente esses campos devem ficar preenchidos no prefab. Se algum estiver vazio, os scripts tentam resolver por `GetComponent`.
 
+### EnemySetup Physics
+
+- `Use Gravity When Simulated`: se ligado, o Rigidbody usa gravidade enquanto o inimigo tem autoridade e esta vivo. Deixe desligado para inimigos flutuantes, mantendo movimento horizontal da IA sem derrubar o prefab ate o chao.
+
 ### Spawn
 
 - `Require Spawn Animation`: se ligado, a IA espera a animacao de spawn terminar antes de agir.
@@ -48,10 +52,19 @@ Mesmo em `Idle`, ele continua usando percepcao. Se enxergar um player ou ouvir r
 - `Patrol Mode`: modo de escolha do proximo ponto.
   - `Sequential`: segue a ordem da lista.
   - `Random`: escolhe pontos validos aleatorios.
+  - `GlobalWander`: ignora pontos fixos e sorteia destinos amplos na NavMesh a partir de um centro global/home.
 - `Patrol Speed`: velocidade durante patrulha.
 - `Patrol Wait Time`: espera padrao ao chegar em cada ponto.
 - `Patrol Stopping Distance`: distancia usada para considerar que chegou ao ponto.
 - `Start At Nearest Patrol Point`: se ligado, a patrulha comeca pelo ponto mais perto do inimigo.
+- `Use Generated Home Patrol`: se ligado e nao houver `Patrol Points`, gera uma rota circular ao redor da posicao inicial do inimigo.
+- `Generated Home Patrol Radius`: raio da rota gerada em volta da posicao inicial.
+- `Generated Home Patrol Point Count`: quantidade de pontos virtuais da rota gerada.
+- `Global Patrol Center`: centro opcional da patrulha global. Se vazio, usa a posicao inicial do inimigo.
+- `Global Patrol Radius`: raio maximo usado para sortear destinos globais.
+- `Global Patrol Minimum Distance`: distancia minima desejada entre o inimigo e o proximo destino sorteado.
+- `Global Patrol Sample Distance`: tolerancia usada para encaixar o destino sorteado na NavMesh.
+- `Global Patrol Sample Attempts`: numero de tentativas antes de desistir do sorteio atual.
 
 Para espera por ponto, adicione `EnemyPatrolPoint` no objeto do ponto.
 
@@ -150,6 +163,16 @@ Quando existe memoria de combate ativa, `Search` usa os parametros de `Combat Me
 
 Ao chegar, ele limpa ultima posicao conhecida, posicao de investigacao e memoria de combate.
 
+### Stun
+
+`Stunned` e um estado temporario aplicado por sistemas externos, como uma derrota nao letal. Enquanto esta nesse estado, o inimigo para navegacao e mantem o estado replicado para animacao/rede. Quando o tempo acaba, o brain volta ao comportamento anterior/default.
+
+### Traversal
+
+`Traversal` e um estado temporario usado por acoes autoradas de passagem, como portas apertadas para inimigos grandes. Enquanto esta nesse estado, a navegacao normal fica pausada e outro componente move o inimigo por uma rota controlada.
+
+O `EnemyTraversalController` no inimigo chama `BeginTraversal`/`EndTraversal`; voce nao deve chamar esse estado diretamente em patrol/chase/search.
+
 ### Debug
 
 - `Draw Debug Gizmos`: desenha gizmos do brain na Scene View.
@@ -241,11 +264,14 @@ O inimigo investiga a posicao do ruido. Ele nao sabe automaticamente quem causou
 ### NavMesh
 
 - `Use Nav Mesh Agent`: se ligado, usa `NavMeshAgent` para pathfinding.
-- `Create Agent At Runtime`: cria um `NavMeshAgent` em runtime se nao existir no prefab.
+- `Create Agent At Runtime`: cria um `NavMeshAgent` em runtime se nao existir no prefab. Use apenas como fallback; para tuning normal, deixe desligado e mantenha um `NavMeshAgent` salvo no prefab/scene.
 - `Use Direct Movement Fallback`: se nao houver NavMesh usavel, permite movimento direto ate o destino.
 - `Sample Position Distance`: distancia para tentar encontrar ponto valido na NavMesh.
+- `Configure Agent From Capsule`: se ligado, recalcula `Radius`, `Height` e `Base Offset` do `NavMeshAgent` a partir do `CapsuleCollider`. Deixe desligado quando quiser tunar esses valores manualmente no componente `NavMeshAgent`.
+- `Force Manual Agent Transform Sync`: mantem `Update Position` e `Update Rotation` do agent desligados em runtime para que o `EnemyMotor`/`Rigidbody` continuem sendo a autoridade real de movimento.
+- `Apply Runtime Avoidance Settings`: se ligado, o `EnemyNavigation` sobrescreve `Obstacle Avoidance` e `Avoidance Priority` em runtime usando os campos abaixo. Deixe desligado para editar esses valores diretamente no `NavMeshAgent`.
 
-Recomendacao: para mapas definitivos, coloque `NavMeshAgent` no prefab e garanta que o inimigo nasce sobre a NavMesh.
+Recomendacao: para mapas definitivos, coloque `NavMeshAgent` no prefab e garanta que o inimigo nasce sobre a NavMesh. O Skeleton e o Beholder ja possuem `NavMeshAgent` salvo no prefab para tuning em Scene/Prefab Mode.
 
 ### Destination
 
@@ -259,6 +285,115 @@ Se o inimigo parece desistir de mover, verifique:
 - se o destino e alcancavel;
 - se `Use Direct Movement Fallback` esta ligado durante testes sem NavMesh.
 
+## BeholderMovementLoopAudioController
+
+Use esse componente para sons continuos do Beholder, como hover, deslocamento e tensao de perseguicao. Ele nao usa cadencia de footsteps: cada cliente calcula volume e pitch localmente a partir de `EnemyMotor.CurrentPlanarSpeed` e `EnemyBrain.CurrentState`, que ja sao replicados pelo inimigo.
+
+- `Hover Loop`: camada base. Use para o som constante de flutuacao/energia. Por padrao continua audivel em idle/patrol.
+- `Movement / Threat`: camada extra para movimento e ameaca. Use para o loop mais agressivo que cresce em chase.
+- Cada camada aceita `AudioCue` ou `Fallback Clip`. Prefira `AudioCue` quando quiser reaproveitar mixer, distancia 3D e configuracao padrao do sistema de audio.
+- `Volume At Zero/Full Intensity` e `Pitch At Zero/Full Intensity`: controlam o quanto o loop muda entre idle e chase. No Unity, `AudioSource.pitch` tambem altera a velocidade de reproducao do clip.
+- `State Floors`: intensidade minima por estado. O `Chase` deve ficar alto o suficiente para nao cair para idle quando o Beholder da microtravadas em porta, quina ou replanejamento.
+- `Patrol Reference Speed` e `Chase Reference Speed`: fallback para normalizar velocidade quando nao houver valor confiavel no `EnemyBrain`. No Beholder atual, use algo proximo de `2.4` para patrol e `4.1` para chase.
+- `Intensity Rise/Fall Speed`: suaviza transicoes para o loop nao "bombear" quando a velocidade oscila.
+
+No prefab do Beholder, arraste o loop principal para `Hover Loop > Cue` ou `Fallback Clip`; se tiver um segundo loop de perseguicao, coloque em `Movement / Threat`. Se usar apenas um audio por enquanto, configure apenas o `Hover Loop` e aumente seu pitch/volume por intensidade.
+
+## EnemyTraversal
+
+Use esse sistema para passagens onde um inimigo grande deve passar por um centro autorado em vez de tentar resolver a quina so com NavMesh/collider.
+
+### EnemyTraversalController
+
+Fica no inimigo. O Beholder ja possui esse componente no prefab.
+
+- `Enable Traversal`: liga/desliga essa mecanica.
+- `Default Traversal Speed`: velocidade usada se o volume nao definir uma velocidade propria.
+- `Point Reach Distance`: distancia para considerar que chegou em cada ponto da rota.
+- `Preserve Current Height`: mantem a altura atual do inimigo durante o movimento horizontal. Para Beholder/flutuantes, deixe ligado para o `EnemyGroundAnchor` continuar cuidando do Y.
+- `Turn Speed`: velocidade de giro enquanto atravessa.
+- `Time Between Traversals`: cooldown local contra retrigger. O volume atravessado tambem fica bloqueado ate o inimigo passar alem do ponto de saida, evitando loop A/B imediato.
+- `Can Open Doors`: permite que este inimigo opere portas vinculadas a um `EnemyTraversalVolume`. Skeleton deve ficar desligado; Beholder deve ficar ligado.
+- Quando um inimigo abre uma porta por essa rota, o `DoorController` ativa `Enemy Open Player Interaction Lock Duration` e bloqueia abrir/fechar/destrancar por jogador durante esse tempo. O default do `Door_01` e `4` segundos.
+- `Close And Reopen Misdirected Open Doors`: quando uma porta rotativa ja esta aberta para o lado que atrapalha a entrada, o inimigo fecha e reabre a porta para longe dele antes de atravessar.
+- `Use Temporary Capsule Radius`: reduz temporariamente o raio da capsula durante a travessia.
+- `Traversal Capsule Radius Multiplier`: multiplicador do raio da capsula durante a travessia.
+- `Minimum Traversal Capsule Radius`: limite minimo do raio reduzido.
+- `Traversal Trigger Name`: trigger opcional no Animator. Se existir um trigger com esse nome, ele sera disparado ao iniciar travessia.
+
+O `EnemyAnimationController` tambem envia `IsTraversing`, `Traversing` e `State = 11`, entao uma animacao futura pode ser ligada por bool, trigger ou inteiro.
+
+### EnemyTraversalVolume
+
+Fica no objeto trigger da passagem.
+
+- `Side A`: ponto central fora da passagem de um lado.
+- `Side B`: ponto central fora da passagem do outro lado.
+- `Midpoints`: pontos opcionais entre A e B. Use para portas curvas, corredores em L ou para forcar um centro especifico.
+- `Traversal Speed`: velocidade dessa passagem. Se zero, o controller usa o default.
+- `Entry Pause Duration`: pequena pausa antes de comecar, util para alinhar animacao.
+- `Exit Pause Duration`: pequena pausa ao sair.
+- `Align To Path Direction`: gira o inimigo na direcao do proximo ponto.
+- `Cooldown After Traversal`: cooldown especifico do volume.
+- `Door Controller`: porta associada a esta passagem. Use quando a travessia depende de uma porta que pode estar aberta, fechada ou abrindo.
+- `Gate Traversal By Door State`: quando ligado, o volume consulta a porta antes de iniciar a travessia. Porta fechada exige `Can Open Doors` no inimigo; porta aberta na direcao errada pode ser fechada/reaberta.
+- `Auto Resolve Door Controller`: tenta encontrar uma `DoorController` proxima em runtime quando `Door Controller` nao foi preenchido manualmente.
+- `Door Search Radius`: raio usado para auto-resolver a porta. Se o volume estiver deslocado demais da porta, aumente este valor ou preencha `Door Controller` manualmente.
+- `Reorient Open Door When Needed`: permite a correcao de porta ja aberta para o lado ruim da passagem.
+- `Reorient Only When Door Obstructs Traversal`: quando ligado, uma porta ja aberta so e fechada/reaberta se seus colliders estiverem invadindo o corredor entre `Side A` e `Side B`.
+- `Door Obstruction Probe Radius`: largura do corredor usado para decidir se a folha da porta esta atrapalhando. Portas fechadas tambem so sao abertas automaticamente quando esse probe detecta obstrucao. Aumente se o Beholder raspar na porta sem reorientar; reduza se ele abrir/reorientar portas que nao bloqueiam.
+- `Door Obstruction Probe Spacing`: distancia entre amostras ao longo da rota `Side A`/`Midpoints`/`Side B`.
+- `Door Ready Timeout`: tempo maximo que o inimigo espera a porta fechar/abrir antes de cancelar a travessia. Use `0` para nao expirar. Para portas que precisam fechar e reabrir, deixe acima de duas vezes o `Move Duration` da porta.
+- `Door Settle Delay`: pequena pausa depois da porta ficar pronta antes do inimigo entrar.
+- `Block Player Interaction While Enemy Inside`: enquanto um inimigo elegivel estiver dentro do trigger desse volume, a `DoorController` associada bloqueia abrir/fechar/destrancar por jogador.
+- `Require Enemy Door Permission For Player Block`: se ligado, so inimigos com `Can Open Doors` ativam esse bloqueio de jogador.
+- `Require Destination Across Sides`: se ligado, a travessia so comeca quando o destino atual da IA esta do outro lado de `Side A`/`Side B`. Isso evita que o inimigo atravesse so porque encostou no trigger.
+- `Side Classification Tolerance`: margem em volta do centro da passagem para decidir se uma posicao esta do lado A ou B.
+- `Rearm Distance Past Exit`: distancia que o inimigo precisa andar alem do ponto de saida antes de essa passagem poder disparar de novo.
+
+O collider do objeto com `EnemyTraversalVolume` deve ficar como `Is Trigger`.
+
+Se um inimigo com `Can Open Doors` ja esta dentro do volume e a porta associada esta fechada, o `EnemyTraversalController` trata a porta como bloqueio real mesmo que o probe/sensor nao tenha confirmado. Esse fallback tambem libera o cooldown/rearm local do volume para evitar o caso em que o inimigo ficou no centro da passagem e nao tenta abrir a porta de novo.
+
+### DoorNavMeshObstacleController
+
+Fica na porta. No `Door_01`, ele cria/controla um `NavMeshObstacle` em runtime na parte movel da porta.
+
+- `Auto Create Obstacle`: cria o `NavMeshObstacle` automaticamente em Play Mode se ainda nao existir.
+- `Fit Obstacle From Colliders`: usa os colliders solidos da porta para calcular o tamanho do obstaculo.
+- `Obstacle Padding`: margem extra aplicada ao tamanho calculado. Aumente para inimigos grandes darem mais folga ao contornar a porta.
+- `Fallback Obstacle Size` e `Fallback Obstacle Center`: usados quando nao ha collider solido valido para calcular o tamanho.
+- `Carve When Open`: quando ligado, a porta aberta recorta o NavMesh e passa a entrar na rota dos inimigos como bloqueio dinamico.
+- `Carve When Closed`: use somente se a porta fechada tambem deve bloquear a rota de inimigos que nao conseguem abrir portas.
+- `Carve While Moving`: por padrao fica desligado para nao recalcular o NavMesh durante a animacao da porta.
+- `Replan Nearby Enemies On State Change`: quando o obstaculo liga/desliga, inimigos proximos recebem `ForceRepath`.
+- `Replan Radius`: raio usado para encontrar inimigos que devem recalcular rota.
+- `Replan Delay`: pequeno atraso para deixar o carve atualizar antes do repath.
+
+Para portas estreitas que ficam abertas atravessando o corredor, comece com `Carve When Open` ligado e `Carve While Moving` desligado. Assim os inimigos podem decidir dar a volta quando a folha aberta ocupa a passagem, sem brigar com a animacao da porta.
+
+### DoorEnemyObstructionSensor
+
+Fica em um trigger filho da porta. No `Door_01`, esse filho se chama `Enemy_Obstruction_Trigger` e esta na layer `Ignore Raycast` para nao aumentar a area de interacao do player.
+
+- `Required Contact Duration`: tempo minimo de contato continuo para considerar que a porta aberta esta obstruindo o inimigo.
+- `Require Enemy Door Permission`: se ligado, so inimigos com `Can Open Doors` podem ativar o sensor.
+- `Require Enemy Destination`: se ligado, o sensor so reage se o inimigo tem destino ativo na navegacao, evitando fechar/reabrir porta porque o inimigo esta parado perto dela.
+- `Ignore Enemy During Traversal`: se ligado, contato durante a travessia autorada e ignorado; esse sensor e uma correcao para contato preso fora do traversal.
+- `Require Solid Door Contact`: se ligado, overlap com o trigger nao basta; algum collider solido do inimigo precisa estar encostado ou muito perto de um collider solido da porta.
+- `Solid Door Contact Distance`: distancia maxima para aceitar esse contato solido. Use valores pequenos para evitar falsos positivos.
+- `Closed Door Contact Duration`: tempo minimo para uma porta fechada ser considerada bloqueio quando o inimigo ja esta dentro do sensor. Isso cobre o caso do player fechar a porta com o inimigo ja na area da folha.
+- `Allow Closed Door Stuck Contact`: se ligado, uma porta fechada tambem pode ser considerada bloqueio quando o inimigo esta dentro do trigger da porta e quase nao se move por um curto periodo.
+- `Closed Door Stuck Duration`: tempo minimo parado dentro do trigger para considerar que o inimigo esta preso.
+- `Closed Door Stuck Move Distance`: deslocamento maximo permitido durante esse tempo. Aumente um pouco se o inimigo treme/oscila parado; reduza se detectar falso positivo.
+- `Allow Automatic Recovery`: se ligado, o proprio sensor pode fechar/reabrir a porta. Por padrao deve ficar desligado; deixe o `EnemyTraversalController` usar o contato como evidência de obstrucao para evitar portas se mexendo sozinhas.
+- `Allow Closed Door Stuck Auto Open`: se ligado, o sensor pode abrir uma porta fechada quando um inimigo com permissao esta dentro do trigger e quase sem movimento pelo tempo configurado. Nao fecha nem reorienta portas abertas.
+- `Close Before Reopening`: fecha a porta primeiro e depois reabre para longe do inimigo, evitando trocar o lado da porta instantaneamente.
+- `Door Action Timeout`: tempo maximo para esperar a porta fechar ou abrir durante essa recuperacao.
+- `Action Cooldown`: tempo minimo antes de o mesmo sensor tentar outra recuperacao.
+
+Esse sensor entra como sinal complementar de obstrucao no `EnemyTraversalController`: se o probe entre `Side A`/`Side B` nao capturar o caso, mas o Beholder ficou encostado na folha aberta tempo suficiente, a porta passa a ser tratada como bloqueio real.
+
 ## EnemyPerception
 
 `EnemyPerception` apenas agrega `EnemyVision` e `EnemyHearing`.
@@ -268,6 +403,19 @@ Se o inimigo parece desistir de mover, verifique:
 - `Enemy Setup` e `Enemy Health`: referencias auxiliares.
 
 Normalmente nao ha muito tunning aqui; a configuracao importante fica em `EnemyVision` e `EnemyHearing`.
+
+## EnemyHealth
+
+`EnemyHealth` controla morte, dano e a ponte com o brain.
+
+### Non-Lethal Defeat
+
+- `Prevent Death`: impede que o inimigo entre no fluxo normal de morte quando a vida chega a zero.
+- `Prevented Death Health`: vida restaurada quando a morte e impedida. Use um valor alto/maximo se o inimigo deve exigir outro ciclo real de dano para ser atordoado de novo.
+- `Prevented Death Stun Duration`: tempo de stun aplicado ao brain apos a derrota nao letal.
+- `Prevented Death Invulnerability Duration`: janela de invulnerabilidade apos a derrota nao letal.
+
+Use esse bloco para inimigos persistentes ou boss-phase stalkers: o player consegue causar dano, interromper e atordoar, mas nao remove o inimigo da cena.
 
 ## EnemyPatrolPoint
 
@@ -284,6 +432,7 @@ Se desligado, o ponto usa `EnemyBrain.Patrol Wait Time`.
 
 ### Attack
 
+- `Attack Enabled`: liga/desliga o ataque comum de contato. Deixe desligado para inimigos que usam habilidades proprias, como o Beholder, para que eles possam patrulhar, perseguir, buscar e retornar sem executar hitbox melee falsa.
 - `Attack Range`: alcance real de dano/contato.
 - `Attack Start Range`: distancia na qual a IA pode iniciar o ataque. Normalmente deve ser maior que `Attack Range`.
 - `Attack Damage`: dano causado.
@@ -332,6 +481,26 @@ Reduza:
 - `Combat Memory Duration`
 - `Combat Search Duration`
 - `Max Chase Distance`
+
+### O inimigo deve agir como stalker global
+
+Ajuste:
+
+- `Patrol Mode = GlobalWander`;
+- `Global Patrol Radius` alto o bastante para cobrir o mapa;
+- `Max Chase Distance = 0`;
+- `Combat Memory Duration`, `Combat Lost Sight Grace Duration` e `Combat Search Duration` altos;
+- `Combat Memory Requires Line Of Sight` desligado somente se ele deve manter pressao mesmo sem visao direta;
+- `EnemyHealth.Prevent Death` ligado se ele deve ser atordoado em vez de morrer.
+
+### O Beholder engancha em portas/quinas
+
+Use em ordem:
+
+- rebake do NavMesh com raio compativel com o Beholder para caminhos que ele nao deveria tentar;
+- colliders invisiveis arredondados/beveled nas quinas criticas;
+- `EnemyTraversalVolume` nas passagens que ele deve atravessar mesmo sendo grande;
+- ajuste `Traversal Capsule Radius Multiplier` apenas para a travessia, sem diminuir globalmente a presenca fisica do Beholder.
 
 ### O inimigo nao me ve
 

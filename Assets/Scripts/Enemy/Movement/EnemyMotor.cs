@@ -132,6 +132,11 @@ public class EnemyMotor : MonoBehaviour
         CurrentPlanarSpeed = Mathf.Max(0f, speed);
     }
 
+    public void ApplyExternalPlanarSpeed(float speed)
+    {
+        CurrentPlanarSpeed = Mathf.Max(0f, speed);
+    }
+
     public void ApplyDamageKnockback(Vector3 velocityChange, float duration)
     {
         if (velocityChange.sqrMagnitude <= 0.0001f)

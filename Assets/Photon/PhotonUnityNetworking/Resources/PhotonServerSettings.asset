@@ -73,6 +73,7 @@ MonoBehaviour:
   - RpcRequestImpactRagdoll
   - RpcApplyLitState
   - RpcReceiveEnemyShieldBlock
+  - RpcArmEnemyPlayerInteractionLock
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

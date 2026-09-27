@@ -22,6 +22,9 @@ public class EnemySetup : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private Transform modelRoot;
 
+    [Header("Physics")]
+    [SerializeField] private bool useGravityWhenSimulated = true;
+
     private Collider[] colliders;
 
     public PhotonView PhotonView => photonView;
@@ -38,6 +41,7 @@ public class EnemySetup : MonoBehaviour
     public Transform AttackOrigin => attackOrigin != null ? attackOrigin : transform;
     public Animator Animator => animator;
     public Transform ModelRoot => modelRoot != null ? modelRoot : transform;
+    public bool UseGravityWhenSimulated => useGravityWhenSimulated;
     public bool HasAuthority => HasLocalAuthority();
 
     private void Awake()
@@ -135,7 +139,7 @@ public class EnemySetup : MonoBehaviour
         }
 
         rb.isKinematic = !simulatePhysics;
-        rb.useGravity = simulatePhysics;
+        rb.useGravity = simulatePhysics && useGravityWhenSimulated;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
     }
 

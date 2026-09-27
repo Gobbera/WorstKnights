@@ -16,6 +16,7 @@ public class PlayerSetup : MonoBehaviourPun
     private const string FirstPersonUpperBodyRootName = "Separated_UpperBody";
     private const string LegacyFirstPersonUpperBodyRootName = "Separeted_UpperBody";
     private const string FirstPersonViewLayerName = "FirstPersonView";
+    private const string PlayerLayerName = "Player";
     private const string WallLayerName = "Wall";
     private const float FirstPersonNearClipPlane = 0.01f;
 
@@ -299,6 +300,8 @@ public class PlayerSetup : MonoBehaviourPun
         }
 
         int firstPersonMask = 1 << firstPersonLayer;
+        int playerLayer = LayerMask.NameToLayer(PlayerLayerName);
+        int playerMask = playerLayer >= 0 ? 1 << playerLayer : 0;
         bool useWallOnlyBypass = ShouldUseWallLayerStencilBypass();
         bool clearOverlayDepth = !useWallOnlyBypass;
         ConfigureFirstPersonVisualRoots(firstPersonLayer);
@@ -306,6 +309,7 @@ public class PlayerSetup : MonoBehaviourPun
         if (fp_Camera != null)
         {
             fp_Camera.cullingMask &= ~firstPersonMask;
+            fp_Camera.cullingMask |= playerMask;
             fp_Camera.nearClipPlane = Mathf.Min(fp_Camera.nearClipPlane, FirstPersonNearClipPlane);
             if (disableFirstPersonCameraOcclusionCulling)
                 fp_Camera.useOcclusionCulling = false;

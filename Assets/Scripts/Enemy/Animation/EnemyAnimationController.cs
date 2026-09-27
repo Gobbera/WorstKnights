@@ -106,6 +106,8 @@ public class EnemyAnimationController : MonoBehaviour
         bool isAlert = state == EnemyState.Alert;
         bool isSearching = state == EnemyState.Search;
         bool isReturning = state == EnemyState.Return;
+        bool isStunned = state == EnemyState.Stunned;
+        bool isTraversing = state == EnemyState.Traversal;
 
         SetBoolIfExists("IsAttacking", isAttacking);
         SetBoolIfExists("Attacking", isAttacking);
@@ -119,6 +121,10 @@ public class EnemyAnimationController : MonoBehaviour
         SetBoolIfExists("Searching", isSearching);
         SetBoolIfExists("IsReturning", isReturning);
         SetBoolIfExists("Returning", isReturning);
+        SetBoolIfExists("IsStunned", isStunned);
+        SetBoolIfExists("Stunned", isStunned);
+        SetBoolIfExists("IsTraversing", isTraversing);
+        SetBoolIfExists("Traversing", isTraversing);
         SetIntegerIfExists("State", (int)state);
         SetFloatIfExists("MoveSpeed", planarSpeed);
         SetFloatIfExists("Speed", planarSpeed);
@@ -223,7 +229,8 @@ public class EnemyAnimationController : MonoBehaviour
             || state == EnemyState.Attack
             || state == EnemyState.Dead
             || state == EnemyState.PreSpawn
-            || state == EnemyState.Spawning)
+            || state == EnemyState.Spawning
+            || state == EnemyState.Traversal)
             return;
 
         if (!hasIdleState || !hasWalkState || IsTakeDamageStateActive())

@@ -31,6 +31,7 @@ public class EnemyAttack : MonoBehaviour
     };
 
     [Header("Attack")]
+    [SerializeField] private bool attackEnabled = true;
     [SerializeField] [Min(0f)] private float attackRange = 1.6f;
     [SerializeField] [Min(0f)] private float attackStartRange = 2.35f;
     [SerializeField] [Min(0f)] private float attackDamage = 12f;
@@ -78,11 +79,13 @@ public class EnemyAttack : MonoBehaviour
     private Vector3 previousWeaponTipPosition;
     private Vector3 cachedAttackForward = Vector3.forward;
 
-    public float AttackRange => attackRange;
-    public float AttackStartRange => Mathf.Max(attackRange, attackStartRange);
+    public bool AttackEnabled => attackEnabled;
+    public bool CanStartAttack => attackEnabled && isActiveAndEnabled && IsEffectivelyAlive();
+    public float AttackRange => attackEnabled ? attackRange : 0f;
+    public float AttackStartRange => attackEnabled ? Mathf.Max(attackRange, attackStartRange) : 0f;
     public float AttackTurnSpeedMultiplier => Mathf.Max(0f, attackTurnSpeedMultiplier);
     public int AttackSequence { get; private set; }
-    public bool IsAttackLocked => IsEffectivelyAlive() && Time.time < attackLockedUntil;
+    public bool IsAttackLocked => CanStartAttack && Time.time < attackLockedUntil;
     public bool CanTrackTargetDuringCurrentAttack => IsAttackLocked
         && GetCurrentAttackNormalizedTime() <= Mathf.Clamp01(attackTurnTrackingEndNormalizedTime);
 
@@ -108,7 +111,7 @@ public class EnemyAttack : MonoBehaviour
 
     public bool TryAttack(PlayerHealth target, Vector3 planarOffset)
     {
-        if (!IsEffectivelyAlive() || target == null || Time.time < nextAttackTime)
+        if (!CanStartAttack || target == null || Time.time < nextAttackTime)
             return false;
 
         float now = Time.time;
