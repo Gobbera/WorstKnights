@@ -310,10 +310,16 @@ PrefabInstance:
       addedObject: {fileID: 483005001000000018}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 483005001000000019}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 398792819100171015}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4013521218111540307}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8350827699812910991}
     - targetCorrespondingSourceObject: {fileID: -1868039562616262120, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8482825128256136322}
@@ -902,6 +908,111 @@ MonoBehaviour:
   traversalTriggerName: Traversal
   drawTraversalGizmos: 1
   activeRouteColor: {r: 1, g: 0.2, b: 0.85, a: 0.9}
+--- !u!114 &483005001000000019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8340882834624413408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ed6dc0fb75643d3b7e5e52b4db847c8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::BeholderEyeGlowController
+  enemySetup: {fileID: 483005001000000003}
+  enemyBrain: {fileID: 483005001000000004}
+  enemyHealth: {fileID: 483005001000000011}
+  blendSpeed: 8
+  rendererRefreshInterval: 1
+  preSpawn:
+    baseColor: {r: 0.32, g: 0.25, b: 0.38, a: 1}
+    emissionColor: {r: 0.18, g: 0.08, b: 0.35, a: 1}
+    emissionIntensity: 0.15
+    pulseAmount: 0
+    pulseSpeed: 0
+    flickerAmount: 0
+    flickerSpeed: 0
+  idle:
+    baseColor: {r: 0.42, g: 0.34, b: 0.5, a: 1}
+    emissionColor: {r: 0.28, g: 0.12, b: 0.55, a: 1}
+    emissionIntensity: 0.35
+    pulseAmount: 0.08
+    pulseSpeed: 0.6
+    flickerAmount: 0
+    flickerSpeed: 0
+  patrol:
+    baseColor: {r: 0.45, g: 0.36, b: 0.52, a: 1}
+    emissionColor: {r: 0.35, g: 0.18, b: 0.65, a: 1}
+    emissionIntensity: 0.6
+    pulseAmount: 0.12
+    pulseSpeed: 0.8
+    flickerAmount: 0
+    flickerSpeed: 0
+  alert:
+    baseColor: {r: 0.72, g: 0.45, b: 0.22, a: 1}
+    emissionColor: {r: 1, g: 0.55, b: 0.18, a: 1}
+    emissionIntensity: 1.5
+    pulseAmount: 0.18
+    pulseSpeed: 1.25
+    flickerAmount: 0
+    flickerSpeed: 0
+  search:
+    baseColor: {r: 0.65, g: 0.38, b: 0.18, a: 1}
+    emissionColor: {r: 1, g: 0.38, b: 0.08, a: 1}
+    emissionIntensity: 1.2
+    pulseAmount: 0.2
+    pulseSpeed: 1.1
+    flickerAmount: 0
+    flickerSpeed: 0
+  chase:
+    baseColor: {r: 0.82, g: 0.18, b: 0.12, a: 1}
+    emissionColor: {r: 1, g: 0.08, b: 0.02, a: 1}
+    emissionIntensity: 3.5
+    pulseAmount: 0.28
+    pulseSpeed: 1.8
+    flickerAmount: 0
+    flickerSpeed: 0
+  attack:
+    baseColor: {r: 1, g: 0.28, b: 0.08, a: 1}
+    emissionColor: {r: 1, g: 0.24, b: 0.04, a: 1}
+    emissionIntensity: 5
+    pulseAmount: 0.35
+    pulseSpeed: 2.2
+    flickerAmount: 0
+    flickerSpeed: 0
+  returnToPatrol:
+    baseColor: {r: 0.42, g: 0.32, b: 0.46, a: 1}
+    emissionColor: {r: 0.3, g: 0.12, b: 0.48, a: 1}
+    emissionIntensity: 0.45
+    pulseAmount: 0.08
+    pulseSpeed: 0.7
+    flickerAmount: 0
+    flickerSpeed: 0
+  traversal:
+    baseColor: {r: 0.58, g: 0.28, b: 0.5, a: 1}
+    emissionColor: {r: 0.75, g: 0.18, b: 0.85, a: 1}
+    emissionIntensity: 1
+    pulseAmount: 0.16
+    pulseSpeed: 1
+    flickerAmount: 0
+    flickerSpeed: 0
+  stunned:
+    baseColor: {r: 0.18, g: 0.42, b: 0.75, a: 1}
+    emissionColor: {r: 0.1, g: 0.55, b: 1, a: 1}
+    emissionIntensity: 0.25
+    pulseAmount: 0.1
+    pulseSpeed: 1.5
+    flickerAmount: 0.85
+    flickerSpeed: 12
+  dead:
+    baseColor: {r: 0.08, g: 0.08, b: 0.08, a: 1}
+    emissionColor: {r: 0, g: 0, b: 0, a: 1}
+    emissionIntensity: 0
+    pulseAmount: 0
+    pulseSpeed: 0
+    flickerAmount: 0
+    flickerSpeed: 0
 --- !u!114 &483005001000000018
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -919,6 +1030,182 @@ MonoBehaviour:
   enemyMotor: {fileID: 483005001000000005}
   enemyHealth: {fileID: 483005001000000011}
   audioAnchor: {fileID: 8686058380772549722}
+  autoCreateSources: 1
+  stopOnDisable: 1
+  hoverLoop:
+    cue: {fileID: 11400000, guid: cc0b0335815355549b679eb6e316061f, type: 2}
+    fallbackClip: {fileID: 0}
+    source: {fileID: 0}
+    volumeAtZeroIntensity: 0.28
+    volumeAtFullIntensity: 0.58
+    pitchAtZeroIntensity: 0.92
+    pitchAtFullIntensity: 1.14
+    volumeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    pitchCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    silentVolumeThreshold: 0.001
+    stopWhenSilent: 0
+  movementLoop:
+    cue: {fileID: 11400000, guid: e39569521f7f56e48b31973570c3ae32, type: 2}
+    fallbackClip: {fileID: 0}
+    source: {fileID: 0}
+    volumeAtZeroIntensity: 0
+    volumeAtFullIntensity: 0.9
+    pitchAtZeroIntensity: 0.86
+    pitchAtFullIntensity: 1.32
+    volumeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    pitchCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    silentVolumeThreshold: 0.001
+    stopWhenSilent: 1
+  fallbackMixerGroup: {fileID: 0}
+  fallbackSpatialBlend: 1
+  fallbackSpread: 0
+  fallbackMinDistance: 2
+  fallbackMaxDistance: 28
+  fallbackRolloffMode: 1
+  useManualDistanceAttenuation: 1
+  hardMuteBeyondMaxDistance: 1
+  manualDistanceFadeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  audioListenerRefreshInterval: 0.25
+  usePlanarSpeed: 1
+  minAudibleSpeed: 0.05
+  patrolReferenceSpeed: 2.4
+  chaseReferenceSpeed: 4.1
+  intensityRiseSpeed: 3.5
+  intensityFallSpeed: 1.8
+  preSpawnIntensity: 0
+  idleIntensity: 0.12
+  patrolIntensity: 0.28
+  alertIntensity: 0.45
+  searchIntensity: 0.45
+  returnIntensity: 0.26
+  traversalIntensity: 0.55
+  chaseIntensity: 0.78
+  attackIntensity: 0.9
+  stunnedIntensity: 0.04
+  drawAudioCueDistanceGizmos: 1
+  drawAudioCueDistanceLabels: 1
+  drawAudioCueMinDistance: 1
+  drawAudioCueMaxDistance: 1
+  hoverMinDistanceGizmoColor: {r: 0.2, g: 0.85, b: 1, a: 0.45}
+  hoverMaxDistanceGizmoColor: {r: 0.2, g: 0.45, b: 1, a: 0.35}
+  movementMinDistanceGizmoColor: {r: 1, g: 0.25, b: 0.45, a: 0.45}
+  movementMaxDistanceGizmoColor: {r: 1, g: 0.65, b: 0.15, a: 0.35}
+  audioCueDistanceLabelHeight: 2.2
 --- !u!65 &398792819100171015
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -962,6 +1249,103 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!82 &8350827699812910991
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8340882834624413408}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!4 &8686058380772549722 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}

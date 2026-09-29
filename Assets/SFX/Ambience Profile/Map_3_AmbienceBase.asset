@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29a45281c5924feaa9f47399fdc176b4, type: 3}
+  m_Name: Map_3_AmbienceBase
+  m_EditorClassIdentifier: Assembly-CSharp::AmbientAudioProfile
+  profileId: 
+  primaryLoop: {fileID: 11400000, guid: cc420f44463236948aed6ec2e55f7308, type: 2}
+  primaryLoopVolume: 0.188
+  secondaryLoop: {fileID: 0}
+  secondaryLoopVolume: 1
+  fadeTime: 2
+  randomOneShots: []
+  randomIntervalRange: {x: 12, y: 28}
+  randomChance: 1

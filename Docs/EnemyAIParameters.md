@@ -289,6 +289,8 @@ Se o inimigo parece desistir de mover, verifique:
 
 Use esse componente para sons continuos do Beholder, como hover, deslocamento e tensao de perseguicao. Ele nao usa cadencia de footsteps: cada cliente calcula volume e pitch localmente a partir de `EnemyMotor.CurrentPlanarSpeed` e `EnemyBrain.CurrentState`, que ja sao replicados pelo inimigo.
 
+Referencia completa dos parametros: `Docs/BeholderMovementLoopAudioController.md`.
+
 - `Hover Loop`: camada base. Use para o som constante de flutuacao/energia. Por padrao continua audivel em idle/patrol.
 - `Movement / Threat`: camada extra para movimento e ameaca. Use para o loop mais agressivo que cresce em chase.
 - Cada camada aceita `AudioCue` ou `Fallback Clip`. Prefira `AudioCue` quando quiser reaproveitar mixer, distancia 3D e configuracao padrao do sistema de audio.
@@ -296,6 +298,7 @@ Use esse componente para sons continuos do Beholder, como hover, deslocamento e 
 - `State Floors`: intensidade minima por estado. O `Chase` deve ficar alto o suficiente para nao cair para idle quando o Beholder da microtravadas em porta, quina ou replanejamento.
 - `Patrol Reference Speed` e `Chase Reference Speed`: fallback para normalizar velocidade quando nao houver valor confiavel no `EnemyBrain`. No Beholder atual, use algo proximo de `2.4` para patrol e `4.1` para chase.
 - `Intensity Rise/Fall Speed`: suaviza transicoes para o loop nao "bombear" quando a velocidade oscila.
+- `Use Manual Distance Attenuation`: ligado por padrao para fazer `Min Distance`/`Max Distance` do `AudioCue` ou fallback terem efeito perceptivel; com `Hard Mute Beyond Max Distance`, o volume chega a zero no alcance maximo.
 
 No prefab do Beholder, arraste o loop principal para `Hover Loop > Cue` ou `Fallback Clip`; se tiver um segundo loop de perseguicao, coloque em `Movement / Threat`. Se usar apenas um audio por enquanto, configure apenas o `Hover Loop` e aumente seu pitch/volume por intensidade.
 

@@ -1,0 +1,438 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+[DisallowMultipleComponent]
+[AddComponentMenu("Enemy/Beholder Eye Glow Controller")]
+public sealed class BeholderEyeGlowController : MonoBehaviour
+{
+    private const string BaseColorProperty = "_Base_Color";
+    private const string UrpBaseColorProperty = "_BaseColor";
+    private const string LegacyColorProperty = "_Color";
+    private const string EmissionColorProperty = "_EmissionColor";
+    private const string EmissionIntensityProperty = "_EmissionIntensity";
+    private const string EyeMaterialName = "WK_Bh_Eye";
+
+    [Serializable]
+    public struct GlowProfile
+    {
+        [ColorUsage(false, false)] public Color baseColor;
+        [ColorUsage(false, true)] public Color emissionColor;
+        [Min(0f)] public float emissionIntensity;
+        [Range(0f, 1f)] public float pulseAmount;
+        [Min(0f)] public float pulseSpeed;
+        [Range(0f, 1f)] public float flickerAmount;
+        [Min(0f)] public float flickerSpeed;
+
+        public GlowProfile(
+            Color baseColor,
+            Color emissionColor,
+            float emissionIntensity,
+            float pulseAmount = 0f,
+            float pulseSpeed = 0f,
+            float flickerAmount = 0f,
+            float flickerSpeed = 0f)
+        {
+            this.baseColor = baseColor;
+            this.emissionColor = emissionColor;
+            this.emissionIntensity = emissionIntensity;
+            this.pulseAmount = pulseAmount;
+            this.pulseSpeed = pulseSpeed;
+            this.flickerAmount = flickerAmount;
+            this.flickerSpeed = flickerSpeed;
+        }
+    }
+
+    private sealed class EyeMaterialSlot
+    {
+        public Renderer Renderer;
+        public int MaterialIndex;
+        public readonly MaterialPropertyBlock PropertyBlock = new MaterialPropertyBlock();
+    }
+
+    [Header("References")]
+    [SerializeField, HideInInspector] private EnemySetup enemySetup;
+    [SerializeField, HideInInspector] private EnemyBrain enemyBrain;
+    [SerializeField, HideInInspector] private EnemyHealth enemyHealth;
+
+    [Header("Blend")]
+    [SerializeField, Min(0f)] private float blendSpeed = 8f;
+    [SerializeField, HideInInspector] private float rendererRefreshInterval = 1f;
+
+    [Header("State Profiles")]
+    [SerializeField] private GlowProfile preSpawn = new GlowProfile(
+        new Color(0.32f, 0.25f, 0.38f, 1f),
+        new Color(0.18f, 0.08f, 0.35f, 1f),
+        0.15f);
+    [SerializeField] private GlowProfile idle = new GlowProfile(
+        new Color(0.42f, 0.34f, 0.5f, 1f),
+        new Color(0.28f, 0.12f, 0.55f, 1f),
+        0.35f,
+        0.08f,
+        0.6f);
+    [SerializeField] private GlowProfile patrol = new GlowProfile(
+        new Color(0.45f, 0.36f, 0.52f, 1f),
+        new Color(0.35f, 0.18f, 0.65f, 1f),
+        0.6f,
+        0.12f,
+        0.8f);
+    [SerializeField] private GlowProfile alert = new GlowProfile(
+        new Color(0.72f, 0.45f, 0.22f, 1f),
+        new Color(1f, 0.55f, 0.18f, 1f),
+        1.5f,
+        0.18f,
+        1.25f);
+    [SerializeField] private GlowProfile search = new GlowProfile(
+        new Color(0.65f, 0.38f, 0.18f, 1f),
+        new Color(1f, 0.38f, 0.08f, 1f),
+        1.2f,
+        0.2f,
+        1.1f);
+    [SerializeField] private GlowProfile chase = new GlowProfile(
+        new Color(0.82f, 0.18f, 0.12f, 1f),
+        new Color(1f, 0.08f, 0.02f, 1f),
+        3.5f,
+        0.28f,
+        1.8f);
+    [SerializeField] private GlowProfile attack = new GlowProfile(
+        new Color(1f, 0.28f, 0.08f, 1f),
+        new Color(1f, 0.24f, 0.04f, 1f),
+        5f,
+        0.35f,
+        2.2f);
+    [SerializeField] private GlowProfile returnToPatrol = new GlowProfile(
+        new Color(0.42f, 0.32f, 0.46f, 1f),
+        new Color(0.3f, 0.12f, 0.48f, 1f),
+        0.45f,
+        0.08f,
+        0.7f);
+    [SerializeField] private GlowProfile traversal = new GlowProfile(
+        new Color(0.58f, 0.28f, 0.5f, 1f),
+        new Color(0.75f, 0.18f, 0.85f, 1f),
+        1f,
+        0.16f,
+        1f);
+    [SerializeField] private GlowProfile stunned = new GlowProfile(
+        new Color(0.18f, 0.42f, 0.75f, 1f),
+        new Color(0.1f, 0.55f, 1f, 1f),
+        0.25f,
+        0.1f,
+        1.5f,
+        0.85f,
+        12f);
+    [SerializeField] private GlowProfile dead = new GlowProfile(
+        new Color(0.08f, 0.08f, 0.08f, 1f),
+        Color.black,
+        0f);
+
+    private readonly List<EyeMaterialSlot> eyeMaterialSlots = new List<EyeMaterialSlot>();
+
+    private Color currentBaseColor;
+    private Color currentEmissionColor;
+    private float currentEmissionIntensity;
+    private bool hasCurrentValues;
+    private EnemyState previousState = (EnemyState)(-1);
+    private float stateStartedAt;
+    private float nextRendererRefreshTime;
+    private bool overrideActive;
+    private GlowProfile overrideProfile;
+    private float overrideUntil;
+    private int overridePriority;
+
+    public int ResolvedEyeMaterialSlotCount => eyeMaterialSlots.Count;
+
+    private void Awake()
+    {
+        ResolveReferences();
+        RefreshEyeMaterialSlots();
+        ForceApplyCurrentProfile();
+    }
+
+    private void OnEnable()
+    {
+        ResolveReferences();
+        RefreshEyeMaterialSlots();
+        ForceApplyCurrentProfile();
+    }
+
+    private void Update()
+    {
+        ResolveReferences();
+
+        if (eyeMaterialSlots.Count == 0 && Time.time >= nextRendererRefreshTime)
+            RefreshEyeMaterialSlots();
+
+        GlowProfile targetProfile = ResolveActiveProfile();
+        float targetIntensity = ResolveAnimatedIntensity(targetProfile);
+        float blend = ResolveBlendFactor(Time.deltaTime);
+
+        if (!hasCurrentValues)
+        {
+            currentBaseColor = targetProfile.baseColor;
+            currentEmissionColor = targetProfile.emissionColor;
+            currentEmissionIntensity = targetIntensity;
+            hasCurrentValues = true;
+        }
+        else
+        {
+            currentBaseColor = Color.Lerp(currentBaseColor, targetProfile.baseColor, blend);
+            currentEmissionColor = Color.Lerp(currentEmissionColor, targetProfile.emissionColor, blend);
+            currentEmissionIntensity = Mathf.Lerp(currentEmissionIntensity, targetIntensity, blend);
+        }
+
+        ApplyEyeGlow(currentBaseColor, currentEmissionColor, currentEmissionIntensity);
+    }
+
+    public void SetGlowOverride(
+        GlowProfile profile,
+        float duration,
+        int priority = 0)
+    {
+        if (overrideActive && priority < overridePriority)
+            return;
+
+        overrideProfile = SanitizeProfile(profile);
+        overrideUntil = duration > 0f ? Time.time + duration : float.PositiveInfinity;
+        overridePriority = priority;
+        overrideActive = true;
+    }
+
+    public void SetGlowOverride(
+        Color baseColor,
+        Color emissionColor,
+        float emissionIntensity,
+        float duration,
+        int priority = 0,
+        float pulseAmount = 0f,
+        float pulseSpeed = 0f,
+        float flickerAmount = 0f,
+        float flickerSpeed = 0f)
+    {
+        SetGlowOverride(
+            new GlowProfile(
+                baseColor,
+                emissionColor,
+                emissionIntensity,
+                pulseAmount,
+                pulseSpeed,
+                flickerAmount,
+                flickerSpeed),
+            duration,
+            priority);
+    }
+
+    public void ClearGlowOverride(int minimumPriority = int.MinValue)
+    {
+        if (!overrideActive || overridePriority < minimumPriority)
+            return;
+
+        overrideActive = false;
+        overridePriority = 0;
+        overrideUntil = 0f;
+    }
+
+    [ContextMenu("Refresh Eye Material Slots")]
+    private void RefreshEyeMaterialSlots()
+    {
+        eyeMaterialSlots.Clear();
+        nextRendererRefreshTime = Time.time + Mathf.Max(0.1f, rendererRefreshInterval);
+
+        Transform root = enemySetup != null && enemySetup.ModelRoot != null
+            ? enemySetup.ModelRoot
+            : transform;
+
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
+        {
+            Renderer targetRenderer = renderers[rendererIndex];
+            if (targetRenderer == null)
+                continue;
+
+            Material[] sharedMaterials = targetRenderer.sharedMaterials;
+            for (int materialIndex = 0; materialIndex < sharedMaterials.Length; materialIndex++)
+            {
+                Material material = sharedMaterials[materialIndex];
+                if (!IsEyeMaterial(material))
+                    continue;
+
+                eyeMaterialSlots.Add(new EyeMaterialSlot
+                {
+                    Renderer = targetRenderer,
+                    MaterialIndex = materialIndex
+                });
+            }
+        }
+    }
+
+    private void ForceApplyCurrentProfile()
+    {
+        GlowProfile profile = ResolveActiveProfile();
+        currentBaseColor = profile.baseColor;
+        currentEmissionColor = profile.emissionColor;
+        currentEmissionIntensity = ResolveAnimatedIntensity(profile);
+        hasCurrentValues = true;
+        ApplyEyeGlow(currentBaseColor, currentEmissionColor, currentEmissionIntensity);
+    }
+
+    private void ResolveReferences()
+    {
+        if (enemySetup == null)
+            enemySetup = GetComponent<EnemySetup>();
+
+        if (enemyBrain == null)
+            enemyBrain = enemySetup != null ? enemySetup.EnemyBrain : GetComponent<EnemyBrain>();
+
+        if (enemyHealth == null)
+            enemyHealth = enemySetup != null ? enemySetup.EnemyHealth : GetComponent<EnemyHealth>();
+    }
+
+    private GlowProfile ResolveActiveProfile()
+    {
+        if (overrideActive)
+        {
+            if (Time.time <= overrideUntil)
+                return overrideProfile;
+
+            overrideActive = false;
+            overridePriority = 0;
+            overrideUntil = 0f;
+        }
+
+        EnemyState state = ResolveState();
+        if (state != previousState)
+        {
+            previousState = state;
+            stateStartedAt = Time.time;
+        }
+
+        return ResolveProfileForState(state);
+    }
+
+    private EnemyState ResolveState()
+    {
+        if (enemyHealth != null && !enemyHealth.IsAlive)
+            return EnemyState.Dead;
+
+        return enemyBrain != null ? enemyBrain.CurrentState : EnemyState.Idle;
+    }
+
+    private GlowProfile ResolveProfileForState(EnemyState state)
+    {
+        switch (state)
+        {
+            case EnemyState.PreSpawn:
+            case EnemyState.Spawning:
+                return SanitizeProfile(preSpawn);
+            case EnemyState.Patrol:
+                return SanitizeProfile(patrol);
+            case EnemyState.Alert:
+                return SanitizeProfile(alert);
+            case EnemyState.Search:
+                return SanitizeProfile(search);
+            case EnemyState.Chase:
+                return SanitizeProfile(chase);
+            case EnemyState.Attack:
+                return SanitizeProfile(attack);
+            case EnemyState.Return:
+                return SanitizeProfile(returnToPatrol);
+            case EnemyState.Traversal:
+                return SanitizeProfile(traversal);
+            case EnemyState.Stunned:
+                return SanitizeProfile(stunned);
+            case EnemyState.Dead:
+                return SanitizeProfile(dead);
+            case EnemyState.Idle:
+            default:
+                return SanitizeProfile(idle);
+        }
+    }
+
+    private float ResolveAnimatedIntensity(GlowProfile profile)
+    {
+        float intensity = Mathf.Max(0f, profile.emissionIntensity);
+        float elapsed = Mathf.Max(0f, Time.time - stateStartedAt);
+
+        if (profile.pulseAmount > 0f && profile.pulseSpeed > 0f)
+        {
+            float wave = Mathf.Sin(elapsed * profile.pulseSpeed * Mathf.PI * 2f) * 0.5f + 0.5f;
+            float multiplier = Mathf.Lerp(1f - profile.pulseAmount, 1f + profile.pulseAmount, wave);
+            intensity *= Mathf.Max(0f, multiplier);
+        }
+
+        if (profile.flickerAmount > 0f && profile.flickerSpeed > 0f)
+        {
+            float flicker = Mathf.PerlinNoise(elapsed * profile.flickerSpeed, 17.381f);
+            float multiplier = Mathf.Lerp(1f - profile.flickerAmount, 1f, flicker);
+            intensity *= Mathf.Max(0f, multiplier);
+        }
+
+        return intensity;
+    }
+
+    private float ResolveBlendFactor(float deltaTime)
+    {
+        if (blendSpeed <= 0f)
+            return 1f;
+
+        return 1f - Mathf.Exp(-blendSpeed * Mathf.Max(0f, deltaTime));
+    }
+
+    private void ApplyEyeGlow(Color baseColor, Color emissionColor, float emissionIntensity)
+    {
+        for (int i = eyeMaterialSlots.Count - 1; i >= 0; i--)
+        {
+            EyeMaterialSlot slot = eyeMaterialSlots[i];
+            if (slot.Renderer == null)
+            {
+                eyeMaterialSlots.RemoveAt(i);
+                continue;
+            }
+
+            slot.Renderer.GetPropertyBlock(slot.PropertyBlock, slot.MaterialIndex);
+            slot.PropertyBlock.SetColor(BaseColorProperty, baseColor);
+            slot.PropertyBlock.SetColor(UrpBaseColorProperty, baseColor);
+            slot.PropertyBlock.SetColor(LegacyColorProperty, baseColor);
+            slot.PropertyBlock.SetColor(EmissionColorProperty, emissionColor);
+            slot.PropertyBlock.SetFloat(EmissionIntensityProperty, Mathf.Max(0f, emissionIntensity));
+            slot.Renderer.SetPropertyBlock(slot.PropertyBlock, slot.MaterialIndex);
+        }
+    }
+
+    private static GlowProfile SanitizeProfile(GlowProfile profile)
+    {
+        profile.emissionIntensity = Mathf.Max(0f, profile.emissionIntensity);
+        profile.pulseAmount = Mathf.Clamp01(profile.pulseAmount);
+        profile.pulseSpeed = Mathf.Max(0f, profile.pulseSpeed);
+        profile.flickerAmount = Mathf.Clamp01(profile.flickerAmount);
+        profile.flickerSpeed = Mathf.Max(0f, profile.flickerSpeed);
+        return profile;
+    }
+
+    private static bool IsEyeMaterial(Material material)
+    {
+        if (material == null || string.IsNullOrEmpty(material.name))
+            return false;
+
+        return string.Equals(
+            material.name.Replace(" (Instance)", string.Empty),
+            EyeMaterialName,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnValidate()
+    {
+        blendSpeed = Mathf.Max(0f, blendSpeed);
+        rendererRefreshInterval = Mathf.Max(0.1f, rendererRefreshInterval);
+        preSpawn = SanitizeProfile(preSpawn);
+        idle = SanitizeProfile(idle);
+        patrol = SanitizeProfile(patrol);
+        alert = SanitizeProfile(alert);
+        search = SanitizeProfile(search);
+        chase = SanitizeProfile(chase);
+        attack = SanitizeProfile(attack);
+        returnToPatrol = SanitizeProfile(returnToPatrol);
+        traversal = SanitizeProfile(traversal);
+        stunned = SanitizeProfile(stunned);
+        dead = SanitizeProfile(dead);
+    }
+}

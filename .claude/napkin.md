@@ -8,7 +8,7 @@
 
 ## Execution & Validation (Highest Priority)
 1. **[2026-08-19] Shader Graph edits can reimport mid-write and require exact graph references**
-   Do instead: for `.shadergraph`/`.shadersubgraph` rewrites, preserve a blank line between top-level JSON objects, validate multi-object JSON immediately, and verify every edge `m_Node.m_Id` points to a graph node object, not a slot object, before Unity imports it.
+   Do instead: for `.shadergraph`/`.shadersubgraph` rewrites, preserve a blank line between top-level JSON objects, validate multi-object JSON immediately, update `CategoryData.m_ChildObjectList` for new exposed properties, and verify every edge `m_Node.m_Id` points to a graph node object, not a slot object, before Unity imports it.
 
 2. **[2026-07-08] Cross-network tests must prove Photon region and build identity first**
    Do instead: before debugging Vivox or gameplay RPCs, log and compare `CloudRegion`, `AppVersion`, room name, player count, and a build hash on every client; use the same explicit region during controlled tests.
@@ -117,35 +117,35 @@
    Do instead: edit the five `emoteWheelSlots` on `Assets/Resources/Player.prefab`'s `PlayerEmoteWheelController` for emote type, label, and sprite, and use `Assets/Prefabs/UI/EmoteWheel.prefab` only when a scene needs an explicit saved Canvas object.
 
 ## Audio & Feedback
-1. **[2026-09-14] Footsteps are layered by surface plus character**
+1. **[2026-09-28] Reverb authoring should stay native-like**
+   Do instead: use a single collider-shaped `BoxReverbZone` prefab for normal room/corridor authoring, choose an `AudioReverbPreset` plus transition time on the component, let the hidden runtime manager drive the listener-following technical zone, and control source participation through `AudioCue.AffectedByEnvironmentReverb`/`EnvironmentReverbSend`.
+
+2. **[2026-09-14] Footsteps are layered by surface plus character**
    Do instead: keep cadence/events in player or enemy controllers, put shared probe/playback in `FootstepPlaybackController`, resolve terrain through `FootstepSurfaceResolver`, and add per-character boot/armor/bone layers through `FootstepCharacterAudioProfile`.
 
-2. **[2026-08-17] Melee VFX context must survive each reaction bridge**
+3. **[2026-09-28] Ambience is scene-local and profile driven**
+   Do instead: use `AmbientAudioController` with a default `AmbientAudioProfile`, switch/mix through local-player-only `AmbientZone` triggers, and use `AmbientRandomEmitter` for localized one-shots instead of networking ambience.
+
+4. **[2026-08-17] Melee VFX context must survive each reaction bridge**
    Do instead: when adding per-attack VFX parameters, pass `ReactionSignalContext` through both `ImpactReactionSignalBridge` and destructible damage flows; for impact feedback, keep `ImpactReactionSignalBridge` on the same GameObject as `PhotonView` so its lightweight RPC can replay the cosmetic signal on other clients.
 
-3. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
+5. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
    Do instead: configure continuous fire audio through `TorchFlameController.litLoopAudioCue`; keep `Lit` reaction audio for one-shot ignition like `Torch_Woosh`, and let `SetLit`/`SetPresentationVisible` start or stop the loop for wall and hand torches.
 
-4. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
+6. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
    Do instead: drive jump, land, attack, pickup, emote, torch-lit loops, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
 
-5. **[2026-08-20] Ground-aware VFX Graph collision should be bound from runtime raycasts**
+7. **[2026-08-20] Ground-aware VFX Graph collision should be bound from runtime raycasts**
    Do instead: for blood/splatter VFX that use `Collision Shape`, expose ground center/normal/size parameters in the VFX Graph and drive them with `VisualEffectGroundCollisionBinder` instead of hardcoding a world-space box at `y=0`.
 
-6. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
+8. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
    Do instead: keep `Use Native Vivox Positional Audio` off when native `JoinPositionalChannelAsync` causes `5100/1001`; join a 2D `-sim3d` Vivox channel, map `VivoxParticipant.PlayerId` through Photon `kwkVivoxPlayerId`, and drive per-participant local volume/mute from Photon player distance.
 
-7. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
+9. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
    Do instead: when testing builds, expect profiles like `kwk-player-xxxxxxxx`; only pass `--ugs-profile=<name>` for deliberate persistent identity, and never reuse the same manual profile in two simultaneous clients.
 
-8. **[2026-07-08] Vivox channel drops must suspend 3D publishing and reconnect with backoff**
+10. **[2026-07-08] Vivox channel drops must suspend 3D publishing and reconnect with backoff**
    Do instead: treat `ChannelJoined` as the safe point for `Set3DPosition`, publish around `0.3s`, and on `ChannelLeft` or connection recovery stop 3D updates immediately and retry with backoff so server disconnect `5100` does not cascade into stale-session `1001` loops.
-
-9. **[2026-07-08] Same-machine standalone Vivox clients need distinct Authentication profiles**
-   Do instead: build once and launch each standalone instance with a unique `--ugs-profile=<name>` argument; otherwise both instances reuse the same cached anonymous identity while Editor + build appear healthy because their defaults already differ.
-
-10. **[2026-07-07] Vivox positional voice must publish the owner-local camera pose at a limited rate**
-   Do instead: join a positional channel with shared `Channel3DProperties`, resolve the owning `PlayerSetup`/`FP_Camera`, and call `Set3DPosition` about 2-4 times per second rather than every frame.
 
 ## Inventory & Equipment
 1. **[2026-08-17] Sword trail no longer uses the legacy attack-trail stack**
@@ -291,25 +291,28 @@
    Do instead: use the `PlayerPerspectiveVisibility` Elements list on `Assets/Resources/Player.prefab`, resolve final renderer visibility by target specificity, and force-hide owner-only roots/layer renderers such as `Separated_UpperBody` on remote player instances so the local Hands Camera cannot draw them.
 
 ## Rendering & Materials
-1. **[2026-09-08] WK toon shadows come from custom Unlit lighting**
+1. **[2026-09-28] WK toon emission must feed the custom final color path**
+   Do instead: for `SG_WK_Base_Toon Shader`, multiply HDR `_EmissionColor` by `_EmissionIntensity` and add it before `SurfaceDescription.BaseColor`; do not rely on a separate `SurfaceDescription.Emission` block because the custom Unlit/toon path may ignore it.
+
+2. **[2026-09-08] WK toon shadows come from custom Unlit lighting**
    Do instead: when WK toon shadows fail, verify `SG_WK_Base_Toon Shader` still has `m_CastShadows`, `m_ReceiveShadows`, and `m_KeepLightingVariants` enabled; for point/spot shadows, make `Assets/Shaders/Shaders/WK/Includes/Lighting.hlsl` call `GetAdditionalLight(i, positionWS, shadowMask)` so URP fills `light.shadowAttenuation`.
 
-2. **[2026-09-10] Torch shadow flicker usually starts at shadowed wall lights**
+3. **[2026-09-10] Torch shadow flicker usually starts at shadowed wall lights**
    Do instead: debug torch flicker by disabling shadows on `Wall_Torch` first; keep hand torch shadows off, avoid animating range/position on any shadow-casting torch, and tune Additional Light shadow tier/atlas before changing toon shader code.
 
-3. **[2026-08-21] Runtime liquid state must be renderer-local**
+4. **[2026-08-21] Runtime liquid state must be renderer-local**
    Do instead: drive per-instance liquid values such as `_WobbleX`, `_WobbleZ`, and `_FillAmount` through `MaterialPropertyBlock` on the target `Renderer`; never write them to `sharedMaterial` because every potion using the same material will inherit the motion/fill.
 
-4. **[2026-08-21] Liquid fill sliders must use renderer-relative bounds**
+5. **[2026-08-21] Liquid fill sliders must use renderer-relative bounds**
    Do instead: in `SG_Liquid_Effect`, remap `_Fill` through `Object.World Bounds Min/Max - Object.Position` rather than fixed `Y` ranges; keep wobble scripts writing both `_WobbleX` and legacy `_WoobleX` while the graph carries the typo.
 
-5. **[2026-08-20] WK toon fade should stay opaque/dithered**
+6. **[2026-08-20] WK toon fade should stay opaque/dithered**
    Do instead: drive WK toon object disappearance through `_FadeAlpha` plus Shader Graph dither/alpha clip, keep saved WK materials serialized with `_FadeAlpha: 1` and `_Cutoff: 0`, and keep `AlphaClipThreshold` at `0` so full fade alpha is fully opaque.
 
-6. **[2026-08-20] `Invalid AABB` can be a Prefab Stage post-play renderer/cache issue**
+7. **[2026-08-20] `Invalid AABB` can be a Prefab Stage post-play renderer/cache issue**
    Do instead: run `Tools/Diagnostics/Scan Serialized Invalid Values`, keep `Tools/Diagnostics/Monitor Invalid Scene Values` enabled before reproducing with `Player.prefab` open, inspect any `PrefabStage(...)` path from the post-play/log-triggered scan, remove serialized `m_AABB` NaN overrides, and rebuild/remove corrupted `Cloth` components when `SkinnedMeshRenderer.localBounds` wakes as NaN.
 
-7. **[2026-08-20] Auto texture tiling should stay renderer-local**
+8. **[2026-08-20] Auto texture tiling should stay renderer-local**
    Do instead: keep `_Texture_Tiling`, `_Texture_Offset`, and `_Texture_Rotation` changes in `MaterialPropertyBlock` on a specific renderer, and keep both WK toon Shader Graphs wired through the same Tiling And Offset/Rotate UV path; editing the saved `.mat` vector changes every mesh using that shared material.
 
 ## User Directives

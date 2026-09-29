@@ -129,6 +129,39 @@ Na pratica:
 - bom para loops ou efeitos mais longos
 - exemplo: tocha, motor, zumbido, fogo
 
+## Environment Reverb
+
+Estes campos controlam se o cue participa do reverb de sala/corredor/porta.
+
+### `Affected By Environment Reverb`
+
+Liga/desliga a participacao desse cue no sistema de reverb de ambiente.
+
+Na pratica:
+
+- ligado: o som recebe o reverb ativo das `BoxReverbZone`;
+- desligado: o som ignora o reverb.
+
+Cues `TwoD` nao entram no reverb de ambiente mesmo com esta opcao ligada.
+
+### `Environment Reverb Send`
+
+Intensidade enviada ao reverb.
+
+Na pratica:
+
+- `0`: seco;
+- `0.5`: metade da influencia;
+- `1`: influencia normal;
+- acima de `1`: um pouco mais evidente.
+
+Uso comum:
+
+- passos: `0.7` a `1`;
+- impactos: `0.8` a `1`;
+- vento 3D local: `0.3` a `0.6`;
+- musica/UI: desligado.
+
 ### `Loop`
 
 Se marcado, o som repete continuamente.
@@ -242,6 +275,28 @@ Na pratica:
 - maior = da para ouvir de mais longe
 - menor = some mais cedo
 
+## Visualizacao De Raio Na Scene View
+
+Para visualizar `Min Distance` e `Max Distance` de um `AudioCue`, adicione o componente `Audio Cue Radius Gizmo` em um objeto da cena.
+
+Uso:
+
+- `Default Anchor`: ponto de origem dos raios. Se vazio, usa o proprio objeto.
+- `Cues`: lista de `AudioCue` que devem ser desenhados.
+- `Anchor Override`: opcional por cue, caso algum raio deva sair de outro transform.
+- `Draw Min Distance`: desenha a esfera menor, onde o som fica em volume cheio.
+- `Draw Max Distance`: desenha a esfera maior, onde o som chega ao alcance maximo/fade final.
+- `Draw Labels`: mostra nome, min, max e spatial blend.
+- `Draw When Not Selected`: desenha mesmo quando o objeto nao esta selecionado.
+
+O gizmo so desenha raio espacial para cues com:
+
+- `Draw Distance Gizmos` ligado no asset de `AudioCue`;
+- `Space = ThreeD`;
+- `Spatial Blend` maior que `0`.
+
+Para o Beholder, o proprio `Beholder Movement Loop Audio Controller` tambem desenha os raios de `Hover Loop` e `Movement Loop` quando o inimigo esta selecionado. As cores e labels ficam no bloco `Debug Gizmos` desse componente.
+
 ### `Cooldown`
 
 E o tempo minimo entre uma execucao e outra do mesmo cue no mesmo `AudioEmitter`.
@@ -256,6 +311,24 @@ Exemplos:
 - abrir/fechar UI repetidamente
 - triggers muito sensiveis
 - impactos repetidos em curto intervalo
+
+## Debug Gizmos Do `AudioCue`
+
+Estes campos ficam no proprio asset de `AudioCue`.
+
+### `Draw Distance Gizmos`
+
+Liga/desliga a visualizacao de raio desse cue.
+
+Quando desligado, esse cue nao desenha os raios mesmo que exista um `Audio Cue Radius Gizmo` na cena ou que ele esteja sendo usado pelo `Beholder Movement Loop Audio Controller`.
+
+### `Min Distance Gizmo Color`
+
+Cor da esfera de `Min Distance`.
+
+### `Max Distance Gizmo Color`
+
+Cor da esfera de `Max Distance`.
 
 ## Parametros mais importantes na percepcao do audio
 

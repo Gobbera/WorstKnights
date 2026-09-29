@@ -27,5 +27,8 @@ MonoBehaviour:
   spatialBlend: 1
   spread: 0
   minDistance: 1
-  maxDistance: 9
+  maxDistance: 15
   cooldown: 0
+  drawDistanceGizmos: 1
+  minDistanceGizmoColor: {r: 0.15, g: 0.85, b: 1, a: 0.45}
+  maxDistanceGizmoColor: {r: 1, g: 0.65, b: 0.15, a: 0.45}

@@ -107,6 +107,30 @@ Para wall torch, configure o `Lit Loop Audio Cue` no `TorchFlameController` do p
 
 Para tocha de mao, configure o mesmo campo no prefab `Assets/Prefabs/Items/Torch.prefab`; as copias FPS/TP herdam a configuracao, e `SetPresentationVisible` evita que uma copia escondida continue tocando som.
 
+## Som ambiente
+
+Som ambiente de cena usa componentes proprios em `Assets/Scripts/Audio/Ambience`:
+
+- `AmbientAudioProfile`: asset com loop principal, camada extra e one-shots.
+- `AmbientAudioController`: toca o profile atual e faz crossfade.
+- `AmbientZone`: trigger local do jogador que troca o profile ativo.
+- `AmbientLoopEmitter`: toca um loop continuo em uma fonte local da cena.
+- `AmbientRandomEmitter`: dispara sons ambientais aleatorios em pontos da cena.
+
+Guia curto: `Docs/AmbientAudioSystem.md`.
+
+## Reverb de ambiente
+
+Reverb por sala/corredor/porta usa o prefab simples:
+
+- `Assets/Prefabs/Audio/Reverb/PF_BoxReverbZone.prefab`
+
+O uso normal e: ajustar o `BoxCollider`, escolher o `AudioReverbPreset`, definir `Transition Time` e, se houver sobreposicao, ajustar `Priority`.
+
+O manager e criado automaticamente em Play Mode.
+
+Guia curto: `Docs/EnvironmentReverbSystem.md`.
+
 ## Exemplo simples
 
 ```csharp

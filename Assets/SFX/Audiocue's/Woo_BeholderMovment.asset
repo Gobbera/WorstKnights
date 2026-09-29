@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a1055a6b9a79d40bcad2eec8cb41ae, type: 3}
+  m_Name: Woo_BeholderMovment
+  m_EditorClassIdentifier: Assembly-CSharp::AudioCue
+  cueId: _WooBeholderMovment
+  clips:
+  - {fileID: 8300000, guid: cce61c37ff9fb484fab23f75bdc23f2f, type: 3}
+  mixerGroup: {fileID: 0}
+  space: 1
+  replication: 1
+  anchor: 0
+  loop: 1
+  baseVolume: 1
+  randomVolumeRange: {x: 1, y: 1}
+  basePitch: 1
+  randomPitchRange: {x: 1, y: 1}
+  spatialBlend: 1
+  spread: 0
+  minDistance: 1
+  maxDistance: 15
+  cooldown: 0
+  drawDistanceGizmos: 1
+  minDistanceGizmoColor: {r: 0, g: 0, b: 0, a: 0.45}
+  maxDistanceGizmoColor: {r: 0, g: 0, b: 0, a: 0.45}

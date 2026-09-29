@@ -1,6 +1,9 @@
 using System;
 using UnityEngine;
 using UnityEngine.Audio;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EnemyMotor))]
@@ -25,8 +28,10 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
 
         private AudioCue configuredCue;
         private AudioClip configuredFallbackClip;
-        private float configuredBaseVolume = 1f;
-        private float configuredBasePitch = 1f;
+        private Vector2 configuredVolumeRandomRange = Vector2.one;
+        private Vector2 configuredPitchRandomRange = Vector2.one;
+        private float configuredVolumeRandomMultiplier = 1f;
+        private float configuredPitchRandomMultiplier = 1f;
 
         public static LoopLayer CreateHover()
         {
@@ -67,7 +72,11 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
             AudioRolloffMode fallbackRolloffMode,
             float intensity,
             float masterVolume,
-            bool shouldPlay)
+            bool shouldPlay,
+            Transform listenerTransform,
+            bool useManualDistanceAttenuation,
+            bool hardMuteBeyondMaxDistance,
+            AnimationCurve manualDistanceFadeCurve)
         {
             if (!HasPlayableContent())
             {
@@ -91,6 +100,14 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
                 return;
             }
 
+            ApplySourceSettings(
+                fallbackMixerGroup,
+                fallbackSpatialBlend,
+                fallbackSpread,
+                fallbackMinDistance,
+                fallbackMaxDistance,
+                fallbackRolloffMode);
+
             if (!shouldPlay)
             {
                 source.volume = 0f;
@@ -101,8 +118,13 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
             float safeIntensity = Mathf.Clamp01(intensity);
             float volumeT = Mathf.Clamp01(EvaluateCurve(volumeCurve, safeIntensity));
             float pitchT = Mathf.Clamp01(EvaluateCurve(pitchCurve, safeIntensity));
-            source.volume = Mathf.Max(0f, configuredBaseVolume * Mathf.Lerp(volumeAtZeroIntensity, volumeAtFullIntensity, volumeT) * Mathf.Clamp01(masterVolume));
-            source.pitch = Mathf.Clamp(configuredBasePitch * Mathf.Lerp(pitchAtZeroIntensity, pitchAtFullIntensity, pitchT), -3f, 3f);
+            float distanceMultiplier = ResolveManualDistanceMultiplier(
+                listenerTransform,
+                useManualDistanceAttenuation,
+                hardMuteBeyondMaxDistance,
+                manualDistanceFadeCurve);
+            source.volume = Mathf.Max(0f, ResolveBaseVolume() * Mathf.Lerp(volumeAtZeroIntensity, volumeAtFullIntensity, volumeT) * Mathf.Clamp01(masterVolume) * distanceMultiplier);
+            source.pitch = Mathf.Clamp(ResolveBasePitch() * Mathf.Lerp(pitchAtZeroIntensity, pitchAtFullIntensity, pitchT), -3f, 3f);
 
             bool audible = source.clip != null && source.volume > silentVolumeThreshold;
             if (audible)
@@ -138,6 +160,63 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
             pitchAtZeroIntensity = Mathf.Max(0f, pitchAtZeroIntensity);
             pitchAtFullIntensity = Mathf.Max(0f, pitchAtFullIntensity);
             silentVolumeThreshold = Mathf.Max(0f, silentVolumeThreshold);
+        }
+
+        public bool TryResolveDistanceSettings(
+            float fallbackSpatialBlend,
+            float fallbackMinDistance,
+            float fallbackMaxDistance,
+            out string sourceName,
+            out bool isSpatial,
+            out float spatialBlend,
+            out float minDistance,
+            out float maxDistance)
+        {
+            if (cue != null)
+            {
+                sourceName = cue.name;
+                isSpatial = cue.Is3D && cue.SpatialBlend > 0.001f;
+                spatialBlend = cue.Is3D ? cue.SpatialBlend : 0f;
+                minDistance = Mathf.Max(0.01f, cue.MinDistance);
+                maxDistance = Mathf.Max(minDistance, cue.MaxDistance);
+                return true;
+            }
+
+            if (fallbackClip != null)
+            {
+                sourceName = fallbackClip.name;
+                spatialBlend = Mathf.Clamp01(fallbackSpatialBlend);
+                isSpatial = spatialBlend > 0.001f;
+                minDistance = Mathf.Max(0.01f, fallbackMinDistance);
+                maxDistance = Mathf.Max(minDistance, fallbackMaxDistance);
+                return true;
+            }
+
+            sourceName = string.Empty;
+            isSpatial = false;
+            spatialBlend = 0f;
+            minDistance = 0f;
+            maxDistance = 0f;
+            return false;
+        }
+
+        public bool ShouldDrawDistanceGizmo()
+        {
+            return cue == null || cue.DrawDistanceGizmos;
+        }
+
+        public bool TryGetCueDistanceGizmoColors(out Color minDistanceColor, out Color maxDistanceColor)
+        {
+            if (cue != null)
+            {
+                minDistanceColor = cue.MinDistanceGizmoColor;
+                maxDistanceColor = cue.MaxDistanceGizmoColor;
+                return true;
+            }
+
+            minDistanceColor = Color.clear;
+            maxDistanceColor = Color.clear;
+            return false;
         }
 
         private bool HasPlayableContent()
@@ -194,35 +273,143 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
             source.playOnAwake = false;
             source.loop = true;
             source.dopplerLevel = 0f;
+            source.clip = clip;
+
+            configuredVolumeRandomRange = cue != null ? GetOrderedRange(cue.RandomVolumeRange) : Vector2.one;
+            configuredPitchRandomRange = cue != null ? GetOrderedRange(cue.RandomPitchRange) : Vector2.one;
+            configuredVolumeRandomMultiplier = ResolveRandomMultiplier(configuredVolumeRandomRange);
+            configuredPitchRandomMultiplier = ResolveRandomMultiplier(configuredPitchRandomRange);
+            configuredCue = cue;
+            configuredFallbackClip = fallbackClip;
+            ApplySourceSettings(
+                fallbackMixerGroup,
+                fallbackSpatialBlend,
+                fallbackSpread,
+                fallbackMinDistance,
+                fallbackMaxDistance,
+                fallbackRolloffMode);
+            return true;
+        }
+
+        private void ApplySourceSettings(
+            AudioMixerGroup fallbackMixerGroup,
+            float fallbackSpatialBlend,
+            float fallbackSpread,
+            float fallbackMinDistance,
+            float fallbackMaxDistance,
+            AudioRolloffMode fallbackRolloffMode)
+        {
+            if (source == null)
+                return;
+
+            RefreshCueRandomMultipliersIfNeeded();
+
+            source.loop = true;
+            source.playOnAwake = false;
+            source.dopplerLevel = 0f;
+            source.rolloffMode = fallbackRolloffMode;
 
             if (cue != null)
             {
-                cue.ConfigureAudioSource(source, clip, fallbackMixerGroup, forceLoop: true);
-            }
-            else
-            {
-                source.clip = clip;
-                source.volume = 1f;
-                source.pitch = 1f;
-                source.spatialBlend = Mathf.Clamp01(fallbackSpatialBlend);
-                source.spread = Mathf.Clamp(fallbackSpread, 0f, 360f);
-                source.minDistance = Mathf.Max(0.01f, fallbackMinDistance);
-                source.maxDistance = Mathf.Max(source.minDistance, fallbackMaxDistance);
-                source.outputAudioMixerGroup = fallbackMixerGroup;
+                source.spatialBlend = cue.Is3D ? cue.SpatialBlend : 0f;
+                source.spread = cue.Is3D ? cue.Spread : 0f;
+                source.minDistance = Mathf.Max(0.01f, cue.MinDistance);
+                source.maxDistance = Mathf.Max(source.minDistance, cue.MaxDistance);
+                source.outputAudioMixerGroup = cue.MixerGroup != null ? cue.MixerGroup : fallbackMixerGroup;
+                source.bypassReverbZones = !cue.AffectedByEnvironmentReverb;
+                source.reverbZoneMix = cue.EnvironmentReverbSend;
+                return;
             }
 
-            source.loop = true;
-            source.rolloffMode = fallbackRolloffMode;
-            configuredBaseVolume = Mathf.Max(0f, source.volume);
-            configuredBasePitch = source.pitch;
-            configuredCue = cue;
-            configuredFallbackClip = fallbackClip;
-            return true;
+            source.spatialBlend = Mathf.Clamp01(fallbackSpatialBlend);
+            source.spread = Mathf.Clamp(fallbackSpread, 0f, 360f);
+            source.minDistance = Mathf.Max(0.01f, fallbackMinDistance);
+            source.maxDistance = Mathf.Max(source.minDistance, fallbackMaxDistance);
+            source.outputAudioMixerGroup = fallbackMixerGroup;
+            source.bypassReverbZones = false;
+            source.reverbZoneMix = source.spatialBlend > 0.001f ? 1f : 0f;
+        }
+
+        private void RefreshCueRandomMultipliersIfNeeded()
+        {
+            if (cue == null)
+                return;
+
+            Vector2 volumeRange = GetOrderedRange(cue.RandomVolumeRange);
+            if (volumeRange != configuredVolumeRandomRange)
+            {
+                configuredVolumeRandomRange = volumeRange;
+                configuredVolumeRandomMultiplier = ResolveRandomMultiplier(volumeRange);
+            }
+
+            Vector2 pitchRange = GetOrderedRange(cue.RandomPitchRange);
+            if (pitchRange != configuredPitchRandomRange)
+            {
+                configuredPitchRandomRange = pitchRange;
+                configuredPitchRandomMultiplier = ResolveRandomMultiplier(pitchRange);
+            }
+        }
+
+        private float ResolveBaseVolume()
+        {
+            return cue != null
+                ? Mathf.Max(0f, cue.BaseVolume * configuredVolumeRandomMultiplier)
+                : 1f;
+        }
+
+        private float ResolveBasePitch()
+        {
+            return cue != null
+                ? Mathf.Clamp(cue.BasePitch * configuredPitchRandomMultiplier, -3f, 3f)
+                : 1f;
+        }
+
+        private float ResolveManualDistanceMultiplier(
+            Transform listenerTransform,
+            bool useManualDistanceAttenuation,
+            bool hardMuteBeyondMaxDistance,
+            AnimationCurve manualDistanceFadeCurve)
+        {
+            if (!useManualDistanceAttenuation || listenerTransform == null || source == null)
+                return 1f;
+
+            float spatialBlend = Mathf.Clamp01(source.spatialBlend);
+            if (spatialBlend <= 0.001f)
+                return 1f;
+
+            float minDistance = Mathf.Max(0f, source.minDistance);
+            float maxDistance = Mathf.Max(minDistance + 0.01f, source.maxDistance);
+            float distance = Vector3.Distance(listenerTransform.position, source.transform.position);
+            if (distance <= minDistance)
+                return 1f;
+
+            if (hardMuteBeyondMaxDistance && distance >= maxDistance)
+                return 0f;
+
+            float normalizedDistance = Mathf.InverseLerp(minDistance, maxDistance, distance);
+            float attenuation = manualDistanceFadeCurve != null && manualDistanceFadeCurve.length > 0
+                ? manualDistanceFadeCurve.Evaluate(normalizedDistance)
+                : 1f - normalizedDistance;
+
+            return Mathf.Lerp(1f, Mathf.Clamp01(attenuation), spatialBlend);
         }
 
         private static float EvaluateCurve(AnimationCurve curve, float intensity)
         {
             return curve != null && curve.length > 0 ? curve.Evaluate(intensity) : intensity;
+        }
+
+        private static float ResolveRandomMultiplier(Vector2 range)
+        {
+            Vector2 orderedRange = GetOrderedRange(range);
+            return UnityEngine.Random.Range(orderedRange.x, orderedRange.y);
+        }
+
+        private static Vector2 GetOrderedRange(Vector2 range)
+        {
+            return new Vector2(
+                Mathf.Min(range.x, range.y),
+                Mathf.Max(range.x, range.y));
         }
     }
 
@@ -245,7 +432,13 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
     [SerializeField] [Range(0f, 360f)] private float fallbackSpread;
     [SerializeField] [Min(0.01f)] private float fallbackMinDistance = 2f;
     [SerializeField] [Min(0.01f)] private float fallbackMaxDistance = 28f;
-    [SerializeField] private AudioRolloffMode fallbackRolloffMode = AudioRolloffMode.Logarithmic;
+    [SerializeField] private AudioRolloffMode fallbackRolloffMode = AudioRolloffMode.Linear;
+
+    [Header("Distance Attenuation")]
+    [SerializeField] private bool useManualDistanceAttenuation = true;
+    [SerializeField] private bool hardMuteBeyondMaxDistance = true;
+    [SerializeField] private AnimationCurve manualDistanceFadeCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+    [SerializeField] [Min(0f)] private float audioListenerRefreshInterval = 0.25f;
 
     [Header("Intensity")]
     [SerializeField] private bool usePlanarSpeed = true;
@@ -267,9 +460,22 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
     [SerializeField] [Range(0f, 1f)] private float attackIntensity = 0.9f;
     [SerializeField] [Range(0f, 1f)] private float stunnedIntensity = 0.04f;
 
+    [Header("Debug Gizmos")]
+    [SerializeField] private bool drawAudioCueDistanceGizmos = true;
+    [SerializeField] private bool drawAudioCueDistanceLabels = true;
+    [SerializeField] private bool drawAudioCueMinDistance = true;
+    [SerializeField] private bool drawAudioCueMaxDistance = true;
+    [SerializeField] private Color hoverMinDistanceGizmoColor = new Color(0.2f, 0.85f, 1f, 0.45f);
+    [SerializeField] private Color hoverMaxDistanceGizmoColor = new Color(0.2f, 0.45f, 1f, 0.35f);
+    [SerializeField] private Color movementMinDistanceGizmoColor = new Color(1f, 0.25f, 0.45f, 0.45f);
+    [SerializeField] private Color movementMaxDistanceGizmoColor = new Color(1f, 0.65f, 0.15f, 0.35f);
+    [SerializeField] [Min(0f)] private float audioCueDistanceLabelHeight = 2.2f;
+
     public float CurrentIntensity => currentIntensity;
 
     private float currentIntensity;
+    private Transform cachedAudioListenerTransform;
+    private float nextAudioListenerRefreshTime;
 
     private void Awake()
     {
@@ -415,6 +621,7 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
         bool shouldPlay = alive || currentIntensity > 0.001f;
         float masterVolume = alive ? 1f : currentIntensity;
         Transform resolvedAnchor = audioAnchor != null ? audioAnchor : transform;
+        Transform listenerTransform = useManualDistanceAttenuation ? ResolveAudioListenerTransform() : null;
 
         hoverLoop?.UpdatePlayback(
             resolvedAnchor,
@@ -427,7 +634,11 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
             fallbackRolloffMode,
             currentIntensity,
             masterVolume,
-            shouldPlay);
+            shouldPlay,
+            listenerTransform,
+            useManualDistanceAttenuation,
+            hardMuteBeyondMaxDistance,
+            manualDistanceFadeCurve);
 
         movementLoop?.UpdatePlayback(
             resolvedAnchor,
@@ -440,12 +651,144 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
             fallbackRolloffMode,
             currentIntensity,
             masterVolume,
-            shouldPlay);
+            shouldPlay,
+            listenerTransform,
+            useManualDistanceAttenuation,
+            hardMuteBeyondMaxDistance,
+            manualDistanceFadeCurve);
+    }
+
+    private Transform ResolveAudioListenerTransform()
+    {
+        if (cachedAudioListenerTransform != null && cachedAudioListenerTransform.gameObject.activeInHierarchy)
+            return cachedAudioListenerTransform;
+
+        float now = Time.unscaledTime;
+        if (cachedAudioListenerTransform == null || now >= nextAudioListenerRefreshTime)
+        {
+            nextAudioListenerRefreshTime = now + Mathf.Max(0f, audioListenerRefreshInterval);
+            AudioListener listener = FindAnyObjectByType<AudioListener>();
+            cachedAudioListenerTransform = listener != null ? listener.transform : null;
+        }
+
+        return cachedAudioListenerTransform;
     }
 
     private static float ResolveSpeed(float candidate, float fallback)
     {
         return Mathf.Max(0.01f, candidate > 0f ? candidate : fallback);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (!drawAudioCueDistanceGizmos)
+            return;
+
+        Transform anchor = ResolveGizmoAnchor();
+        if (anchor == null)
+            return;
+
+        int labelIndex = 0;
+        DrawLoopDistanceGizmo(
+            hoverLoop,
+            "Hover Loop",
+            anchor.position,
+            hoverMinDistanceGizmoColor,
+            hoverMaxDistanceGizmoColor,
+            ref labelIndex);
+
+        DrawLoopDistanceGizmo(
+            movementLoop,
+            "Movement Loop",
+            anchor.position,
+            movementMinDistanceGizmoColor,
+            movementMaxDistanceGizmoColor,
+            ref labelIndex);
+    }
+
+    private Transform ResolveGizmoAnchor()
+    {
+        if (audioAnchor != null)
+            return audioAnchor;
+
+        EnemySetup setup = enemySetup != null ? enemySetup : GetComponent<EnemySetup>();
+        return setup != null && setup.ModelRoot != null ? setup.ModelRoot : transform;
+    }
+
+    private void DrawLoopDistanceGizmo(
+        LoopLayer loopLayer,
+        string label,
+        Vector3 origin,
+        Color minDistanceColor,
+        Color maxDistanceColor,
+        ref int labelIndex)
+    {
+        if (loopLayer == null)
+            return;
+
+        if (!loopLayer.ShouldDrawDistanceGizmo())
+            return;
+
+        if (!loopLayer.TryResolveDistanceSettings(
+                fallbackSpatialBlend,
+                fallbackMinDistance,
+                fallbackMaxDistance,
+                out string sourceName,
+                out bool isSpatial,
+                out float spatialBlend,
+                out float minDistance,
+                out float maxDistance))
+        {
+            return;
+        }
+
+        if (loopLayer.TryGetCueDistanceGizmoColors(out Color cueMinDistanceColor, out Color cueMaxDistanceColor))
+        {
+            minDistanceColor = cueMinDistanceColor;
+            maxDistanceColor = cueMaxDistanceColor;
+        }
+
+        if (!isSpatial)
+        {
+#if UNITY_EDITOR
+            if (drawAudioCueDistanceLabels)
+            {
+                Handles.Label(
+                    origin + Vector3.up * ResolveAudioCueDistanceLabelHeight(labelIndex),
+                    $"{label}: {sourceName}\n2D / sem raio espacial");
+            }
+#endif
+            labelIndex++;
+            return;
+        }
+
+        if (drawAudioCueMinDistance)
+        {
+            Gizmos.color = minDistanceColor;
+            Gizmos.DrawWireSphere(origin, minDistance);
+        }
+
+        if (drawAudioCueMaxDistance)
+        {
+            Gizmos.color = maxDistanceColor;
+            Gizmos.DrawWireSphere(origin, maxDistance);
+        }
+
+#if UNITY_EDITOR
+        if (drawAudioCueDistanceLabels)
+        {
+            Handles.Label(
+                origin + Vector3.up * ResolveAudioCueDistanceLabelHeight(labelIndex),
+                $"{label}: {sourceName}\nMin {minDistance:0.##}m | Max {maxDistance:0.##}m | Blend {spatialBlend:0.##}");
+        }
+#endif
+
+        labelIndex++;
+    }
+
+    private float ResolveAudioCueDistanceLabelHeight(int labelIndex)
+    {
+        return Mathf.Max(0f, audioCueDistanceLabelHeight) + labelIndex * 0.35f;
     }
 
     private void OnValidate()
@@ -463,6 +806,15 @@ public sealed class BeholderMovementLoopAudioController : MonoBehaviour
         fallbackSpread = Mathf.Clamp(fallbackSpread, 0f, 360f);
         fallbackMinDistance = Mathf.Max(0.01f, fallbackMinDistance);
         fallbackMaxDistance = Mathf.Max(fallbackMinDistance, fallbackMaxDistance);
+        if (manualDistanceFadeCurve == null || manualDistanceFadeCurve.length == 0)
+            manualDistanceFadeCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+
+        audioListenerRefreshInterval = Mathf.Max(0f, audioListenerRefreshInterval);
+        hoverMinDistanceGizmoColor.a = Mathf.Clamp01(hoverMinDistanceGizmoColor.a);
+        hoverMaxDistanceGizmoColor.a = Mathf.Clamp01(hoverMaxDistanceGizmoColor.a);
+        movementMinDistanceGizmoColor.a = Mathf.Clamp01(movementMinDistanceGizmoColor.a);
+        movementMaxDistanceGizmoColor.a = Mathf.Clamp01(movementMaxDistanceGizmoColor.a);
+        audioCueDistanceLabelHeight = Mathf.Max(0f, audioCueDistanceLabelHeight);
         minAudibleSpeed = Mathf.Max(0f, minAudibleSpeed);
         patrolReferenceSpeed = Mathf.Max(0.01f, patrolReferenceSpeed);
         chaseReferenceSpeed = Mathf.Max(0.01f, chaseReferenceSpeed);

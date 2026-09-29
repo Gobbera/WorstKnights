@@ -10,22 +10,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 62a1055a6b9a79d40bcad2eec8cb41ae, type: 3}
-  m_Name: WooBeholderMovment
+  m_Name: Hover_Beholder
   m_EditorClassIdentifier: Assembly-CSharp::AudioCue
-  cueId: _WooBeholderMovment
+  cueId: 
   clips:
-  - {fileID: 8300000, guid: cce61c37ff9fb484fab23f75bdc23f2f, type: 3}
+  - {fileID: 8300000, guid: d4620052ec9f2dd4c957b892d9d3fb7b, type: 3}
   mixerGroup: {fileID: 0}
   space: 1
   replication: 1
   anchor: 0
-  loop: 1
-  baseVolume: 0.5
+  loop: 0
+  baseVolume: 1
   randomVolumeRange: {x: 1, y: 1}
   basePitch: 1
   randomPitchRange: {x: 1, y: 1}
   spatialBlend: 1
-  spread: 0
+  spread: 180
   minDistance: 1
   maxDistance: 15
   cooldown: 0
+  drawDistanceGizmos: 1
+  minDistanceGizmoColor: {r: 1, g: 0, b: 0, a: 0.45}
+  maxDistanceGizmoColor: {r: 1, g: 0, b: 0, a: 0.45}

@@ -36,6 +36,10 @@ public class AudioCue : ScriptableObject
     [SerializeField] private AudioReplicationMode replication = AudioReplicationMode.LocalOnly;
     [SerializeField] private AudioPlaybackAnchor anchor = AudioPlaybackAnchor.PositionSnapshot;
 
+    [Header("Environment Reverb")]
+    [SerializeField] private bool affectedByEnvironmentReverb = true;
+    [SerializeField] [Range(0f, 1.1f)] private float environmentReverbSend = 1f;
+
     [Header("Playback")]
     [SerializeField] private bool loop;
     [SerializeField] [Min(0f)] private float baseVolume = 1f;
@@ -48,12 +52,19 @@ public class AudioCue : ScriptableObject
     [SerializeField] [Min(0.01f)] private float maxDistance = 15f;
     [SerializeField] [Min(0f)] private float cooldown;
 
+    [Header("Debug Gizmos")]
+    [SerializeField] private bool drawDistanceGizmos = true;
+    [SerializeField] private Color minDistanceGizmoColor = new Color(0.15f, 0.85f, 1f, 0.45f);
+    [SerializeField] private Color maxDistanceGizmoColor = new Color(1f, 0.65f, 0.15f, 0.45f);
+
     public string CueId => string.IsNullOrWhiteSpace(cueId) ? name : cueId;
     public AudioClip[] Clips => clips;
     public AudioMixerGroup MixerGroup => mixerGroup;
     public AudioSpace Space => space;
     public AudioReplicationMode Replication => replication;
     public AudioPlaybackAnchor Anchor => anchor;
+    public bool AffectedByEnvironmentReverb => Is3D && affectedByEnvironmentReverb;
+    public float EnvironmentReverbSend => AffectedByEnvironmentReverb ? environmentReverbSend : 0f;
     public bool Loop => loop;
     public float BaseVolume => baseVolume;
     public Vector2 RandomVolumeRange => randomVolumeRange;
@@ -64,6 +75,9 @@ public class AudioCue : ScriptableObject
     public float MinDistance => minDistance;
     public float MaxDistance => maxDistance;
     public float Cooldown => cooldown;
+    public bool DrawDistanceGizmos => drawDistanceGizmos;
+    public Color MinDistanceGizmoColor => minDistanceGizmoColor;
+    public Color MaxDistanceGizmoColor => maxDistanceGizmoColor;
     public bool Is3D => space == AudioSpace.ThreeD;
 
     public void ConfigureAudioSource(
@@ -84,6 +98,8 @@ public class AudioCue : ScriptableObject
         audioSource.minDistance = minDistance;
         audioSource.maxDistance = maxDistance;
         audioSource.outputAudioMixerGroup = mixerGroup != null ? mixerGroup : fallbackMixerGroup;
+        audioSource.bypassReverbZones = !AffectedByEnvironmentReverb;
+        audioSource.reverbZoneMix = EnvironmentReverbSend;
     }
 
     public bool HasPlayableClip()
@@ -136,8 +152,11 @@ public class AudioCue : ScriptableObject
         minDistance = Mathf.Max(0.01f, minDistance);
         maxDistance = Mathf.Max(minDistance, maxDistance);
         cooldown = Mathf.Max(0f, cooldown);
+        environmentReverbSend = Mathf.Clamp(environmentReverbSend, 0f, 1.1f);
         randomVolumeRange = GetOrderedRange(randomVolumeRange);
         randomPitchRange = GetOrderedRange(randomPitchRange);
+        minDistanceGizmoColor.a = Mathf.Clamp01(minDistanceGizmoColor.a);
+        maxDistanceGizmoColor.a = Mathf.Clamp01(maxDistanceGizmoColor.a);
 
         if (!Is3D)
         {
