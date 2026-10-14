@@ -22,6 +22,7 @@ public abstract class EnemyAIState
 
     protected bool TryChaseVisibleTarget()
     {
+        bool hadTargetAwareness = Brain.HasTargetAwareness;
         if (!Brain.TryRefreshVisibleTarget()
             && !Brain.TryRefreshCombatMemoryTarget()
             && !Brain.TryRefreshCloseAwarenessTarget())
@@ -29,7 +30,17 @@ public abstract class EnemyAIState
             return false;
         }
 
-        Brain.ChangeState(EnemyState.Chase);
+        if (Brain.ShouldAlertBeforeChase(hadTargetAwareness))
+        {
+            Brain.BeginTargetAlert();
+            Brain.ChangeState(EnemyState.Alert);
+        }
+        else
+        {
+            Brain.ClearActiveAlertContext();
+            Brain.ChangeState(EnemyState.Chase);
+        }
+
         return true;
     }
 
@@ -38,7 +49,7 @@ public abstract class EnemyAIState
         if (!Brain.TryConsumeHeardNoise(out NoiseEvent noiseEvent))
             return false;
 
-        Brain.SetInvestigationPosition(noiseEvent.Position);
+        Brain.BeginInvestigationAlert(noiseEvent.Position);
         Brain.ChangeState(EnemyState.Alert);
         return true;
     }

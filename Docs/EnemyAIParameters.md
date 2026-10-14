@@ -70,14 +70,21 @@ Para espera por ponto, adicione `EnemyPatrolPoint` no objeto do ponto.
 
 ### Alert
 
-`Alert` e o estado de suspeita/investigacao. Ele costuma vir de som ou dano sem alvo confirmado.
+`Alert` e o estado de percepcao antes de uma decisao maior. Ele cobre dois casos:
+
+- suspeita/investigacao por ruido ou dano sem alvo confirmado;
+- primeira deteccao real de um player antes de entrar em `Chase`.
 
 - `Alert Duration`: quanto tempo o inimigo fica alerta antes de ir para busca.
-- `Move To Alert Position`: se ligado, ele anda ate a posicao investigada.
-- `Alert Speed`: velocidade ao investigar.
+- `Alert Before Chase On First Target Detection`: se ligado, a primeira deteccao de player faz `Idle/Patrol/Search/Return -> Alert -> Chase` em vez de ir direto para `Chase`.
+- `Rotate During Alert`: se ligado, o inimigo gira para encarar o player detectado ou a posicao investigada.
+- `Move To Alert Position`: se ligado, alertas de investigacao andam ate a posicao suspeita. Alertas de player confirmado sempre param a movimentacao antes do `Chase`.
+- `Alert Speed`: velocidade ao investigar uma posicao suspeita.
 - `Alert Stopping Distance`: distancia para considerar que chegou na posicao investigada.
 
-Se o inimigo encontrar o player visualmente durante `Alert`, ele entra em `Chase`.
+O alerta antes de perseguicao so acontece quando o inimigo ainda nao tinha alvo/memoria de combate. Se ele ja estava perseguindo, procurando por um alvo conhecido ou ainda lembra do combate, reencontrar o player volta direto para `Chase` para evitar ALERT repetido.
+
+Para animacao/som de entrada em alerta, use a secao `Alert Feedback` do `EnemyAnimationController`.
 
 ### Chase
 
@@ -284,6 +291,21 @@ Se o inimigo parece desistir de mover, verifique:
 - se ele nasceu perto da NavMesh;
 - se o destino e alcancavel;
 - se `Use Direct Movement Fallback` esta ligado durante testes sem NavMesh.
+
+## EnemyAnimationController
+
+`EnemyAnimationController` traduz `EnemyBrain.CurrentState` para parametros do Animator e toca sequencias diretas de spawn, dano e morte.
+
+### Alert Feedback
+
+- `Trigger Alert On State Enter`: dispara um trigger quando o estado entra em `Alert`.
+- `Alert Trigger Name`: nome do trigger. Padrao: `AlertTrigger`.
+- `Use Alert Parameter As Fallback Trigger`: se nao existir `AlertTrigger`, tenta usar um trigger chamado `Alert`. Se `Alert` for bool, ele continua sendo controlado como bool e nao como trigger.
+- `Play Alert Audio On State Enter`: toca um som pontual ao entrar em `Alert`.
+- `Alert Audio Cue`: `AudioCue` usado nesse som.
+- `Alert Audio Anchor`: transform usado como origem do som. Se vazio, usa o transform do inimigo.
+
+O controller tambem continua enviando `IsAlert`, `Alert` e `State = 7`. Para uma animacao futura do Beholder, voce pode usar o bool `IsAlert`, o inteiro `State`, ou criar um trigger com o nome configurado em `Alert Trigger Name`.
 
 ## BeholderMovementLoopAudioController
 

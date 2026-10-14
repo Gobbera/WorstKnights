@@ -74,12 +74,12 @@ public static class FootstepSurfaceAssetBuilder
         string cueFolder = $"{OutputRoot}/Cues/{safeName}";
         EnsureFolderPath(cueFolder);
 
-        AudioCue walkCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Walk.asset", walkClips, 0.12f, new Vector2(0.95f, 1.08f));
-        AudioCue sprintCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Sprint.asset", runClips.Count > 0 ? runClips : walkClips, 0.14f, new Vector2(0.95f, 1.12f));
-        AudioCue crouchCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Crouch.asset", walkClips, 0.075f, new Vector2(0.9f, 1.02f));
-        AudioCue enemyWalkCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_EnemyWalk.asset", walkClips.Count > 0 ? walkClips : runClips, 0.12f, new Vector2(0.88f, 1.02f));
-        AudioCue jumpCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Jump.asset", jumpStartClips, 0.14f, new Vector2(0.95f, 1.1f));
-        AudioCue landCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Land.asset", landClips, 0.18f, new Vector2(0.9f, 1.05f));
+        AudioCue walkCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Walk.asset", walkClips, 0.25f, new Vector2(0.95f, 1.08f));
+        AudioCue sprintCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Sprint.asset", runClips.Count > 0 ? runClips : walkClips, 0.38f, new Vector2(0.95f, 1.12f));
+        AudioCue crouchCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Crouch.asset", walkClips, 0.09f, new Vector2(0.9f, 1.02f));
+        AudioCue enemyWalkCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_EnemyWalk.asset", walkClips.Count > 0 ? walkClips : runClips, 0.25f, new Vector2(0.88f, 1.02f));
+        AudioCue jumpCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Jump.asset", jumpStartClips, 0.38f, new Vector2(0.95f, 1.1f));
+        AudioCue landCue = CreateOrUpdateCue($"{cueFolder}/Footstep_{safeName}_Land.asset", landClips, 0.216f, new Vector2(0.9f, 1.05f));
 
         AudioCue defaultCue = walkCue != null ? walkCue : sprintCue != null ? sprintCue : enemyWalkCue != null ? enemyWalkCue : landCue != null ? landCue : jumpCue;
         string surfacePath = $"{OutputRoot}/FootstepSurface_{safeName}.asset";

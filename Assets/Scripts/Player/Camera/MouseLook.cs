@@ -16,6 +16,11 @@ using UnityEngine.InputSystem;
 public class MouseLook : MonoBehaviour
 {
     public static MouseLook instance;
+    public const string MouseSensitivityPlayerPrefsKey = "mouseSensitivity";
+    public const float DefaultSensitivityMultiplier = 1f;
+    public const float MinSensitivityMultiplier = 0.25f;
+    public const float MaxSensitivityMultiplier = 3f;
+
     private const float BaseSensitivity = 0.17f;
 
     [Header("Input Settings")]
@@ -72,6 +77,8 @@ public class MouseLook : MonoBehaviour
         if (lockCursor && HasLocalAuthority())
             LockCursor();
 
+        SetSensitivity(GetSavedSensitivityMultiplier());
+
         if (UsesDrivenLookController())
             ApplyDrivenLookRotation(0f);
         else
@@ -83,7 +90,7 @@ public class MouseLook : MonoBehaviour
         if (!HasLocalAuthority() || Mouse.current == null)
             return;
 
-        if (lookInputBlocked)
+        if (lookInputBlocked || InGameSettingsMenuController.IsAnyMenuOpen)
         {
             mouseDelta = Vector2.zero;
             smoothMouse = Vector2.zero;
@@ -123,6 +130,9 @@ public class MouseLook : MonoBehaviour
 
     public void LockCursor()
     {
+        if (InGameSettingsMenuController.IsAnyMenuOpen)
+            return;
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -145,8 +155,20 @@ public class MouseLook : MonoBehaviour
 
     public void SetSensitivity(float value)
     {
-        float actual = BaseSensitivity * value;
+        float actual = BaseSensitivity * ClampSensitivityMultiplier(value);
         sensitivity = new Vector2(actual, actual);
+    }
+
+    public static float GetSavedSensitivityMultiplier()
+    {
+        return ClampSensitivityMultiplier(PlayerPrefs.GetFloat(
+            MouseSensitivityPlayerPrefsKey,
+            DefaultSensitivityMultiplier));
+    }
+
+    public static float ClampSensitivityMultiplier(float value)
+    {
+        return Mathf.Clamp(value, MinSensitivityMultiplier, MaxSensitivityMultiplier);
     }
 
     private void CacheReferences()

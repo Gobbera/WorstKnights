@@ -59,6 +59,32 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
     [SerializeField, Min(0f)] private float blendSpeed = 8f;
     [SerializeField, HideInInspector] private float rendererRefreshInterval = 1f;
 
+    [Header("Eye Fake Volume")]
+    [SerializeField] private WKFakeVolumeController[] eyeFakeVolumes = Array.Empty<WKFakeVolumeController>();
+    [SerializeField] private bool autoBindEyeFakeVolumes = true;
+    [SerializeField] private bool driveEyeFakeVolumeColor = true;
+    [SerializeField] private bool driveEyeFakeVolumeIntensity;
+    [SerializeField, Min(0f)] private float eyeFakeVolumeIntensityMultiplier = 0.15f;
+    [SerializeField, Min(0f)] private float eyeFakeVolumeMinIntensity;
+    [SerializeField, Min(0f)] private float eyeFakeVolumeMaxIntensity = 3f;
+    [SerializeField] private bool driveEyeFakeVolumeOpacity;
+    [SerializeField, Range(0f, 1f)] private float eyeFakeVolumeOpacity = 0.2f;
+
+    [Header("Eye Spot Light")]
+    [SerializeField] private Light[] eyeSpotLights = Array.Empty<Light>();
+    [SerializeField] private bool autoBindEyeSpotLights = true;
+    [SerializeField] private bool eyeSpotLightsEnabled = true;
+    [SerializeField] private bool driveEyeSpotLightColor = true;
+    [SerializeField] private bool driveEyeSpotLightIntensity = true;
+    [SerializeField, Min(0f)] private float eyeSpotLightIntensityMultiplier = 0.12f;
+    [SerializeField, Min(0f)] private float eyeSpotLightMinIntensity;
+    [SerializeField, Min(0f)] private float eyeSpotLightMaxIntensity = 4f;
+    [SerializeField] private bool driveEyeSpotLightRange = true;
+    [SerializeField, Min(0f)] private float eyeSpotLightRange = 1.5f;
+    [SerializeField] private bool driveEyeSpotLightAngles = true;
+    [SerializeField, Range(1f, 179f)] private float eyeSpotLightAngle = 30f;
+    [SerializeField, Range(0f, 179f)] private float eyeSpotLightInnerAngle = 21.8f;
+
     [Header("State Profiles")]
     [SerializeField] private GlowProfile preSpawn = new GlowProfile(
         new Color(0.32f, 0.25f, 0.38f, 1f),
@@ -144,6 +170,7 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
+        ResolveEyeVfxTargets();
         RefreshEyeMaterialSlots();
         ForceApplyCurrentProfile();
     }
@@ -151,6 +178,7 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
     private void OnEnable()
     {
         ResolveReferences();
+        ResolveEyeVfxTargets();
         RefreshEyeMaterialSlots();
         ForceApplyCurrentProfile();
     }
@@ -264,6 +292,25 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
         }
     }
 
+    [ContextMenu("Auto Bind Eye VFX Targets")]
+    private void AutoBindEyeVfxTargets()
+    {
+        List<WKFakeVolumeController> fakeVolumes = new List<WKFakeVolumeController>();
+        GetComponentsInChildren(includeInactive: true, fakeVolumes);
+        eyeFakeVolumes = fakeVolumes.ToArray();
+
+        Light[] childLights = GetComponentsInChildren<Light>(true);
+        List<Light> spotLights = new List<Light>(childLights.Length);
+        for (int i = 0; i < childLights.Length; i++)
+        {
+            Light targetLight = childLights[i];
+            if (targetLight != null && targetLight.type == LightType.Spot)
+                spotLights.Add(targetLight);
+        }
+
+        eyeSpotLights = spotLights.ToArray();
+    }
+
     private void ForceApplyCurrentProfile()
     {
         GlowProfile profile = ResolveActiveProfile();
@@ -284,6 +331,30 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
 
         if (enemyHealth == null)
             enemyHealth = enemySetup != null ? enemySetup.EnemyHealth : GetComponent<EnemyHealth>();
+    }
+
+    private void ResolveEyeVfxTargets()
+    {
+        if (autoBindEyeFakeVolumes && (eyeFakeVolumes == null || eyeFakeVolumes.Length == 0))
+        {
+            List<WKFakeVolumeController> fakeVolumes = new List<WKFakeVolumeController>();
+            GetComponentsInChildren(includeInactive: true, fakeVolumes);
+            eyeFakeVolumes = fakeVolumes.ToArray();
+        }
+
+        if (autoBindEyeSpotLights && (eyeSpotLights == null || eyeSpotLights.Length == 0))
+        {
+            Light[] childLights = GetComponentsInChildren<Light>(true);
+            List<Light> spotLights = new List<Light>(childLights.Length);
+            for (int i = 0; i < childLights.Length; i++)
+            {
+                Light targetLight = childLights[i];
+                if (targetLight != null && targetLight.type == LightType.Spot)
+                    spotLights.Add(targetLight);
+            }
+
+            eyeSpotLights = spotLights.ToArray();
+        }
     }
 
     private GlowProfile ResolveActiveProfile()
@@ -396,6 +467,85 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
             slot.PropertyBlock.SetFloat(EmissionIntensityProperty, Mathf.Max(0f, emissionIntensity));
             slot.Renderer.SetPropertyBlock(slot.PropertyBlock, slot.MaterialIndex);
         }
+
+        ApplyEyeVfxTargets(emissionColor, emissionIntensity);
+    }
+
+    private void ApplyEyeVfxTargets(Color emissionColor, float emissionIntensity)
+    {
+        Color tint = ResolveTintColor(emissionColor);
+        float outputIntensity = ResolveOutputIntensity(emissionColor, emissionIntensity);
+
+        ApplyEyeFakeVolumes(tint, outputIntensity);
+        ApplyEyeSpotLights(tint, outputIntensity);
+    }
+
+    private void ApplyEyeFakeVolumes(Color tint, float outputIntensity)
+    {
+        if (eyeFakeVolumes == null || eyeFakeVolumes.Length == 0)
+            return;
+
+        float volumeIntensity = ClampDrivenIntensity(
+            outputIntensity * eyeFakeVolumeIntensityMultiplier,
+            eyeFakeVolumeMinIntensity,
+            eyeFakeVolumeMaxIntensity);
+
+        for (int i = eyeFakeVolumes.Length - 1; i >= 0; i--)
+        {
+            WKFakeVolumeController targetVolume = eyeFakeVolumes[i];
+            if (targetVolume == null || targetVolume.Settings == null)
+                continue;
+
+            WKFakeVolumeSettings settings = targetVolume.Settings;
+            if (driveEyeFakeVolumeColor)
+                settings.color = tint;
+
+            if (driveEyeFakeVolumeIntensity)
+                settings.colorIntensity = volumeIntensity;
+
+            if (driveEyeFakeVolumeOpacity)
+                settings.opacity = eyeFakeVolumeOpacity;
+
+            targetVolume.ApplyNow();
+        }
+    }
+
+    private void ApplyEyeSpotLights(Color tint, float outputIntensity)
+    {
+        if (eyeSpotLights == null || eyeSpotLights.Length == 0)
+            return;
+
+        float lightIntensity = ClampDrivenIntensity(
+            outputIntensity * eyeSpotLightIntensityMultiplier,
+            eyeSpotLightMinIntensity,
+            eyeSpotLightMaxIntensity);
+
+        for (int i = eyeSpotLights.Length - 1; i >= 0; i--)
+        {
+            Light targetLight = eyeSpotLights[i];
+            if (targetLight == null)
+                continue;
+
+            bool shouldEnable = eyeSpotLightsEnabled
+                && (!driveEyeSpotLightIntensity || lightIntensity > 0.0001f);
+            if (targetLight.enabled != shouldEnable)
+                targetLight.enabled = shouldEnable;
+
+            if (driveEyeSpotLightColor)
+                targetLight.color = tint;
+
+            if (driveEyeSpotLightIntensity)
+                targetLight.intensity = lightIntensity;
+
+            if (driveEyeSpotLightRange)
+                targetLight.range = eyeSpotLightRange;
+
+            if (driveEyeSpotLightAngles && targetLight.type == LightType.Spot)
+            {
+                targetLight.spotAngle = eyeSpotLightAngle;
+                targetLight.innerSpotAngle = Mathf.Clamp(eyeSpotLightInnerAngle, 0f, targetLight.spotAngle);
+            }
+        }
     }
 
     private static GlowProfile SanitizeProfile(GlowProfile profile)
@@ -419,10 +569,46 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
             StringComparison.OrdinalIgnoreCase);
     }
 
+    private static Color ResolveTintColor(Color color)
+    {
+        float maxComponent = Mathf.Max(color.r, Mathf.Max(color.g, color.b));
+        if (maxComponent <= 1f)
+            return color;
+
+        return new Color(
+            color.r / maxComponent,
+            color.g / maxComponent,
+            color.b / maxComponent,
+            color.a);
+    }
+
+    private static float ResolveOutputIntensity(Color color, float emissionIntensity)
+    {
+        float maxComponent = Mathf.Max(color.r, Mathf.Max(color.g, color.b));
+        return Mathf.Max(0f, emissionIntensity) * Mathf.Max(1f, maxComponent);
+    }
+
+    private static float ClampDrivenIntensity(float value, float minimum, float maximum)
+    {
+        float sanitizedMinimum = Mathf.Max(0f, minimum);
+        float sanitizedMaximum = Mathf.Max(sanitizedMinimum, maximum);
+        return Mathf.Clamp(Mathf.Max(0f, value), sanitizedMinimum, sanitizedMaximum);
+    }
+
     private void OnValidate()
     {
         blendSpeed = Mathf.Max(0f, blendSpeed);
         rendererRefreshInterval = Mathf.Max(0.1f, rendererRefreshInterval);
+        eyeFakeVolumeIntensityMultiplier = Mathf.Max(0f, eyeFakeVolumeIntensityMultiplier);
+        eyeFakeVolumeMinIntensity = Mathf.Max(0f, eyeFakeVolumeMinIntensity);
+        eyeFakeVolumeMaxIntensity = Mathf.Max(eyeFakeVolumeMinIntensity, eyeFakeVolumeMaxIntensity);
+        eyeFakeVolumeOpacity = Mathf.Clamp01(eyeFakeVolumeOpacity);
+        eyeSpotLightIntensityMultiplier = Mathf.Max(0f, eyeSpotLightIntensityMultiplier);
+        eyeSpotLightMinIntensity = Mathf.Max(0f, eyeSpotLightMinIntensity);
+        eyeSpotLightMaxIntensity = Mathf.Max(eyeSpotLightMinIntensity, eyeSpotLightMaxIntensity);
+        eyeSpotLightRange = Mathf.Max(0f, eyeSpotLightRange);
+        eyeSpotLightAngle = Mathf.Clamp(eyeSpotLightAngle, 1f, 179f);
+        eyeSpotLightInnerAngle = Mathf.Clamp(eyeSpotLightInnerAngle, 0f, eyeSpotLightAngle);
         preSpawn = SanitizeProfile(preSpawn);
         idle = SanitizeProfile(idle);
         patrol = SanitizeProfile(patrol);

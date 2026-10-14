@@ -11,6 +11,8 @@ public class EnemyAnimationController : MonoBehaviour
     private const string PreSpawnStatePath = "Base Layer.Pre-Spawn";
     private const string SpawnStatePath = "Base Layer.Spawn";
     private const string DeathStatePath = "Base Layer.Death";
+    private const string DefaultAlertTriggerName = "AlertTrigger";
+    private const string AlertTriggerFallbackName = "Alert";
     private const float LocomotionTransitionDuration = 0.1f;
     private const float TakeDamageTransitionDuration = 0.06f;
     private const float SpawnTransitionDuration = 0.05f;
@@ -24,6 +26,7 @@ public class EnemyAnimationController : MonoBehaviour
     [SerializeField] private EnemyMotor enemyMotor;
     [SerializeField] private EnemyAttack enemyAttack;
     [SerializeField] private EnemyHealth enemyHealth;
+    [SerializeField] private AudioEmitter audioEmitter;
 
     [Header("Spawn / Death")]
     [SerializeField] private bool playPreSpawnAndSpawn = true;
@@ -31,6 +34,14 @@ public class EnemyAnimationController : MonoBehaviour
     [SerializeField] [Min(0f)] private float deathFallbackDuration = 1f;
     [SerializeField] [Min(0f)] private float deathFadeOutStartDelay = 0f;
     [SerializeField] [Min(0f)] private float deathFadeOutDuration = 1f;
+
+    [Header("Alert Feedback")]
+    [SerializeField] private bool triggerAlertOnStateEnter = true;
+    [SerializeField] private string alertTriggerName = DefaultAlertTriggerName;
+    [SerializeField] private bool useAlertParameterAsFallbackTrigger = true;
+    [SerializeField] private bool playAlertAudioOnStateEnter = true;
+    [SerializeField] private AudioCue alertAudioCue;
+    [SerializeField] private Transform alertAudioAnchor;
 
     private readonly Dictionary<string, AnimatorControllerParameterType> parameterTypes = new Dictionary<string, AnimatorControllerParameterType>();
     private RuntimeAnimatorController cachedRuntimeAnimatorController;
@@ -49,6 +60,8 @@ public class EnemyAnimationController : MonoBehaviour
     private int lastAttackSequence;
     private int lastDamageSequence;
     private bool wasAlive = true;
+    private EnemyState previousState = EnemyState.Idle;
+    private bool hasPreviousState;
     private bool spawnPlaybackStarted;
     private float spawnPlaybackStartedAt;
     private float spawnPlaybackDuration;
@@ -71,6 +84,9 @@ public class EnemyAnimationController : MonoBehaviour
         if (enemyHealth == null)
             enemyHealth = GetComponent<EnemyHealth>();
 
+        if (audioEmitter == null)
+            audioEmitter = GetComponent<AudioEmitter>();
+
         if (animator == null)
             animator = enemySetup != null ? enemySetup.Animator : GetComponentInChildren<Animator>(true);
 
@@ -88,6 +104,7 @@ public class EnemyAnimationController : MonoBehaviour
 
         bool isAlive = enemyHealth == null || enemyHealth.IsAlive;
         EnemyState state = enemyBrain != null ? enemyBrain.CurrentState : (isAlive ? EnemyState.Idle : EnemyState.Dead);
+        bool enteredAlert = DidEnterState(state, EnemyState.Alert);
         float planarSpeed = enemyMotor != null ? enemyMotor.CurrentPlanarSpeed : 0f;
         float normalizedSpeed = enemyMotor != null && enemyMotor.MoveSpeed > 0.0001f
             ? planarSpeed / enemyMotor.MoveSpeed
@@ -130,16 +147,21 @@ public class EnemyAnimationController : MonoBehaviour
         SetFloatIfExists("Speed", planarSpeed);
         SetFloatIfExists("NormalizedSpeed", normalizedSpeed);
 
+        if (enteredAlert)
+            PlayAlertEntryFeedback();
+
         if (!isAlive)
         {
             PlayDeathSequenceIfNeeded();
             wasAlive = isAlive;
+            RememberState(state);
             return;
         }
 
         if (HandleSpawnState(state))
         {
             wasAlive = isAlive;
+            RememberState(state);
             return;
         }
 
@@ -160,6 +182,7 @@ public class EnemyAnimationController : MonoBehaviour
         }
 
         wasAlive = isAlive;
+        RememberState(state);
     }
 
     public bool TryGetDeathSequenceDestroyDelay(out float delay)
@@ -274,6 +297,37 @@ public class EnemyAnimationController : MonoBehaviour
         SetTriggerIfExists("TakeDamage");
         SetTriggerIfExists("Damage");
         SetTriggerIfExists("Hit");
+    }
+
+    private void PlayAlertEntryFeedback()
+    {
+        if (triggerAlertOnStateEnter)
+            TriggerAlertAnimation();
+
+        if (!playAlertAudioOnStateEnter || alertAudioCue == null)
+            return;
+
+        if (audioEmitter == null)
+            audioEmitter = GetComponent<AudioEmitter>();
+
+        Transform resolvedAnchor = alertAudioAnchor != null ? alertAudioAnchor : transform;
+        if (audioEmitter != null)
+        {
+            audioEmitter.PlayAttached(alertAudioCue, resolvedAnchor);
+            return;
+        }
+
+        GameAudioService.Play(alertAudioCue, resolvedAnchor);
+    }
+
+    private void TriggerAlertAnimation()
+    {
+        bool triggered = TryResetAndSetTrigger(alertTriggerName);
+        if (!triggered)
+            triggered = TryResetAndSetTrigger(DefaultAlertTriggerName);
+
+        if (!triggered && useAlertParameterAsFallbackTrigger)
+            TryResetAndSetTrigger(AlertTriggerFallbackName);
     }
 
     private bool HandleSpawnState(EnemyState state)
@@ -458,6 +512,31 @@ public class EnemyAnimationController : MonoBehaviour
     {
         if (HasParameter(parameterName, AnimatorControllerParameterType.Trigger))
             animator.ResetTrigger(parameterName);
+    }
+
+    private bool TryResetAndSetTrigger(string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(parameterName))
+            return false;
+
+        string trimmedName = parameterName.Trim();
+        if (!HasParameter(trimmedName, AnimatorControllerParameterType.Trigger))
+            return false;
+
+        animator.ResetTrigger(trimmedName);
+        animator.SetTrigger(trimmedName);
+        return true;
+    }
+
+    private bool DidEnterState(EnemyState state, EnemyState targetState)
+    {
+        return state == targetState && (!hasPreviousState || previousState != state);
+    }
+
+    private void RememberState(EnemyState state)
+    {
+        previousState = state;
+        hasPreviousState = true;
     }
 
     private bool HasParameter(string parameterName, AnimatorControllerParameterType parameterType)

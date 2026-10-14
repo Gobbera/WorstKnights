@@ -24,7 +24,7 @@ MonoBehaviour:
   replication: 0
   anchor: 0
   loop: 0
-  baseVolume: 0.18
+  baseVolume: 0.216
   randomVolumeRange: {x: 0.95, y: 1.05}
   basePitch: 1
   randomPitchRange: {x: 0.9, y: 1.05}

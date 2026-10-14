@@ -14,14 +14,17 @@ public class PlayerInputHandler : MonoBehaviour, IPlayerInput
     private KeyCode crouchKeyFallback = KeyCode.LeftControl;
     private const float MovementDeadzoneFallback = 0.15f;
 
-    public Vector2 MovementInput { get; private set; }
-    public bool AttackPressed => Input.GetKeyDown(GetAttackKey());
-    public bool KickPressed => Input.GetKeyDown(GetKickKey());
-    public bool JumpPressed => Input.GetKeyDown(GetJumpKey());  // Changed from GetKey to GetKeyDown for consistency
-    public bool CrouchHeld => Input.GetKey(GetCrouchKey());
-    public bool CrouchPressed => Input.GetKeyDown(GetCrouchKey());
-    public bool CrouchReleased => Input.GetKeyUp(GetCrouchKey());
-    public bool SprintPressed => Input.GetKey(GetSprintKey());
+    private Vector2 movementInput;
+    private static bool GameplayInputEnabled => !InGameSettingsMenuController.IsAnyMenuOpen;
+
+    public Vector2 MovementInput => GameplayInputEnabled ? movementInput : Vector2.zero;
+    public bool AttackPressed => GameplayInputEnabled && Input.GetKeyDown(GetAttackKey());
+    public bool KickPressed => GameplayInputEnabled && Input.GetKeyDown(GetKickKey());
+    public bool JumpPressed => GameplayInputEnabled && Input.GetKeyDown(GetJumpKey());
+    public bool CrouchHeld => GameplayInputEnabled && Input.GetKey(GetCrouchKey());
+    public bool CrouchPressed => GameplayInputEnabled && Input.GetKeyDown(GetCrouchKey());
+    public bool CrouchReleased => GameplayInputEnabled && Input.GetKeyUp(GetCrouchKey());
+    public bool SprintPressed => GameplayInputEnabled && Input.GetKey(GetSprintKey());
 
     private void Awake()
     {
@@ -59,6 +62,12 @@ public class PlayerInputHandler : MonoBehaviour, IPlayerInput
 
     public void UpdateInput()
     {
+        if (!GameplayInputEnabled)
+        {
+            movementInput = Vector2.zero;
+            return;
+        }
+
         Vector2 rawMovementInput = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
         float movementDeadzone = inputConfig != null
             ? Mathf.Clamp01(inputConfig.movementDeadzone)
@@ -66,13 +75,13 @@ public class PlayerInputHandler : MonoBehaviour, IPlayerInput
 
         if (rawMovementInput.sqrMagnitude <= movementDeadzone * movementDeadzone)
         {
-            MovementInput = Vector2.zero;
+            movementInput = Vector2.zero;
             return;
         }
 
         // Preserve full axis intent for animation and higher-level locomotion decisions.
         // PlayerMovement still clamps physical motion internally, so diagonals do not gain speed.
-        MovementInput = rawMovementInput;
+        movementInput = rawMovementInput;
     }
 
     private KeyCode GetAttackKey() => inputConfig != null ? inputConfig.attackKey : attackKeyFallback;

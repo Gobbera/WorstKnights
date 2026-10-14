@@ -44,8 +44,8 @@
 2. **[2026-07-13] New gameplay scenes must be registered in both scene bootstraps and Build Settings**
    Do instead: when cloning or adding a gameplay map, update every hardcoded gameplay-scene check such as `RoomManager`/enemy bootstraps and add the scene to `ProjectSettings/EditorBuildSettings.asset`, otherwise direct Play and menu/room loading diverge.
 
-3. **[2026-07-23] Menu-to-gameplay transitions must not depend on raw scene asset paths or immediate Photon readiness**
-   Do instead: load gameplay scenes by validated build index/name from `RoomList`, and let `RoomManager` resume room join from callbacks like `OnJoinedLobby` when the menu changes scene before Photon finishes becoming ready.
+3. **[2026-07-23] Menu-to-gameplay transitions need Photon room handoff plus a gameplay camera fallback**
+   Do instead: create or join the Photon room from `RoomList` before loading gameplay, publish scene path/index in `CustomRoomPropertiesForLobby`, keep `AutomaticallySyncScene` off in Menu until the master handoff, mark the pending gameplay scene before hiding the lobby and calling `LoadScene`, keep scene-baked players alive until `RoomManager` has spawned the runtime Photon player, and let `RoomManager` create a temporary gameplay camera until the local network player camera is active so the Game view does not stay on the last Menu frame.
 
 4. **[2026-07-23] Scene-fixed interactables should degrade from PhotonView sync to room-state sync**
    Do instead: keep doors and destructibles usable offline/local by default, use RPCs when a valid `PhotonView` exists, and fall back to scene-stable room properties plus master-authority requests when the object is a fixed scene actor without manual `PhotonView` setup.
@@ -72,23 +72,29 @@
 1. **[2026-09-25] Stalker enemies should stay as enemy-base extensions**
    Do instead: tune `EnemyBrain` with `GlobalWander`, long combat memory/search, and `Max Chase Distance = 0`, then use `EnemyHealth.preventDeath` for stun-only defeat while keeping `EnemyAttack` disabled until special abilities own damage.
 
-2. **[2026-09-25] Large-enemy tight passages should be authored traversal volumes**
+2. **[2026-10-01] First-detection enemy alert belongs to the base state flow**
+   Do instead: route first target awareness through `EnemyAIState.TryChaseVisibleTarget` and `EnemyAlertState`, use `EnemyBrain.Alert Before Chase On First Target Detection`/`Rotate During Alert`, and keep per-prefab alert trigger/audio cue setup in `EnemyAnimationController`; `AudioEmitter` is optional because alert audio can fall back to `GameAudioService`.
+
+3. **[2026-09-25] Large-enemy tight passages should be authored traversal volumes**
    Do instead: keep the Beholder's real collider presence, use NavMesh radius/bake to reject impossible doors, add `EnemyTraversalVolume` side points with destination-across-side checks, exit-side rearm cooldown, auto-resolved or explicit `DoorController` gate, enemy-open/inside-volume player interaction locks, closed-door in-volume retry, dynamic `DoorNavMeshObstacleController` carving for open blocking doors, door-obstruction probes before opening/reorienting, passive `DoorEnemyObstructionSensor` solid-contact evidence, and only a strict closed-door stuck-inside-trigger auto-open fallback before using temporary traversal-only capsule shrink.
 
-3. **[2026-09-25] Combat masks must follow gameplay layers**
+4. **[2026-09-25] Combat masks must follow gameplay layers**
    Do instead: whenever moving enemies/players to dedicated layers, update `PlayerMeleeAttack.hitMask` to include `Enemy`/`Player` and `EnemyAttack.hitMask` to include `Player`; otherwise overlaps stop finding combat colliders before damage code runs.
 
-4. **[2026-09-25] Enemy separation belongs to layers plus NavMesh avoidance**
+5. **[2026-09-25] Enemy separation belongs to layers plus NavMesh avoidance**
    Do instead: put enemy roots/colliders on the `Enemy` layer, disable `Enemy x Enemy` in the Physics matrix, and keep authored `NavMeshAgent` avoidance/radius values aligned so enemies avoid each other without Rigidbody pushing.
 
-5. **[2026-09-25] Floating enemies need vertical ground anchoring**
+6. **[2026-09-25] Floating enemies need vertical ground anchoring**
    Do instead: keep gravity off for hover-style enemies, but add an authority-only ground-probe anchor that preserves the initial floor offset, uses a forward movement probe plus tangent slope velocity for ramps, applies a low-friction capsule material, corrects Rigidbody `Y` after movement, and zeros vertical velocity before trying `FreezePositionY`.
 
-6. **[2026-09-25] Large enemies need authored NavMesh radius parity**
+7. **[2026-09-25] Large enemies need authored NavMesh radius parity**
    Do instead: keep a real `NavMeshAgent` component saved on enemy prefabs, tune its radius/height/baseOffset in Prefab or Scene Mode, leave `EnemyNavigation.Configure Agent From Capsule` off unless intentionally regenerating from the collider, and rebake with the larger radius or a dedicated agent before changing motor code.
 
-7. **[2026-09-25] Beholder eye tracking is an animation overlay**
+8. **[2026-09-25] Beholder eye tracking is an animation overlay**
    Do instead: when the Beholder is not actively tracking a target, do not write eye-bone rotations; when tracking, blend from the Animator's current bone rotation in `LateUpdate` so idle/patrol clips stay authoritative.
+
+9. **[2026-10-01] Beholder eye color drives linked eye VFX**
+   Do instead: tune eye material profiles, linked `WKFakeVolumeController` volumes, and eye `Spot Light` references from `BeholderEyeGlowController`; let that controller use the current animated emission color/intensity as the shared source.
 
 ## Movement & Actions
 1. **[2026-04-07] Player probes and state decisions must stay aligned with the real capsule**
@@ -113,7 +119,10 @@
    Do instead: when kick starts from `MovementState.crouching`, validate kick availability, stand/queue the kick briefly, suppress crouch while queued or active, then let held crouch re-enter after `kickActionDuration`.
 
 ## UI & Emotes
-1. **[2026-07-30] Emote wheel slots are authored from the player emote controller**
+1. **[2026-10-14] In-game settings UI is gameplay-root bootstrapped**
+   Do instead: keep the reusable Settings overlay at `Assets/Resources/UI/InGameSettingsMenu.prefab`, let `GameplaySceneRoot` instantiate it through `InGameSettingsMenuController`, and guard local gameplay input with `InGameSettingsMenuController.IsAnyMenuOpen` instead of pausing multiplayer time.
+
+2. **[2026-07-30] Emote wheel slots are authored from the player emote controller**
    Do instead: edit the five `emoteWheelSlots` on `Assets/Resources/Player.prefab`'s `PlayerEmoteWheelController` for emote type, label, and sprite, and use `Assets/Prefabs/UI/EmoteWheel.prefab` only when a scene needs an explicit saved Canvas object.
 
 ## Audio & Feedback
@@ -290,29 +299,42 @@
 10. **[2026-09-01] Perspective visibility must account for the global `FirstPersonView` overlay**
    Do instead: use the `PlayerPerspectiveVisibility` Elements list on `Assets/Resources/Player.prefab`, resolve final renderer visibility by target specificity, and force-hide owner-only roots/layer renderers such as `Separated_UpperBody` on remote player instances so the local Hands Camera cannot draw them.
 
+## Post Processing Feedback
+1. **[2026-10-13] Player camera post effects should go through one local feedback controller**
+   Do instead: raise local gameplay signals such as `PlayerHealth.Damaged`, then let `PlayerPostProcessingFeedbackController` on `Assets/Resources/Player.prefab` `FP_Camera` drive the child `PostProcessingFeedbackVolume` weight against the base Volume baseline; keep feedback owner-local so remote player volumes stay at zero.
+
+2. **[2026-10-13] URP Volume inspector errors can come from broken profile subassets**
+   Do instead: when `SerializedObjectNotCreatableException` appears from URP `VolumeComponentEditor`/effect editors, scan active `VolumeProfile` assets for dangling `m_Script: {fileID: 0}` subassets or null components and remove only the broken, unreferenced entries.
+
 ## Rendering & Materials
 1. **[2026-09-28] WK toon emission must feed the custom final color path**
    Do instead: for `SG_WK_Base_Toon Shader`, multiply HDR `_EmissionColor` by `_EmissionIntensity` and add it before `SurfaceDescription.BaseColor`; do not rely on a separate `SurfaceDescription.Emission` block because the custom Unlit/toon path may ignore it.
 
-2. **[2026-09-08] WK toon shadows come from custom Unlit lighting**
+2. **[2026-09-30] Fake volume fog should be authored through the WK library**
+   Do instead: use `WKFakeVolumeController` settings and generated visuals under `Assets/VFX/FakeVolume`; for new authoring, add the controller to an empty object or use `GameObject/VFX/WK Fake Volume`, size volumes with `Transform` scale, then let renderer-local `MaterialPropertyBlock` values drive tuning.
+
+3. **[2026-10-02] Interactive tutorial fog is a local compute-driven volume**
+   Do instead: create/configure it through `GameObject/VFX/Interactive Fog Volume`, keep `FogSimulation` references wired to `Assets/Fog/FogSim.compute` and `Assets/Fog/FogVolume.mat`, size it with `Transform` scale, and let it resolve the local spawned player at runtime.
+
+4. **[2026-09-08] WK toon shadows come from custom Unlit lighting**
    Do instead: when WK toon shadows fail, verify `SG_WK_Base_Toon Shader` still has `m_CastShadows`, `m_ReceiveShadows`, and `m_KeepLightingVariants` enabled; for point/spot shadows, make `Assets/Shaders/Shaders/WK/Includes/Lighting.hlsl` call `GetAdditionalLight(i, positionWS, shadowMask)` so URP fills `light.shadowAttenuation`.
 
-3. **[2026-09-10] Torch shadow flicker usually starts at shadowed wall lights**
+5. **[2026-09-10] Torch shadow flicker usually starts at shadowed wall lights**
    Do instead: debug torch flicker by disabling shadows on `Wall_Torch` first; keep hand torch shadows off, avoid animating range/position on any shadow-casting torch, and tune Additional Light shadow tier/atlas before changing toon shader code.
 
-4. **[2026-08-21] Runtime liquid state must be renderer-local**
+6. **[2026-08-21] Runtime liquid state must be renderer-local**
    Do instead: drive per-instance liquid values such as `_WobbleX`, `_WobbleZ`, and `_FillAmount` through `MaterialPropertyBlock` on the target `Renderer`; never write them to `sharedMaterial` because every potion using the same material will inherit the motion/fill.
 
-5. **[2026-08-21] Liquid fill sliders must use renderer-relative bounds**
+7. **[2026-08-21] Liquid fill sliders must use renderer-relative bounds**
    Do instead: in `SG_Liquid_Effect`, remap `_Fill` through `Object.World Bounds Min/Max - Object.Position` rather than fixed `Y` ranges; keep wobble scripts writing both `_WobbleX` and legacy `_WoobleX` while the graph carries the typo.
 
-6. **[2026-08-20] WK toon fade should stay opaque/dithered**
+8. **[2026-08-20] WK toon fade should stay opaque/dithered**
    Do instead: drive WK toon object disappearance through `_FadeAlpha` plus Shader Graph dither/alpha clip, keep saved WK materials serialized with `_FadeAlpha: 1` and `_Cutoff: 0`, and keep `AlphaClipThreshold` at `0` so full fade alpha is fully opaque.
 
-7. **[2026-08-20] `Invalid AABB` can be a Prefab Stage post-play renderer/cache issue**
+9. **[2026-08-20] `Invalid AABB` can be a Prefab Stage post-play renderer/cache issue**
    Do instead: run `Tools/Diagnostics/Scan Serialized Invalid Values`, keep `Tools/Diagnostics/Monitor Invalid Scene Values` enabled before reproducing with `Player.prefab` open, inspect any `PrefabStage(...)` path from the post-play/log-triggered scan, remove serialized `m_AABB` NaN overrides, and rebuild/remove corrupted `Cloth` components when `SkinnedMeshRenderer.localBounds` wakes as NaN.
 
-8. **[2026-08-20] Auto texture tiling should stay renderer-local**
+10. **[2026-08-20] Auto texture tiling should stay renderer-local**
    Do instead: keep `_Texture_Tiling`, `_Texture_Offset`, and `_Texture_Rotation` changes in `MaterialPropertyBlock` on a specific renderer, and keep both WK toon Shader Graphs wired through the same Tiling And Offset/Rotate UV path; editing the saved `.mat` vector changes every mesh using that shared material.
 
 ## User Directives

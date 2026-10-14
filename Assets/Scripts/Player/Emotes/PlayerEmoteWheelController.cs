@@ -73,6 +73,9 @@ public sealed class PlayerEmoteWheelController : MonoBehaviour
 
     public void HandleRuntimeInput()
     {
+        if (InGameSettingsMenuController.IsAnyMenuOpen)
+            return;
+
         if (Input.GetKeyDown(wheelKey))
             BeginWheel();
 
@@ -93,7 +96,7 @@ public sealed class PlayerEmoteWheelController : MonoBehaviour
     {
         ResolveReferences();
 
-        if (!HasLocalAuthority() || isWheelOpen)
+        if (!HasLocalAuthority() || isWheelOpen || InGameSettingsMenuController.IsAnyMenuOpen)
             return;
 
         if (playerMovement != null && !playerMovement.CanBeginInventoryItemAction())
@@ -139,6 +142,9 @@ public sealed class PlayerEmoteWheelController : MonoBehaviour
 
     public bool TryTriggerEmote(PlayerEmoteType emoteType)
     {
+        if (InGameSettingsMenuController.IsAnyMenuOpen)
+            return false;
+
         ResolveReferences();
 
         if (playerMovement == null || emoteType == PlayerEmoteType.None)

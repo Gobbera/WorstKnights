@@ -3,6 +3,7 @@ using UnityEngine;
 public sealed class EnemyAlertState : EnemyAIState
 {
     private float alertEndsAt;
+    private int activeAlertSequence;
     private bool hasDestination;
 
     public EnemyAlertState(EnemyBrain brain) : base(brain)
@@ -13,9 +14,60 @@ public sealed class EnemyAlertState : EnemyAIState
 
     public override void Enter()
     {
-        alertEndsAt = Time.time + Brain.AlertDuration;
-        hasDestination = Brain.HasInvestigationPosition && Brain.MoveToAlertPosition;
+        ConfigureActiveAlert();
+    }
 
+    public override void Tick(float deltaTime)
+    {
+        if (activeAlertSequence != Brain.ActiveAlertSequence)
+            ConfigureActiveAlert();
+
+        if (Brain.HasActiveTargetAlert)
+        {
+            TickTargetAlert(deltaTime);
+            return;
+        }
+
+        if (TryChaseVisibleTarget())
+            return;
+
+        if (Brain.TryConsumeHeardNoise(out NoiseEvent noiseEvent))
+        {
+            Brain.BeginInvestigationAlert(noiseEvent.Position);
+            ConfigureActiveAlert();
+        }
+
+        if (Brain.RotateDuringAlert && Brain.HasInvestigationPosition)
+            Brain.RotateTowards(Brain.InvestigationPosition, deltaTime);
+
+        bool reachedInvestigation = !hasDestination || Brain.NavigationHasReachedDestination();
+        if (!reachedInvestigation && Time.time < alertEndsAt)
+            return;
+
+        if (Brain.HasInvestigationPosition)
+            Brain.SetLastKnownTargetPosition(Brain.InvestigationPosition);
+
+        Brain.ChangeState(EnemyState.Search);
+    }
+
+    public override void Exit()
+    {
+        Brain.ClearActiveAlertContext();
+    }
+
+    private void ConfigureActiveAlert()
+    {
+        activeAlertSequence = Brain.ActiveAlertSequence;
+        alertEndsAt = Time.time + Brain.AlertDuration;
+
+        if (Brain.HasActiveTargetAlert)
+        {
+            hasDestination = false;
+            Brain.StopNavigation();
+            return;
+        }
+
+        hasDestination = Brain.HasInvestigationPosition && Brain.MoveToAlertPosition;
         if (hasDestination)
         {
             Brain.SetNavigationDestination(
@@ -30,37 +82,26 @@ public sealed class EnemyAlertState : EnemyAIState
         }
     }
 
-    public override void Tick(float deltaTime)
+    private void TickTargetAlert(float deltaTime)
     {
-        if (TryChaseVisibleTarget())
+        Brain.StopNavigation();
+
+        Brain.TryRefreshVisibleTarget();
+        Brain.TryRefreshCombatMemoryTarget();
+        Brain.TryRefreshCloseAwarenessTarget();
+
+        if (Brain.RotateDuringAlert && Brain.HasLastKnownTargetPosition)
+            Brain.RotateTowards(Brain.LastKnownTargetPosition, deltaTime);
+
+        if (Time.time < alertEndsAt)
             return;
 
-        if (Brain.TryConsumeHeardNoise(out NoiseEvent noiseEvent))
+        if (Brain.HasValidTarget && Brain.HasLastKnownTargetPosition)
         {
-            Brain.SetInvestigationPosition(noiseEvent.Position);
-            alertEndsAt = Time.time + Brain.AlertDuration;
-            hasDestination = Brain.MoveToAlertPosition;
-
-            if (hasDestination)
-            {
-                Brain.SetNavigationDestination(
-                    Brain.InvestigationPosition,
-                    Brain.AlertSpeed,
-                    Brain.AlertStoppingDistance,
-                    force: true);
-            }
+            Brain.ChangeState(EnemyState.Chase);
+            return;
         }
 
-        if (Brain.HasInvestigationPosition)
-            Brain.RotateTowards(Brain.InvestigationPosition, deltaTime);
-
-        bool reachedInvestigation = !hasDestination || Brain.NavigationHasReachedDestination();
-        if (!reachedInvestigation && Time.time < alertEndsAt)
-            return;
-
-        if (Brain.HasInvestigationPosition)
-            Brain.SetLastKnownTargetPosition(Brain.InvestigationPosition);
-
-        Brain.ChangeState(EnemyState.Search);
+        Brain.ChangeState(Brain.HasLastKnownTargetPosition ? EnemyState.Search : EnemyState.Return);
     }
 }

@@ -48,3 +48,13 @@ Os estados esperados no controller do skeleton sao:
 - `Base Layer.Take Damage`
 
 `Pre-Spawn`, `Spawn` e `Death` podem ficar sem transicoes no Animator Controller, porque o runtime usa `CrossFadeInFixedTime` para entrar neles.
+
+## Alert Flow
+
+Quando o estado entra em `EnemyState.Alert`, o `EnemyAnimationController`:
+
+- atualiza `IsAlert`, `Alert` e `State = 7`, se esses parametros existirem;
+- pode disparar o trigger configurado em `Alert Trigger Name` (padrao `AlertTrigger`);
+- pode tocar `Alert Audio Cue` uma vez.
+
+Isso vale tanto para alertas de investigacao quanto para o alerta antes de perseguir um player recem-detectado.

@@ -74,6 +74,15 @@ public class PlayerController : MonoBehaviourPun
             return;
         }
 
+        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        {
+            ClearQueuedCrouchKick();
+            playerMovement.SetSprintHeld(false);
+            UpdateMovementState(Vector2.zero);
+            playerMovement.Move(Vector2.zero);
+            return;
+        }
+
         Vector2 movementInput = playerInput.MovementInput;
         playerMovement.SetSprintHeld(playerInput.SprintPressed);
 

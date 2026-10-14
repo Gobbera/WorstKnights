@@ -27,29 +27,29 @@ MonoBehaviour:
     blendSharpness: 10
     inputDeadzone: 0.05
   idle:
-    referenceSpeed: 1
-    intensityMultiplier: 2.25
-    frequency: 2.21
+    referenceSpeed: 0.5
+    intensityMultiplier: 0.5
+    frequency: 0.8
   walk:
-    referenceSpeed: 3
-    intensityMultiplier: 2
+    referenceSpeed: 2.5
+    intensityMultiplier: 2.5
     frequency: 1
   sprint:
-    referenceSpeed: 6
-    intensityMultiplier: 4
-    frequency: 2
+    referenceSpeed: 5
+    intensityMultiplier: 5
+    frequency: 1.2
   crouch:
-    referenceSpeed: 1.5
-    intensityMultiplier: 0.3
-    frequency: 0.7
+    referenceSpeed: 1
+    intensityMultiplier: 1
+    frequency: 1
   airborne:
-    referenceSpeed: 0
-    intensityMultiplier: 0.1
-    frequency: 0.75
+    referenceSpeed: 3
+    intensityMultiplier: 3
+    frequency: 1
   landing:
     enabled: 1
-    minLandingSpeed: 1.25
-    fullLandingSpeed: 9
-    settleDistance: 0.028
-    settlePitch: 1.4
-    recoverySharpness: 9
+    minLandingSpeed: 3
+    fullLandingSpeed: 12
+    settleDistance: 1.5
+    settlePitch: 0.05
+    recoverySharpness: 3

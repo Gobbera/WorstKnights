@@ -171,6 +171,12 @@ public class HandEquipmentController : MonoBehaviour
         if (!HasLocalAuthority())
             return;
 
+        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        {
+            StopShieldGuard();
+            return;
+        }
+
         HandleRuntimeInput();
     }
 

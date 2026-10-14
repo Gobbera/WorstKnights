@@ -950,7 +950,7 @@ PlayerSettings:
   qualitySettingsNames: []
   projectName: KingsWorstKnights
   organizationId: gobbera
-  cloudEnabled: 0
+  cloudEnabled: 1
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
   platformRequiresReadableAssets: 0

@@ -13,6 +13,7 @@
 - Configure `EnemyAttack.Attack Enabled` as disabled for the Beholder until its dedicated eye/magic actions exist.
 - Configure `EnemySetup.Use Gravity When Simulated` as disabled so the scene-authored hover height is preserved while the normal enemy navigation steers horizontally.
 - The prefab uses generated home patrol until a hand-authored scene route exists. If a map needs exact pathing, assign scene transforms to `EnemyBrain.Patrol Points`; explicit patrol points override generated home patrol.
+- The first visual detection should use the standard `EnemyBrain` alert-before-chase flow. Tune `Alert Duration` and `Rotate During Alert` on the brain; add a future eye/body/tentacle reaction through `EnemyAnimationController.Alert Feedback`.
 - Beholder-specific combat actions should be added later through a dedicated component that observes/extends `EnemyBrain` state and target information.
 
 ## Procedural Animation

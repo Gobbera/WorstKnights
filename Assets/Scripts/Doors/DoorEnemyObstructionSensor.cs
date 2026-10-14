@@ -511,6 +511,9 @@ public sealed class DoorEnemyObstructionSensor : MonoBehaviour
 
     private static float GetApproximateColliderDistanceSqr(Collider a, Collider b)
     {
+        if (!CanUseClosestPoint(a) || !CanUseClosestPoint(b))
+            return GetBoundsDistanceSqr(a.bounds, b.bounds);
+
         Vector3 aCenter = a.bounds.center;
         Vector3 bCenter = b.bounds.center;
 
@@ -521,6 +524,22 @@ public sealed class DoorEnemyObstructionSensor : MonoBehaviour
         Vector3 pointOnAFromB = a.ClosestPoint(bCenter);
         Vector3 pointOnBFromAPoint = b.ClosestPoint(pointOnAFromB);
         return Mathf.Min(distanceSqr, (pointOnBFromAPoint - pointOnAFromB).sqrMagnitude);
+    }
+
+    private static bool CanUseClosestPoint(Collider collider)
+    {
+        return collider is BoxCollider
+            || collider is SphereCollider
+            || collider is CapsuleCollider
+            || collider is MeshCollider { convex: true };
+    }
+
+    private static float GetBoundsDistanceSqr(Bounds a, Bounds b)
+    {
+        float x = Mathf.Max(0f, Mathf.Max(a.min.x - b.max.x, b.min.x - a.max.x));
+        float y = Mathf.Max(0f, Mathf.Max(a.min.y - b.max.y, b.min.y - a.max.y));
+        float z = Mathf.Max(0f, Mathf.Max(a.min.z - b.max.z, b.min.z - a.max.z));
+        return x * x + y * y + z * z;
     }
 
     private void RegisterContact(Collider other)

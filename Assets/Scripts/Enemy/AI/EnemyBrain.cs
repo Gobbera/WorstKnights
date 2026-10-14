@@ -49,6 +49,8 @@ public class EnemyBrain : MonoBehaviour
 
     [Header("Alert")]
     [SerializeField] [Min(0f)] private float alertDuration = 1.5f;
+    [SerializeField] private bool alertBeforeChaseOnFirstTargetDetection = true;
+    [SerializeField] private bool rotateDuringAlert = true;
     [SerializeField] private bool moveToAlertPosition = true;
     [SerializeField] [Min(0f)] private float alertSpeed = 2.5f;
     [SerializeField] [Min(0f)] private float alertStoppingDistance = 0.75f;
@@ -113,6 +115,8 @@ public class EnemyBrain : MonoBehaviour
     private EnemyState externalStateOverride = EnemyState.PreSpawn;
     private float lastCombatAwarenessTime = float.NegativeInfinity;
     private bool hasCombatAwareness;
+    private bool activeAlertHasTarget;
+    private int activeAlertSequence;
     private float stunnedUntil = float.NegativeInfinity;
     private int traversalLockCount;
 
@@ -127,6 +131,10 @@ public class EnemyBrain : MonoBehaviour
     public bool HasPatrolPoints => CountResolvedPatrolPoints() > 0;
     public bool ShouldReturnToPatrol => returnToPatrol;
     public bool MoveToAlertPosition => moveToAlertPosition;
+    public bool RotateDuringAlert => rotateDuringAlert;
+    public bool HasTargetAwareness => HasValidTarget || HasActiveCombatMemory;
+    public bool HasActiveTargetAlert => activeAlertHasTarget && HasValidTarget;
+    public int ActiveAlertSequence => activeAlertSequence;
     public bool IsAttackLocked => enemyAttack != null && enemyAttack.IsAttackLocked;
     public bool CanStartAttack => enemyAttack != null && enemyAttack.CanStartAttack;
     public bool IsStunned => Time.time < stunnedUntil;
@@ -194,6 +202,7 @@ public class EnemyBrain : MonoBehaviour
         {
             ClearCurrentTarget();
             ClearCombatAwareness();
+            ClearActiveAlertContext();
             StopNavigation();
             SetExternalState(EnemyState.Dead);
             return;
@@ -238,6 +247,7 @@ public class EnemyBrain : MonoBehaviour
         {
             ClearCurrentTarget();
             ClearCombatAwareness();
+            ClearActiveAlertContext();
             traversalLockCount = 0;
             StopNavigation();
             enemyNavigation?.SetSimulationEnabled(false);
@@ -349,7 +359,7 @@ public class EnemyBrain : MonoBehaviour
 
         Vector3 stimulusPosition = ResolveDamageStimulusPosition(damageInfo);
         RegisterCombatAwareness(stimulusPosition);
-        SetInvestigationPosition(stimulusPosition);
+        BeginInvestigationAlert(stimulusPosition);
         ChangeState(EnemyState.Alert);
     }
 
@@ -383,6 +393,9 @@ public class EnemyBrain : MonoBehaviour
             SetExternalState(EnemyState.Traversal);
             return;
         }
+
+        if (state != EnemyState.Alert)
+            ClearActiveAlertContext();
 
         if (stateMachine == null)
             stateMachine = new EnemyStateMachine(this);
@@ -493,6 +506,38 @@ public class EnemyBrain : MonoBehaviour
     {
         noiseEvent = default;
         return enemyPerception != null && enemyPerception.TryConsumeHeardNoise(out noiseEvent);
+    }
+
+    public bool ShouldAlertBeforeChase(bool hadTargetAwareness)
+    {
+        return alertBeforeChaseOnFirstTargetDetection
+            && AlertDuration > 0f
+            && !hadTargetAwareness;
+    }
+
+    public void BeginTargetAlert()
+    {
+        activeAlertHasTarget = HasValidTarget;
+        if (HasValidTarget)
+        {
+            Vector3 targetPosition = currentTarget.transform.position;
+            RegisterCombatAwareness(targetPosition);
+            SetInvestigationPosition(targetPosition);
+        }
+
+        activeAlertSequence++;
+    }
+
+    public void BeginInvestigationAlert(Vector3 position)
+    {
+        activeAlertHasTarget = false;
+        SetInvestigationPosition(position);
+        activeAlertSequence++;
+    }
+
+    public void ClearActiveAlertContext()
+    {
+        activeAlertHasTarget = false;
     }
 
     public void SetLastKnownTargetPosition(Vector3 position)

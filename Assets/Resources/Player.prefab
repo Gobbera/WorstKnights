@@ -1781,6 +1781,55 @@ MonoBehaviour:
   pitchDownLimit: 89
   characterBody: {fileID: 8122122414697523063}
   scoped: 0
+--- !u!1 &3748719687565019136
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7802612675767937024}
+  - component: {fileID: 6000099743445688320}
+  m_Layer: 13
+  m_Name: PostProcessingFeedbackVolume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7802612675767937024
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3748719687565019136}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5298891682522162122}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6000099743445688320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3748719687565019136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 50
+  blendDistance: 0
+  weight: 0
+  sharedProfile: {fileID: 0}
 --- !u!1 &6008836630170549270
 GameObject:
   m_ObjectHideFlags: 0
@@ -1952,6 +2001,9 @@ GameObject:
   - component: {fileID: 8506111064439396195}
   - component: {fileID: 729554116848078219}
   - component: {fileID: 5176719066230849341}
+  - component: {fileID: 513719924450811376}
+  - component: {fileID: 3757263385761530368}
+  - component: {fileID: 7135577924106584064}
   m_Layer: 13
   m_Name: FP_Camera
   m_TagString: MainCamera
@@ -1968,12 +2020,13 @@ Transform:
   m_GameObject: {fileID: 8029933979964806925}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.656, z: 0.45}
+  m_LocalPosition: {x: 0, y: 0.758, z: 0.45}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2593504479766164524}
   - {fileID: 1064139272900309404}
+  - {fileID: 7802612675767937024}
   m_Father: {fileID: 8122122414697523063}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &8605576129968621690
@@ -2056,7 +2109,7 @@ MonoBehaviour:
   m_RendererIndex: -1
   m_VolumeLayerMask:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 8193
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
@@ -2146,6 +2199,97 @@ MonoBehaviour:
   autoDeriveCrouchCameraOffset: 1
   crouchCameraLocalYOffset: -0.5
   crouchCameraSmoothTime: 0.08
+--- !u!114 &513719924450811376
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8029933979964806925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 964cc3c12e572d34b8590273af88d6b2, type: 2}
+--- !u!114 &3757263385761530368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8029933979964806925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2abcc1060aa4936a4332081c8c416fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DynamicDepthOfFieldController
+  focusCamera: {fileID: 8605576129968621690}
+  targetVolume: {fileID: 513719924450811376}
+  depthOfFieldEnabled: 1
+  autoFocus: 1
+  focusLayerMask:
+    serializedVersion: 2
+    m_Bits: 7835
+  triggerInteraction: 1
+  focusProbeRadius: 0.08
+  minFocusDistance: 0.75
+  maxFocusDistance: 45
+  fallbackFocusDistance: 18
+  focusDeadZone: 0.04
+  ignoreOwnHierarchy: 1
+  nearFocusSpeed: 14
+  farFocusSpeed: 8
+  lostFocusSpeed: 4
+  useUnscaledTime: 0
+  focusMode: 2
+  aperture: 15
+  focalLength: 75
+  controlBokehShape: 1
+  bladeCount: 5
+  bladeCurvature: 1
+  bladeRotation: 0
+  gaussianBlurRange: 15
+  gaussianMaxRadius: 1
+  highQualityGaussian: 1
+  drawFocusRay: 0
+--- !u!114 &7135577924106584064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8029933979964806925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a35e8c7142f460c9c4a35cff92db952, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerPostProcessingFeedbackController
+  baseVolume: {fileID: 513719924450811376}
+  feedbackVolume: {fileID: 6000099743445688320}
+  playerHealth: {fileID: 3184000000000000211}
+  playerMovement: {fileID: 6695486303663589364}
+  damageColor: {r: 0.75, g: 0.02, b: 0.02, a: 1}
+  damageForMaxFlash: 20
+  maxDamageFlashIntensity: 0.22
+  damageFlashFadeSpeed: 0.1
+  lowHealthThreshold: 0.3
+  lowHealthColor: {r: 0.75, g: 0.02, b: 0.02, a: 1}
+  lowHealthPulseTargetIntensity: 0.6
+  lowHealthPulseTargetSmoothness: 0.6
+  lowHealthPulseSpeed: 0.1
+  lowHealthSlowPulseTargetIntensity: 0.55
+  lowHealthSlowPulseTargetSmoothness: 0.6
+  lowHealthSlowPulseSpeed: 1.15
+  lowStaminaStartThreshold: 0.5
+  lowStaminaCriticalThreshold: 0.25
+  lowStaminaColor: {r: 0, g: 0, b: 0, a: 1}
+  lowStaminaTargetIntensity: 0.62
+  lowStaminaTargetSmoothness: 0.68
 --- !u!1 &9061271877706108843
 GameObject:
   m_ObjectHideFlags: 0
@@ -2987,7 +3131,7 @@ PrefabInstance:
     - target: {fileID: 8662617239381368188, guid: ae3c63c262a146740913b779eaa2a551, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: ee35df297879b5149a58fc08fc8f40ef, type: 2}
+      objectReference: {fileID: 2100000, guid: c436abae32ab9044f88cc606fde58df4, type: 2}
     - target: {fileID: 8694790137394929743, guid: ae3c63c262a146740913b779eaa2a551, type: 3}
       propertyPath: m_Layer
       value: 13
@@ -3753,7 +3897,7 @@ PrefabInstance:
     - target: {fileID: -6547223059409353530, guid: ecb8666fabbda1c4dae1885efdc3682a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: ee35df297879b5149a58fc08fc8f40ef, type: 2}
+      objectReference: {fileID: 2100000, guid: c436abae32ab9044f88cc606fde58df4, type: 2}
     - target: {fileID: -6547223059409353530, guid: ecb8666fabbda1c4dae1885efdc3682a, type: 3}
       propertyPath: 'm_Materials.Array.data[1]'
       value: 
@@ -4033,7 +4177,7 @@ PrefabInstance:
     - target: {fileID: -4295087563660814937, guid: ecb8666fabbda1c4dae1885efdc3682a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: ee35df297879b5149a58fc08fc8f40ef, type: 2}
+      objectReference: {fileID: 2100000, guid: c436abae32ab9044f88cc606fde58df4, type: 2}
     - target: {fileID: -4228470685140462118, guid: ecb8666fabbda1c4dae1885efdc3682a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: -73.746826
@@ -5641,7 +5785,7 @@ PrefabInstance:
     - target: {fileID: 8662617239381368188, guid: ecb8666fabbda1c4dae1885efdc3682a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: ee35df297879b5149a58fc08fc8f40ef, type: 2}
+      objectReference: {fileID: 2100000, guid: c436abae32ab9044f88cc606fde58df4, type: 2}
     - target: {fileID: 8879528566716807029, guid: ecb8666fabbda1c4dae1885efdc3682a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: -89.98021

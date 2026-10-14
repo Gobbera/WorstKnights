@@ -25,7 +25,11 @@ public class GameplaySceneRoot : MonoBehaviour
     private static void BootstrapActiveGameplayScene()
     {
         GameplaySceneRoot root = TryGetActiveSceneRoot(createIfMissing: true);
-        root?.AutoPopulateFromScene();
+        if (root == null)
+            return;
+
+        root.AutoPopulateFromScene();
+        InGameSettingsMenuController.EnsureForGameplayScene();
     }
 
     public static GameplaySceneRoot TryGetActiveSceneRoot(bool createIfMissing = false)
@@ -106,6 +110,7 @@ public class GameplaySceneRoot : MonoBehaviour
 
         cachedActiveRoot = this;
         AutoPopulateFromScene();
+        InGameSettingsMenuController.EnsureForGameplayScene();
     }
 
     private void OnDestroy()
@@ -117,6 +122,7 @@ public class GameplaySceneRoot : MonoBehaviour
     private void HandleLocalPlayerReady(PlayerSetup localPlayer)
     {
         AutoPopulateFromScene();
+        InGameSettingsMenuController.EnsureForGameplayScene();
 
         if (!disableSceneCamerasForLocalPlayer)
             return;

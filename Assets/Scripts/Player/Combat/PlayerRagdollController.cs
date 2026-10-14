@@ -208,6 +208,9 @@ public class PlayerRagdollController : MonoBehaviour
 
     private void Update()
     {
+        if (InGameSettingsMenuController.IsAnyMenuOpen)
+            return;
+
         HandleDebugThirdPersonCameraToggleInput();
         HandleDebugRagdollToggleInput();
     }
@@ -1634,16 +1637,20 @@ public class PlayerRagdollController : MonoBehaviour
 
     private void UpdateLocalRagdollCameraInput()
     {
-        if (!allowThirdPersonRagdollCameraInput || !HasAuthority() || Mouse.current == null)
+        if (InGameSettingsMenuController.IsAnyMenuOpen
+            || !allowThirdPersonRagdollCameraInput
+            || !HasAuthority()
+            || Mouse.current == null)
             return;
 
         Vector2 mouseDelta = Mouse.current.delta.ReadValue();
         if (mouseDelta.sqrMagnitude > 0.0001f && thirdPersonRagdollMouseSensitivity > 0f)
         {
-            ragdollCameraYaw += mouseDelta.x * thirdPersonRagdollMouseSensitivity;
+            float mouseSensitivity = thirdPersonRagdollMouseSensitivity * MouseLook.GetSavedSensitivityMultiplier();
+            ragdollCameraYaw += mouseDelta.x * mouseSensitivity;
             float pitchDirection = invertThirdPersonRagdollMouseY ? -1f : 1f;
             ragdollCameraPitch = ClampRagdollCameraPitch(
-                ragdollCameraPitch + mouseDelta.y * thirdPersonRagdollMouseSensitivity * pitchDirection);
+                ragdollCameraPitch + mouseDelta.y * mouseSensitivity * pitchDirection);
         }
 
         float scrollDelta = Mouse.current.scroll.ReadValue().y;

@@ -98,6 +98,13 @@ public class PlayerPickupInteractor : MonoBehaviour
             return;
         }
 
+        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        {
+            ClearPickupOutline();
+            SetInteractionPromptVisible(false);
+            return;
+        }
+
         UpdatePickupOutline();
         UpdateInteractionPrompt();
 
@@ -113,7 +120,7 @@ public class PlayerPickupInteractor : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!HasLocalAuthority() || activePasscodeDoor == null)
+        if (!HasLocalAuthority() || activePasscodeDoor == null || InGameSettingsMenuController.IsAnyMenuOpen)
             return;
 
         Rect panelRect = new Rect(

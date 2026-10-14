@@ -5,7 +5,7 @@
 - `EnemyAttack` remains responsible for attack execution, animation timing, hit windows, player damage, and shield-block interaction.
 - `EnemyMotor` remains responsible for applying actual local movement and damage knockback.
 - `EnemyNetworkSync` remains responsible for replicating transform, state, speed, health, attack sequence, and damage sequence.
-- `EnemyAnimationController` remains responsible for translating code state into Animator parameters and direct spawn/death/damage playback.
+- `EnemyAnimationController` remains responsible for translating code state into Animator parameters, direct spawn/death/damage playback, and optional alert-entry trigger/audio feedback.
 
 ## New Architecture
 - `EnemyBrain` becomes the behavior orchestrator instead of owning all target search and movement logic.
@@ -19,7 +19,7 @@
 ## Behavioral States
 - `Idle`: waits and observes.
 - `Patrol`: moves through configured patrol points.
-- `Alert`: investigates a suspicious position.
+- `Alert`: investigates a suspicious position or pauses on first confirmed target detection before chase.
 - `Chase`: follows a confirmed target using last visible target position.
 - `Attack`: allows `EnemyAttack` to execute when in range.
 - `Search`: searches around the last known target position without tracking the real hidden target.
@@ -32,6 +32,13 @@
 - `Close Awareness` is separate: it wakes the enemy when a player gets very close, even if that player was never seen before.
 - `Search` automatically uses the combat search duration/radius/point count/speed when the search came from recent combat.
 - This prevents an enemy from dropping back to patrol immediately when the player briefly leaves the cone during melee, while still avoiding permanent magical tracking.
+
+## First Target Alert
+- `Idle`, `Patrol`, `Search`, and `Return` use the same target acquisition helper before chase.
+- If the enemy had no valid target and no active combat memory, target acquisition can enter `Alert` first, controlled by `EnemyBrain.Alert Before Chase On First Target Detection`.
+- Target alerts stop navigation, optionally rotate toward the last known target position, wait `Alert Duration`, then continue into `Chase`.
+- Investigation alerts keep the existing sound/damage-without-target flow: optionally move to `InvestigationPosition`, then enter `Search`.
+- Reacquiring a known combat target skips the alert pause and goes straight back to `Chase`.
 
 ## Multiplayer
 - Only the authoritative enemy runs AI decisions.

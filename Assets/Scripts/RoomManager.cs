@@ -3,6 +3,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using IEnumerator = System.Collections.IEnumerator;
 
 [DisallowMultipleComponent]
 public class RoomManager : MonoBehaviourPunCallbacks
@@ -13,6 +14,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
     private const string RoomSceneNamePropertyKey = "mapSceneName";
     private const string RoomNamePlayerPrefsKey = "RoomNameToJoin";
     private const string NicknamePlayerPrefsKey = "PlayerNickname";
+    private const string FallbackGameplayCameraName = "GameplayFallbackCamera";
     private static readonly Vector3[] FallbackSpawnOffsets =
     {
         new Vector3(0f, 0f, 0f),
@@ -48,6 +50,26 @@ public class RoomManager : MonoBehaviourPunCallbacks
     private bool roomJoinRequested;
     private Transform fallbackSpawnPoint;
     private GameObject spawnedPlayerInstance;
+    private GameObject fallbackGameplayCamera;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        instance = null;
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSceneLoadedBootstrap()
+    {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+        SceneManager.sceneLoaded += HandleSceneLoaded;
+    }
+
+    private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        BootstrapGameplayRoomManager();
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void BootstrapGameplayRoomManager()
@@ -77,9 +99,11 @@ public class RoomManager : MonoBehaviourPunCallbacks
         }
 
         instance = this;
+        PhotonNetwork.AutomaticallySyncScene = true;
         ResolveRuntimeReferences();
         DisableLegacyAutoConnectors();
-        RemoveBakedScenePlayers();
+        EnsureFallbackGameplayCamera();
+        StartCoroutine(EnsureFallbackGameplayCameraAfterSceneStarts());
     }
 
     private void Start()
@@ -132,6 +156,12 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
         Debug.Log($"RoomManager: joined Photon lobby while loading gameplay scene. Continuing room join for '{roomNameToJoin}'.");
         TryJoinSelectedRoom();
+    }
+
+    public override void OnCreatedRoom()
+    {
+        base.OnCreatedRoom();
+        Debug.Log($"RoomManager: created Photon room '{PhotonNetwork.CurrentRoom?.Name}' in region '{PhotonNetwork.CloudRegion}' with AppVersion '{PhotonNetwork.AppVersion}'. Visible={PhotonNetwork.CurrentRoom?.IsVisible}, Open={PhotonNetwork.CurrentRoom?.IsOpen}.");
     }
 
     public override void OnJoinedRoom()
@@ -284,6 +314,9 @@ public class RoomManager : MonoBehaviourPunCallbacks
         roomJoinRequested = true;
         RoomOptions roomOptions = new RoomOptions
         {
+            MaxPlayers = 16,
+            IsVisible = true,
+            IsOpen = true,
             CustomRoomProperties = new Hashtable
             {
                 { RoomSceneIndexPropertyKey, SceneManager.GetActiveScene().buildIndex },
@@ -293,7 +326,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
             CustomRoomPropertiesForLobby = new[] { RoomSceneIndexPropertyKey, RoomScenePathPropertyKey, RoomSceneNamePropertyKey }
         };
 
-        Debug.Log($"RoomManager: joining or creating room '{roomNameToJoin}' for scene index {SceneManager.GetActiveScene().buildIndex}.");
+        Debug.Log($"RoomManager: joining or creating visible Photon room '{roomNameToJoin}' for scene index {SceneManager.GetActiveScene().buildIndex} in region '{PhotonNetwork.CloudRegion}' with AppVersion '{PhotonNetwork.AppVersion}'.");
         PhotonNetwork.JoinOrCreateRoom(roomNameToJoin, roomOptions, TypedLobby.Default);
     }
 
@@ -303,6 +336,17 @@ public class RoomManager : MonoBehaviourPunCallbacks
         roomJoinRequested = false;
         SyncLegacyUiJoinedState();
         SpawnPlayer();
+        if (localPlayerSpawned)
+        {
+            RemoveBakedScenePlayers();
+            EnsureFallbackGameplayCamera();
+        }
+        else
+        {
+            EnsureFallbackGameplayCamera();
+        }
+
+        StartCoroutine(ReleaseFallbackGameplayCameraWhenPlayerCameraIsReady());
     }
 
     private void ResolveRuntimeReferences()
@@ -348,12 +392,83 @@ public class RoomManager : MonoBehaviourPunCallbacks
                 continue;
 
             PhotonView playerView = playerSetup.GetComponent<PhotonView>();
-            if (playerView == null || playerView.InstantiationId != 0)
+            if (playerView == null || playerView.InstantiationId != 0 || playerView.ViewID == 0)
                 continue;
 
             playerSetup.gameObject.SetActive(false);
             Destroy(playerSetup.gameObject);
         }
+    }
+
+    private void EnsureFallbackGameplayCamera()
+    {
+        if (fallbackGameplayCamera != null || HasEnabledGameplayCamera(ignoreFallbackCamera: true))
+            return;
+
+        Transform[] resolvedSpawnPoints = GetResolvedSpawnPoints();
+        Transform spawnPoint = resolvedSpawnPoints.Length > 0 ? resolvedSpawnPoints[0] : fallbackSpawnPoint;
+        Vector3 cameraPosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+        Quaternion cameraRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
+
+        cameraPosition += Vector3.up * 1.6f;
+
+        fallbackGameplayCamera = new GameObject(FallbackGameplayCameraName);
+        SceneManager.MoveGameObjectToScene(fallbackGameplayCamera, SceneManager.GetActiveScene());
+        fallbackGameplayCamera.transform.SetPositionAndRotation(cameraPosition, cameraRotation);
+
+        Camera camera = fallbackGameplayCamera.AddComponent<Camera>();
+        camera.nearClipPlane = 0.05f;
+        camera.farClipPlane = 1000f;
+        camera.depth = -100f;
+
+        fallbackGameplayCamera.AddComponent<AudioListener>();
+        Debug.Log($"RoomManager: created temporary gameplay camera while waiting for the local player camera in scene '{SceneManager.GetActiveScene().name}'.");
+    }
+
+    private IEnumerator EnsureFallbackGameplayCameraAfterSceneStarts()
+    {
+        yield return null;
+        EnsureFallbackGameplayCamera();
+    }
+
+    private IEnumerator ReleaseFallbackGameplayCameraWhenPlayerCameraIsReady()
+    {
+        if (fallbackGameplayCamera == null)
+            yield break;
+
+        const int maxFramesToWait = 240;
+        for (int frame = 0; frame < maxFramesToWait; frame++)
+        {
+            if (HasEnabledGameplayCamera(ignoreFallbackCamera: true))
+                break;
+
+            yield return null;
+        }
+
+        if (fallbackGameplayCamera == null)
+            yield break;
+
+        Destroy(fallbackGameplayCamera);
+        fallbackGameplayCamera = null;
+    }
+
+    private bool HasEnabledGameplayCamera(bool ignoreFallbackCamera)
+    {
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude);
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Camera camera = cameras[i];
+            if (camera == null || !camera.enabled || !camera.gameObject.activeInHierarchy)
+                continue;
+
+            if (ignoreFallbackCamera && fallbackGameplayCamera != null && camera.gameObject == fallbackGameplayCamera)
+                continue;
+
+            if (camera.gameObject.scene == SceneManager.GetActiveScene())
+                return true;
+        }
+
+        return false;
     }
 
     private PlayerSetup FindExistingLocalRuntimePlayer()

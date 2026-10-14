@@ -50,6 +50,8 @@ public class PlayerHealth : CombatHealth
     public bool IsLocallyOwned => photonView == null || photonView.IsMine;
     public bool CanBeTargetedByEnemy => IsAlive;
 
+    public event System.Action<PlayerHealth, DamageInfo> Damaged;
+
     protected override void Awake()
     {
         photonView = GetComponent<PhotonView>();
@@ -264,6 +266,8 @@ public class PlayerHealth : CombatHealth
     {
         if (!CanApplyDamageLocally())
             return;
+
+        Damaged?.Invoke(this, damageInfo);
 
         if (playerMovement != null && damageInfo.PlayerDamageAnimation != PlayerDamageAnimationType.None)
             playerMovement.TriggerDamageAnimation(damageInfo.PlayerDamageAnimation);

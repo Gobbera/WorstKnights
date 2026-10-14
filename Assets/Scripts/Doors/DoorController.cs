@@ -45,6 +45,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     [SerializeField] private Transform movingPart;
     [SerializeField] private new PhotonView photonView;
     [SerializeField] [HideInInspector] private string networkSceneId = string.Empty;
+    private string runtimeNetworkSceneId;
     [SerializeField] private bool prototypeLocalOnly;
     [SerializeField] [Min(0f)] private float interactionCooldown = 0.35f;
     [Tooltip("How long players are blocked from interacting with this door after an enemy opens it.")]
@@ -142,6 +143,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private void Awake()
     {
         ResolveReferences();
+        runtimeNetworkSceneId = SceneNetworkStateIdUtility.BuildSceneObjectId(transform);
         CaptureClosedPose();
 
         isOpen = startupState == DoorStartupState.StartsOpen;
@@ -1097,8 +1099,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     {
         get
         {
-            EnsureNetworkSceneId();
-            return networkSceneId;
+            return !string.IsNullOrWhiteSpace(runtimeNetworkSceneId) ? runtimeNetworkSceneId : networkSceneId;
         }
     }
 

@@ -243,6 +243,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6119358272234519331}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -1373672963336166708}
   m_SourcePrefab: {fileID: 100100000, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
 --- !u!4 &1284160626870180310 stripped
 Transform:
@@ -330,33 +333,6 @@ MonoBehaviour:
   - {fileID: 0}
   signalRequirement: 0
   stayOpenAfterFirstSignalOpen: 0
---- !u!114 &6119358272234519331
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1916723532739609452}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3b2f2354fdf64bd889597b7758f762ea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoorNavMeshObstacleController
-  doorController: {fileID: 6926036344011652875}
-  obstacle: {fileID: 0}
-  obstacleHost: {fileID: 1284160626870180310}
-  autoCreateObstacle: 1
-  fitObstacleFromColliders: 1
-  obstaclePadding: {x: 0.35, y: 0.2, z: 0.35}
-  fallbackObstacleSize: {x: 1.1, y: 2.4, z: 0.25}
-  fallbackObstacleCenter: {x: 0, y: 1.2, z: 0}
-  carveWhenOpen: 1
-  carveWhenClosed: 0
-  carveWhileMoving: 0
-  replanNearbyEnemiesOnStateChange: 1
-  replanRadius: 10
-  replanDelay: 0.1
-  drawGizmos: 1
 --- !u!114 &5717212043837353951
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -475,3 +451,46 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -6151747068533630916, guid: 50d4c3250ae0a4646840544d3ac0746b, type: 3}
+--- !u!114 &6119358272234519331
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1916723532739609452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b2f2354fdf64bd889597b7758f762ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoorNavMeshObstacleController
+  doorController: {fileID: 6926036344011652875}
+  obstacle: {fileID: -1373672963336166708}
+  obstacleHost: {fileID: 1284160626870180310}
+  autoCreateObstacle: 1
+  fitObstacleFromColliders: 1
+  obstaclePadding: {x: 0.35, y: 0.2, z: 0.35}
+  fallbackObstacleSize: {x: 1.1, y: 2.4, z: 0.25}
+  fallbackObstacleCenter: {x: 0, y: 1.2, z: 0}
+  carveWhenOpen: 1
+  carveWhenClosed: 0
+  carveWhileMoving: 0
+  replanNearbyEnemiesOnStateChange: 1
+  replanRadius: 10
+  replanDelay: 0.1
+  drawGizmos: 1
+--- !u!208 &-1373672963336166708
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1916723532739609452}
+  m_Enabled: 0
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.175, y: 0.1, z: 0.175}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 0
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5

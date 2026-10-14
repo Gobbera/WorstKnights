@@ -16,11 +16,17 @@ public class PlayerPerspectiveVisibilityEditor : Editor
 
     private void OnEnable()
     {
+        if (target == null)
+            return;
+
         elementsProperty = serializedObject.FindProperty("elements");
     }
 
     public override void OnInspectorGUI()
     {
+        if (target == null)
+            return;
+
         serializedObject.Update();
 
         DrawElements();
