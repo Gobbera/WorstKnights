@@ -128,8 +128,10 @@ public partial class PlayerAudioController : MonoBehaviour
     [SerializeField] private bool verboseLogging;
 
     private int lastAttackSequence;
+    private int lastKickSequence;
     private int lastJumpSequence;
     private int lastLandingSequence;
+    private MovementState lastMovementState;
     private float footstepDistanceAccumulator;
     private bool hasInitializedSequenceState;
 
@@ -144,6 +146,12 @@ public partial class PlayerAudioController : MonoBehaviour
         ResolveReferences();
         InitializeSequenceState();
         ResetFootstepState();
+        EnableFeedbackAudio();
+    }
+
+    private void OnDisable()
+    {
+        DisableFeedbackAudio();
     }
 
     private void Update()
@@ -151,6 +159,7 @@ public partial class PlayerAudioController : MonoBehaviour
         ResolveReferences();
         UpdateActionAudio();
         UpdateFootsteps(Time.deltaTime);
+        UpdateFeedbackAudio(Time.deltaTime);
     }
 
     private void ResolveReferences()
@@ -180,8 +189,10 @@ public partial class PlayerAudioController : MonoBehaviour
             return;
 
         lastAttackSequence = playerMovement.AttackAnimationSequence;
+        lastKickSequence = playerMovement.KickAnimationSequence;
         lastJumpSequence = playerMovement.JumpAnimationSequence;
         lastLandingSequence = playerMovement.LandingAnimationSequence;
+        lastMovementState = playerMovement.CurrentState;
         hasInitializedSequenceState = true;
     }
 
@@ -199,6 +210,12 @@ public partial class PlayerAudioController : MonoBehaviour
             PlayAttached(profile != null ? profile.Attack : null, attackAnchor);
         }
 
+        if (playerMovement.KickAnimationSequence != lastKickSequence)
+        {
+            lastKickSequence = playerMovement.KickAnimationSequence;
+            PlayAttached(profile != null ? profile.Kick : null, transform);
+        }
+
         if (playerMovement.JumpAnimationSequence != lastJumpSequence)
         {
             lastJumpSequence = playerMovement.JumpAnimationSequence;
@@ -211,6 +228,20 @@ public partial class PlayerAudioController : MonoBehaviour
             lastLandingSequence = playerMovement.LandingAnimationSequence;
             PlayFootstepActionAudio(FootstepGait.Land, profile != null ? profile.Land : null);
             ResetFootstepState();
+        }
+
+        MovementState currentState = playerMovement.CurrentState;
+        if (currentState != lastMovementState)
+        {
+            if (currentState == MovementState.crouching)
+                PlayAttached(profile != null ? profile.CrouchDown : null, transform);
+            else if (lastMovementState == MovementState.crouching)
+                PlayAttached(profile != null ? profile.StandUp : null, transform);
+
+            if (currentState == MovementState.sprinting)
+                PlayAttached(profile != null ? profile.RunStart : null, transform);
+
+            lastMovementState = currentState;
         }
     }
 
@@ -292,7 +323,7 @@ public partial class PlayerAudioController : MonoBehaviour
 
     private void PlayAttached(AudioCue cue, Transform anchor)
     {
-        if (cue == null || audioEmitter == null)
+        if (cue == null || !cue.HasPlayableClip() || audioEmitter == null)
         {
             if (cue == null && verboseLogging && profile == null)
                 Debug.Log("[PlayerAudioController] Nenhum PlayerAudioProfile/Cue configurado ainda para este evento.", gameObject);

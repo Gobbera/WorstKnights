@@ -954,6 +954,7 @@ MonoBehaviour:
   footstepPlayback: {fileID: 3184000000000000213}
   attackAnchor: {fileID: 3184000000000000102}
   verboseLogging: 0
+  playerHealth: {fileID: 0}
 --- !u!114 &3184000000000000208
 MonoBehaviour:
   m_ObjectHideFlags: 0

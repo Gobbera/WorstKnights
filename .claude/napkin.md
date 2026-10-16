@@ -300,10 +300,13 @@
    Do instead: use the `PlayerPerspectiveVisibility` Elements list on `Assets/Resources/Player.prefab`, resolve final renderer visibility by target specificity, and force-hide owner-only roots/layer renderers such as `Separated_UpperBody` on remote player instances so the local Hands Camera cannot draw them.
 
 ## Post Processing Feedback
-1. **[2026-10-13] Player camera post effects should go through one local feedback controller**
+1. **[2026-10-14] Runtime URP Volumes can override inactive saved camera components**
+   Do instead: keep the base `FP_Camera Profile.asset` untouched, verify the runtime Volume is on a layer in `FP_Camera`'s Volume Layer Mask and post-processing is enabled, then inspect the runtime Volume weight and active overrides in Play Mode; calibrate light thresholds against actual torch intensities (about 0.4 here).
+
+2. **[2026-10-13] Player camera post effects should go through one local feedback controller**
    Do instead: raise local gameplay signals such as `PlayerHealth.Damaged`, then let `PlayerPostProcessingFeedbackController` on `Assets/Resources/Player.prefab` `FP_Camera` drive the child `PostProcessingFeedbackVolume` weight against the base Volume baseline; keep feedback owner-local so remote player volumes stay at zero.
 
-2. **[2026-10-13] URP Volume inspector errors can come from broken profile subassets**
+3. **[2026-10-13] URP Volume inspector errors can come from broken profile subassets**
    Do instead: when `SerializedObjectNotCreatableException` appears from URP `VolumeComponentEditor`/effect editors, scan active `VolumeProfile` assets for dangling `m_Script: {fileID: 0}` subassets or null components and remove only the broken, unreferenced entries.
 
 ## Rendering & Materials

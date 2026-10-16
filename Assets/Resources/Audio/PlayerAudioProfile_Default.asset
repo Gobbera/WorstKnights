@@ -28,3 +28,10 @@ MonoBehaviour:
   jump: {fileID: 0}
   land: {fileID: 0}
   footstepHeightOffset: 0
+  crouchDown: {fileID: 11400000, guid: f85d301d8f9a4f8e801abcd5698b7db8, type: 2}
+  standUp: {fileID: 11400000, guid: ccb1568e24c744b5a116a8a944652769, type: 2}
+  kick: {fileID: 11400000, guid: 569e3942a22e40e99241cf78f7238e48, type: 2}
+  runStart: {fileID: 11400000, guid: 6b76e4177e054060821a04e94137f21c, type: 2}
+  damaged: {fileID: 11400000, guid: 338029e9342142229e40587e5772e666, type: 2}
+  lowStaminaBreathing: {fileID: 11400000, guid: 7e15f186c17447e0b4befe99e4c949d1, type: 2}
+  lowHealthHeartbeat: {fileID: 11400000, guid: 138f815215b9443ab0ea89d06a877af7, type: 2}

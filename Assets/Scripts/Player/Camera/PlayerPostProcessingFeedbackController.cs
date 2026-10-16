@@ -52,6 +52,10 @@ public sealed class PlayerPostProcessingFeedbackController : MonoBehaviour
     private bool warnedMissingBaseVolume;
     private bool warnedMissingFeedbackVolume;
 
+    public float LowHealthThreshold => lowHealthThreshold;
+    public float LowHealthPulseSpeed => lowHealthPulseSpeed;
+    public float LowStaminaStartThreshold => lowStaminaStartThreshold;
+
     private void Reset()
     {
         baseVolume = GetComponent<Volume>();

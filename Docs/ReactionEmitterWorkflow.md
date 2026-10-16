@@ -301,6 +301,10 @@ Use em objetos que tenham `DoorController` e que precisem reagir quando a porta 
 4. No `ReactionSignalReceiver`, configure os sinais que voce quer usar.
 5. Se quiser controlar o local exato do som ou efeito, ajuste o `Feedback Origin` diretamente no `Signal Entry` do `ReactionSignalReceiver`.
 
+No `Chest_Drawers_01`, `Chest_Drawers_Door_01.L` e `Chest_Drawers_Door_01.R` tem, cada uma, `DoorController`, collider, receiver, emitter e bridge no proprio objeto da folha. As entries `Squeaking`, `Opened` e `Closed` reutilizam os cues de porta, com `Feedback Origin` no pivo da respectiva folha. Assim cada lado abre, fecha e sincroniza seu estado independentemente; para trocar o timbre do armario, substitua os `Audio Cue` dessas entries no prefab.
+
+No `Chest_Drawer_02`, cada uma das quatro gavetas usa o mesmo conjunto de componentes, com `DoorController.Motion Mode = Slide` e deslocamento local no eixo `-Z`. Mantenha `Moving Part`, `Interaction Prompt Pivot` e `Feedback Origin` ligados a transforms da propria gaveta: copiar componentes de outro armario pode preservar referencias externas. A instancia do Map3 usa o prefab `Chest_Drawer_02`, portanto ajustes no prefab se propagam para a cena, salvo campos sobrescritos na instancia.
+
 #### Parametros importantes da bridge
 
 `DoorReactionSignalBridge`:
