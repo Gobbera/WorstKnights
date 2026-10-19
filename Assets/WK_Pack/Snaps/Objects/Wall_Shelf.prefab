@@ -1,5 +1,56 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7781377609901341196
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6000513081096702056}
+  - component: {fileID: 4489386059698964821}
+  m_Layer: 0
+  m_Name: Pivot_Asset
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6000513081096702056
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7781377609901341196}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.466, z: 0.586}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2248056036330042312}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4489386059698964821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7781377609901341196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 092459c116fb4e709faff84efaf26c4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LootSpawner
+  groups:
+  - door: {fileID: 0}
+    slots:
+    - spawnPoint: {fileID: 6000513081096702056}
+      options:
+      - prefab: {fileID: 9113791748502159959, guid: cd0fb8e99c68cd34689c176d6eb6129c, type: 3}
+        chancePercent: 100
 --- !u!1001 &1781185131296494627
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -58,7 +109,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 732aee20f70858b47964c3bf0c953c69, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6000513081096702056}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 732aee20f70858b47964c3bf0c953c69, type: 3}
       insertIndex: -1
@@ -90,3 +144,8 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.41823354, y: 0.45710668, z: 1.8108318}
   m_Center: {x: 0, y: 0.22855328, z: 0.000000029802322}
+--- !u!4 &2248056036330042312 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 732aee20f70858b47964c3bf0c953c69, type: 3}
+  m_PrefabInstance: {fileID: 1781185131296494627}
+  m_PrefabAsset: {fileID: 0}

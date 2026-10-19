@@ -155,6 +155,108 @@ Transform:
   m_Children: []
   m_Father: {fileID: 6667369020610053623}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &4176998792295392224
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2866885651714170127}
+  - component: {fileID: 1627853966473159199}
+  m_Layer: 0
+  m_Name: Pivot_Asset
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2866885651714170127
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4176998792295392224}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.815, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3706022200646889211}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1627853966473159199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4176998792295392224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 092459c116fb4e709faff84efaf26c4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LootSpawner
+  groups:
+  - door: {fileID: 8833313222888002492}
+    slots:
+    - spawnPoint: {fileID: 2866885651714170127}
+      options:
+      - prefab: {fileID: 9113791748502159959, guid: cd0fb8e99c68cd34689c176d6eb6129c, type: 3}
+        chancePercent: 100
+--- !u!1 &4472250285094579039
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 167528989388307504}
+  - component: {fileID: 5722717560856780697}
+  m_Layer: 0
+  m_Name: Pivot_Asset
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &167528989388307504
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4472250285094579039}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.53, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6611679782534962606}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5722717560856780697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4472250285094579039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 092459c116fb4e709faff84efaf26c4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LootSpawner
+  groups:
+  - door: {fileID: 2652336209839304379}
+    slots:
+    - spawnPoint: {fileID: 167528989388307504}
+      options:
+      - prefab: {fileID: 9113791748502159959, guid: cd0fb8e99c68cd34689c176d6eb6129c, type: 3}
+        chancePercent: 100
 --- !u!1 &4865439854922612173
 GameObject:
   m_ObjectHideFlags: 0
@@ -333,12 +435,18 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8871908532562191706, guid: 6585d14562aea1347935b274da0bbcfd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1502906025598984945}
+    - targetCorrespondingSourceObject: {fileID: 8871908532562191706, guid: 6585d14562aea1347935b274da0bbcfd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 167528989388307504}
     - targetCorrespondingSourceObject: {fileID: -7804648015036918257, guid: 6585d14562aea1347935b274da0bbcfd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6242167087216208828}
     - targetCorrespondingSourceObject: {fileID: -7804648015036918257, guid: 6585d14562aea1347935b274da0bbcfd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5173669768226289584}
+    - targetCorrespondingSourceObject: {fileID: -7804648015036918257, guid: 6585d14562aea1347935b274da0bbcfd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2866885651714170127}
     - targetCorrespondingSourceObject: {fileID: 3381517050737912841, guid: 6585d14562aea1347935b274da0bbcfd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9207421826547571734}
@@ -436,7 +544,7 @@ MonoBehaviour:
   doorName: Top drawer
   movingPart: {fileID: 6667369020610053623}
   photonView: {fileID: 0}
-  networkSceneId: 'Chest_Drawer_02:Chest_Drawer_02[0]/Drawer_04[4]'
+  networkSceneId: 'Map3:Chest_Drawer_02[91]/Drawer_04[4]'
   prototypeLocalOnly: 0
   interactionCooldown: 0.35
   enemyOpenPlayerInteractionLockDuration: 4
@@ -506,8 +614,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.2037034, y: 0.17839539, z: 0.97966003}
-  m_Center: {x: -0.0008467436, y: 1.270802, z: -0.035361767}
+  m_Size: {x: 1.2037034, y: 0.17839527, z: 0.042476673}
+  m_Center: {x: -0.0008467436, y: 1.270802, z: -0.5039536}
 --- !u!114 &4412468125845414707
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -605,7 +713,7 @@ MonoBehaviour:
   doorName: Bottom drawer
   movingPart: {fileID: 6611679782534962606}
   photonView: {fileID: 0}
-  networkSceneId: 'Chest_Drawer_02:Chest_Drawer_02[0]/Drawer_01[1]'
+  networkSceneId: 'Map3:Chest_Drawer_02[91]/Drawer_01[1]'
   prototypeLocalOnly: 0
   interactionCooldown: 0.35
   enemyOpenPlayerInteractionLockDuration: 4
@@ -675,8 +783,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.2037034, y: 0.19243547, z: 0.980381}
-  m_Center: {x: -0.0008467436, y: 0.42220247, z: -0.035722256}
+  m_Size: {x: 1.2037034, y: 0.1924355, z: 0.030277275}
+  m_Center: {x: -0.0008467436, y: 0.42220247, z: -0.51077425}
 --- !u!114 &553886268607676312
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -769,7 +877,7 @@ MonoBehaviour:
   doorName: Upper middle drawer
   movingPart: {fileID: 1023356849797747965}
   photonView: {fileID: 0}
-  networkSceneId: 'Chest_Drawer_02:Chest_Drawer_02[0]/Drawer_03[3]'
+  networkSceneId: 'Map3:Chest_Drawer_02[91]/Drawer_03[3]'
   prototypeLocalOnly: 0
   interactionCooldown: 0.35
   enemyOpenPlayerInteractionLockDuration: 4
@@ -839,8 +947,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.2037034, y: 0.18229741, z: 0.97966003}
-  m_Center: {x: -0.0008467436, y: 0.9884242, z: -0.035361767}
+  m_Size: {x: 1.2037034, y: 0.18229747, z: 0.035058998}
+  m_Center: {x: -0.0008467436, y: 0.9884242, z: -0.5076624}
 --- !u!114 &4500133947924226382
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -933,7 +1041,7 @@ MonoBehaviour:
   doorName: Lower middle drawer
   movingPart: {fileID: 3706022200646889211}
   photonView: {fileID: 0}
-  networkSceneId: 'Chest_Drawer_02:Chest_Drawer_02[0]/Drawer_02[2]'
+  networkSceneId: 'Map3:Chest_Drawer_02[91]/Drawer_02[2]'
   prototypeLocalOnly: 0
   interactionCooldown: 0.35
   enemyOpenPlayerInteractionLockDuration: 4
@@ -1003,8 +1111,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.2037034, y: 0.18778408, z: 0.97719574}
-  m_Center: {x: -0.0008467436, y: 0.70476955, z: -0.03412962}
+  m_Size: {x: 1.2037034, y: 0.18778408, z: 0.027090097}
+  m_Center: {x: -0.0008467436, y: 0.70476955, z: -0.5091826}
 --- !u!114 &6417737839915894781
 MonoBehaviour:
   m_ObjectHideFlags: 0

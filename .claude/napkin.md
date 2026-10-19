@@ -178,8 +178,8 @@
 7. **[2026-07-01] Hand grip authoring should happen in Scene Mode and keep explicit perspective refs**
    Do instead: place a prefab instance of the item in the scene, select it or open `Tools/Inventory/Item Grip Authoring Tool` from its Inspector, assign a scene `Target` that contains sockets, choose a compatible FPS/TP `Preview Socket`, adjust in Scene view, then save to the matching `GripPoints_TP_*` or `GripPoints_FPS_*` transform required by the item `HandRequirement`.
 
-8. **[2026-05-27] Single-key actions across both hands need an explicit hand-resolution rule**
-   Do instead: resolve shared actions like `G` drop from the last interacted hand first, then fall back to whichever active hand actually has an item instead of hardcoding right-hand priority.
+8. **[2026-10-19] Loot pivots must follow the movable compartment**
+   Do instead: put `LootSpawner` on `Pivot_Asset`, leave `Spawn Point` empty to use that pivot, parent it under `DoorController.movingPart` for sliding drawers, and gate it with the matching door; use the standalone pivot prefab for floor or table loot.
 
 9. **[2026-05-27] Dropped pickups must preserve their world source per slot**
    Do instead: when equipping a `WorldPickupItem`, store the original pickup reference alongside the slot data, then make `DropToWorld` reactivate inactive stored pickups before repositioning them instead of relying only on `ItemDefinition` or the equipped visual clone.

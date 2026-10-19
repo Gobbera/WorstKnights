@@ -323,6 +323,9 @@ public class HandEquipmentController : MonoBehaviour
             return false;
         }
 
+        if (!pickupItem.CanBePickedUp)
+            return false;
+
         if (!CanChangeInventorySlots("Equipar item"))
             return false;
 

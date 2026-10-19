@@ -1,0 +1,11 @@
+# Loot spawning
+
+Put `LootSpawner` on a `Pivot_Asset` at the intended item position. Use `Assets/Prefabs/Objetcs/Pivot_Asset.prefab` for loot placed directly in the scene, or add a pivot as a child of a chest, cabinet, shelf, table, or other object. For a sliding drawer, parent the pivot under the **moving drawer transform**, not the stationary cabinet. The standalone pivot prefab starts with one group and one slot; add item options to make it spawn something.
+
+Each **Group** has an optional **Door** and one or more **Slots**. Leave **Door** empty for exposed loot, such as items on a shelf or floor; those items can be picked up immediately. Assign the matching `DoorController` to gate a chest or drawer. Multiple independent compartments can each have their own pivot and spawner, or be configured as separate groups on one spawner. Never point a moving drawer's slot at the stationary cabinet.
+
+Leave **Spawn Point** empty to spawn at the `Pivot_Asset` carrying `LootSpawner`. Set it only when a slot intentionally uses another transform. Each slot's **Options** list holds `WorldPickupItem` prefabs with valid `ItemDefinition` assets. At most one option is selected per slot. Chances of 30% and 20% leave a 50% chance of nothing; a single 100% option always appears. Totals above 100% act as relative weights and leave no empty chance. Add slots for multiple independently rolled items. When placing an item on furniture, position the pivot high enough that the item's solid collider rests above the surface.
+
+Items are selected when the scene starts and remain visible at their spawn points. An item in a gated group can only be picked up while that group's door is open; closing it blocks pickup again. Until collected, items follow their pivot, including a sliding drawer. After the first pickup they no longer follow it, even if dropped.
+
+The master client stores the choices in Photon room properties. Every client creates the same pickups with stable IDs for the existing inventory RPCs. Keep scene-authored loot hierarchies and group/slot order identical across clients. `Chest` has one pivot gated by its lid at 50%; `Chest_Drawers_01` has two pivot spawners with separate door references at 100%; `Chest_Drawer_02` has a pivot under the moving drawer; and `Table` has an ungated pivot above its top.

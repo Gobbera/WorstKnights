@@ -645,6 +645,8 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 
 - origem: eventos do `DoorController`
 - sinais comuns: `Squeaking`, `Opened`, `Closed`, `LockedAttempt`, `Locked`, `Unlocked`
+- o prefab `Chest` usa o mesmo fluxo para a tampa: `movingPart` aponta para `Chest_Door`, `rotatePivot` para `Pivot`, e a rotacao local positiva no eixo X levanta a frente da tampa sem mover a base
+- no `Chest`, o `DoorController` e os componentes de reacao ficam na propria `Chest_Door`; o componente de saque permanece no root e referencia essa tampa
 
 ### TriggerVolumeReactionSignalBridge
 
@@ -661,6 +663,7 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 - origem: interacao do jogador pelo `PlayerPickupInteractor`
 - sinais comuns: `Interacted`, ou um signal de dominio como `Lit` quando usado como proxy de um interactable existente
 - para tochas, use o sinal `Lit` para feedback discreto de acendimento, como `Torch_Woosh`; a bridge encaminha a acao da tocha equipada para `WallTorchInteractable`, e o loop continuo da chama fica em `TorchFlameController.litLoopAudioCue`, ligado ao estado `IsLit`
+- `Candlestick_01` e `Candlestick_02` reutilizam a mesma bridge, interactable e estado da tocha. Em cada prefab, um unico `VFX` agrupa tres pares de chama/fumaca e uma luz; uma interacao acende o conjunto, enquanto `WallTorchStateController` sincroniza o estado em multiplayer.
 
 ## Regra para novas integracoes
 

@@ -50,6 +50,7 @@ public class WorldPickupItem : MonoBehaviour
     [SerializeField] [HideInInspector] private bool legacyAuthoringMigrated;
 
     private Transform worldParentBeforeEquip;
+    private bool releaseFromLootAnchorOnEquip;
     private int worldSiblingIndexBeforeEquip;
     private Vector3 worldScaleBeforeEquip = Vector3.one;
     private bool hasWorldStateBeforeEquip;
@@ -77,6 +78,8 @@ public class WorldPickupItem : MonoBehaviour
     public AudioCue InventorySelectAudioCue => inventorySelectAudioCue != null ? inventorySelectAudioCue : itemDefinition != null ? itemDefinition.InventorySelectAudioCue : null;
     public AudioCue UseAudioCue => useAudioCue != null ? useAudioCue : itemDefinition != null ? itemDefinition.UseAudioCue : null;
     public bool IsEquipped { get; private set; }
+    public bool HasEverBeenEquipped { get; private set; }
+    public bool CanBePickedUp { get; private set; } = true;
     public HandType EquippedHand { get; private set; } = HandType.Right;
     public EquippedItemPerspective EquippedPerspective { get; private set; } = EquippedItemPerspective.ThirdPerson;
     public Transform EquippedSocket { get; private set; }
@@ -260,6 +263,31 @@ public class WorldPickupItem : MonoBehaviour
         itemDefinition = definition;
     }
 
+    public void AssignRuntimeNetworkSceneId(string sceneId)
+    {
+        if (!Application.isPlaying || presentationClone || string.IsNullOrWhiteSpace(sceneId))
+            return;
+
+        UnregisterSceneItem();
+        networkSceneId = sceneId;
+        RegisterSceneItem();
+    }
+
+    public void SetPickupAvailable(bool available)
+    {
+        CanBePickedUp = available;
+    }
+
+    public void AttachToLootAnchor(Transform anchor)
+    {
+        if (!Application.isPlaying || presentationClone || IsEquipped || anchor == null)
+            return;
+
+        transform.SetParent(anchor, true);
+        transform.SetPositionAndRotation(anchor.position, anchor.rotation);
+        releaseFromLootAnchorOnEquip = true;
+    }
+
     public void SetAudioCues(AudioCue selectCue, AudioCue actionCue)
     {
         inventorySelectAudioCue = selectCue;
@@ -311,6 +339,8 @@ public class WorldPickupItem : MonoBehaviour
         DisablePickupOutlineForEquippedState(destroyOutlineComponents: perspective == EquippedItemPerspective.FirstPerson);
 
         IsEquipped = true;
+        HasEverBeenEquipped = true;
+        CanBePickedUp = true;
         EquippedHand = hand;
         EquippedPerspective = perspective;
         EquippedSocket = socket;
@@ -363,6 +393,7 @@ public class WorldPickupItem : MonoBehaviour
 
         EquippedSocket = null;
         IsEquipped = false;
+        CanBePickedUp = true;
         EquippedPerspective = EquippedItemPerspective.ThirdPerson;
         hasWorldStateBeforeEquip = false;
     }
@@ -592,7 +623,8 @@ public class WorldPickupItem : MonoBehaviour
 
     private void CacheWorldStateBeforeEquip(EquippedItemPerspective perspective)
     {
-        worldParentBeforeEquip = transform.parent;
+        worldParentBeforeEquip = releaseFromLootAnchorOnEquip ? null : transform.parent;
+        releaseFromLootAnchorOnEquip = false;
         worldSiblingIndexBeforeEquip = transform.GetSiblingIndex();
         worldScaleBeforeEquip = usePresetEquippedBaseWorldScale
             ? SanitizeScale(equippedBaseWorldScale)

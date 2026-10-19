@@ -113,6 +113,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     public event Action<DoorController> Squeaking;
     public event Action<DoorController> Opened;
     public event Action<DoorController> Closed;
+    public event Action<DoorController> OpenStateChanged;
     public event Action<DoorController> LockedInteractionFailed;
     public event Action<DoorController> Locked;
     public event Action<DoorController> Unlocked;
@@ -956,6 +957,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
         if (wasOpen != isOpen)
         {
+            OpenStateChanged?.Invoke(this);
+
             if (isOpen && wasFullyClosed)
                 Opened?.Invoke(this);
 

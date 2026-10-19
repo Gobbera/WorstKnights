@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class PlayerPickupInteractor : MonoBehaviour
 {
     private const string FirstPersonCameraName = "FP_Camera";
-    private const int MaxHits = 8;
+    private const int MaxHits = 64;
     private const string PasscodeFieldControlName = "DoorPasscodeField";
     private const float PasscodePanelWidth = 320f;
     private const float PasscodePanelHeight = 140f;
@@ -46,7 +46,20 @@ public class PlayerPickupInteractor : MonoBehaviour
     [SerializeField] private bool preferObjectPromptAnchors = true;
 
     private readonly RaycastHit[] sphereCastHits = new RaycastHit[MaxHits];
+    private readonly RaycastHit[] aimHits = new RaycastHit[MaxHits];
     private readonly RaycastHit[] outlineHits = new RaycastHit[MaxHits];
+
+    private readonly struct InteractionFocus
+    {
+        public InteractionFocus(WorldPickupItem pickup, IPlayerInteractable interactable)
+        {
+            Pickup = pickup;
+            Interactable = interactable;
+        }
+
+        public WorldPickupItem Pickup { get; }
+        public IPlayerInteractable Interactable { get; }
+    }
     private DoorController activePasscodeDoor;
     private string passcodeBuffer = string.Empty;
     private bool focusPasscodeField;
@@ -105,11 +118,14 @@ public class PlayerPickupInteractor : MonoBehaviour
             return;
         }
 
-        UpdatePickupOutline();
-        UpdateInteractionPrompt();
+        InteractionFocus focus = TryResolveInteractionCamera(logWarning: false)
+            ? ResolveInteractionFocus()
+            : default;
+        UpdatePickupOutline(focus);
+        UpdateInteractionPrompt(focus);
 
         if (Input.GetKeyDown(interactKey))
-            TryInteract();
+            TryInteract(focus);
     }
 
     private void OnDisable()
@@ -173,11 +189,7 @@ public class PlayerPickupInteractor : MonoBehaviour
         if (!TryResolveInteractionCamera())
             return false;
 
-        int hitCount = PerformInteractionCast();
-        if (TryFindBestInteractable(hitCount, out IPlayerInteractable interactable))
-            return interactable.TryInteract(this);
-
-        return TryPickupItemFromHits(hitCount);
+        return TryInteract(ResolveInteractionFocus());
     }
 
     public bool TryInteractWithHeldItem(HandType hand, ItemDefinition itemDefinition, KeyCode actionKey)
@@ -206,7 +218,7 @@ public class PlayerPickupInteractor : MonoBehaviour
         if (!TryResolveInteractionCamera())
             return false;
 
-        return TryPickupItemFromHits(PerformInteractionCast());
+        return TryPickupItem(ResolveInteractionFocus().Pickup);
     }
 
     public void BeginPasscodeEntry(DoorController door)
@@ -264,7 +276,38 @@ public class PlayerPickupInteractor : MonoBehaviour
             QueryTriggerInteraction.Collide);
     }
 
-    private bool TryPickupItemFromHits(int hitCount)
+    private InteractionFocus ResolveInteractionFocus()
+    {
+        int mask = DestructibleDebrisCollision.ExcludeDebrisLayer(interactionMask.value);
+        Transform cameraTransform = interactionCamera.transform;
+        int aimHitCount = Physics.RaycastNonAlloc(
+            cameraTransform.position,
+            cameraTransform.forward,
+            aimHits,
+            pickupDistance,
+            mask,
+            QueryTriggerInteraction.Collide);
+        WorldPickupItem aimedPickup = FindVisiblePickup(aimHits, aimHitCount);
+        if (aimedPickup != null)
+            return new InteractionFocus(aimedPickup, null);
+
+        int hitCount = PerformInteractionCast();
+        if (TryFindBestInteractable(hitCount, out IPlayerInteractable interactable))
+            return new InteractionFocus(null, interactable);
+
+        TryFindBestPickup(hitCount, out WorldPickupItem nearbyPickup);
+        return new InteractionFocus(nearbyPickup, null);
+    }
+
+    private bool TryInteract(InteractionFocus focus)
+    {
+        if (focus.Pickup != null)
+            return TryPickupItem(focus.Pickup);
+
+        return focus.Interactable != null && focus.Interactable.TryInteract(this);
+    }
+
+    private bool TryPickupItem(WorldPickupItem bestPickup)
     {
         ResolveReferences();
 
@@ -274,7 +317,7 @@ public class PlayerPickupInteractor : MonoBehaviour
             return false;
         }
 
-        if (!TryFindBestPickup(hitCount, out WorldPickupItem bestPickup))
+        if (bestPickup == null || !bestPickup.CanBePickedUp)
         {
             Debug.Log("[PlayerPickupInteractor] Nenhum item coletavel encontrado na frente do jogador.");
             return false;
@@ -286,7 +329,7 @@ public class PlayerPickupInteractor : MonoBehaviour
 
         bool equipped = handEquipmentController.TryEquipWorldItem(bestPickup);
         if (!equipped && wasHighlightedPickup)
-            UpdatePickupOutline();
+            UpdatePickupOutline(ResolveInteractionFocus());
 
         return equipped;
     }
@@ -306,7 +349,7 @@ public class PlayerPickupInteractor : MonoBehaviour
                 continue;
 
             WorldPickupItem pickupItem = hit.collider.GetComponentInParent<WorldPickupItem>();
-            if (pickupItem == null || !pickupItem.gameObject.activeInHierarchy)
+            if (!IsValidPickupOutlineTarget(pickupItem) || !IsPickupHitVisible(hit, pickupItem))
                 continue;
 
             if (hit.distance >= bestDistance)
@@ -319,7 +362,79 @@ public class PlayerPickupInteractor : MonoBehaviour
         return bestPickup != null;
     }
 
-    private void UpdateInteractionPrompt()
+    private bool IsPickupHitVisible(RaycastHit pickupHit, WorldPickupItem pickupItem)
+    {
+        Vector3 origin = interactionCamera.transform.position;
+        Vector3 toPickup = pickupHit.point - origin;
+        float distance = toPickup.magnitude;
+        if (distance < 0.01f)
+            return false;
+
+        int hitCount = Physics.RaycastNonAlloc(
+            origin,
+            toPickup / distance,
+            aimHits,
+            distance,
+            DestructibleDebrisCollision.ExcludeDebrisLayer(interactionMask.value),
+            QueryTriggerInteraction.Ignore);
+        if (hitCount == aimHits.Length)
+            return false;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider blocker = aimHits[i].collider;
+            if (blocker == null || blocker.transform.IsChildOf(transform))
+                continue;
+
+            if (blocker.GetComponentInParent<WorldPickupItem>() != pickupItem
+                && aimHits[i].distance < distance - 0.01f)
+                return false;
+        }
+
+        return true;
+    }
+
+    private WorldPickupItem FindVisiblePickup(RaycastHit[] hits, int hitCount)
+    {
+        if (hitCount == hits.Length)
+            return null;
+
+        WorldPickupItem bestPickup = null;
+        float bestPickupDistance = float.MaxValue;
+        Collider nearestSolid = null;
+        float nearestSolidDistance = float.MaxValue;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit hit = hits[i];
+            Collider collider = hit.collider;
+            if (collider == null || collider.transform.IsChildOf(transform) || collider.isTrigger)
+                continue;
+
+            if (hit.distance < nearestSolidDistance)
+            {
+                nearestSolid = collider;
+                nearestSolidDistance = hit.distance;
+            }
+
+            WorldPickupItem candidate = collider.GetComponentInParent<WorldPickupItem>();
+            if (!IsValidPickupOutlineTarget(candidate) || hit.distance >= bestPickupDistance)
+                continue;
+
+            bestPickup = candidate;
+            bestPickupDistance = hit.distance;
+        }
+
+        if (bestPickup == null || nearestSolid == null)
+            return null;
+
+        return nearestSolidDistance + 0.01f >= bestPickupDistance
+            || nearestSolid.GetComponentInParent<WorldPickupItem>() == bestPickup
+                ? bestPickup
+                : null;
+    }
+
+    private void UpdateInteractionPrompt(InteractionFocus focus)
     {
         if (!showInteractionPrompt || activePasscodeDoor != null)
         {
@@ -327,17 +442,10 @@ public class PlayerPickupInteractor : MonoBehaviour
             return;
         }
 
-        if (!TryResolveInteractionCamera(logWarning: false))
+        if (focus.Interactable != null
+            && TryResolveInteractionPrompt(focus.Interactable, out string promptText))
         {
-            SetInteractionPromptVisible(false);
-            return;
-        }
-
-        int hitCount = PerformInteractionCast();
-        if (TryFindBestInteractable(hitCount, out IPlayerInteractable interactable)
-            && TryResolveInteractionPrompt(interactable, out string promptText))
-        {
-            if (TryResolveInteractionPromptPlacement(interactable, out PlayerInteractionPromptPlacement placement))
+            if (TryResolveInteractionPromptPlacement(focus.Interactable, out PlayerInteractionPromptPlacement placement))
                 SetWorldInteractionPrompt(promptText, placement);
             else
                 SetInteractionPrompt(promptText);
@@ -345,7 +453,7 @@ public class PlayerPickupInteractor : MonoBehaviour
             return;
         }
 
-        if (showPickupPrompt && TryFindBestPickup(hitCount, out _))
+        if (showPickupPrompt && focus.Pickup != null)
         {
             SetPickupInteractionPrompt();
             return;
@@ -862,12 +970,16 @@ public class PlayerPickupInteractor : MonoBehaviour
         if (collider == null)
             return false;
 
+        WorldPickupItem pickupItem = collider.GetComponentInParent<WorldPickupItem>();
         MonoBehaviour[] behaviours = collider.GetComponentsInParent<MonoBehaviour>(true);
         int bestPriority = int.MinValue;
 
         for (int i = 0; i < behaviours.Length; i++)
         {
             if (behaviours[i] is not IPlayerInteractable interactable)
+                continue;
+
+            if (pickupItem != null && !behaviours[i].transform.IsChildOf(pickupItem.transform))
                 continue;
 
             if (interactable.InteractionPriority <= bestPriority)
@@ -920,9 +1032,9 @@ public class PlayerPickupInteractor : MonoBehaviour
         return photonView == null || photonView.IsMine;
     }
 
-    private void UpdatePickupOutline()
+    private void UpdatePickupOutline(InteractionFocus focus)
     {
-        if (!highlightPickupUnderAim)
+        if (!highlightPickupUnderAim || focus.Pickup == null)
         {
             ClearPickupOutline();
             return;
@@ -935,7 +1047,7 @@ public class PlayerPickupInteractor : MonoBehaviour
             return;
         }
 
-        SetHighlightedPickup(FindPickupUnderAim());
+        SetHighlightedPickup(FindPickupUnderAim() == focus.Pickup ? focus.Pickup : null);
     }
 
     private WorldPickupItem FindPickupUnderAim()
@@ -961,40 +1073,7 @@ public class PlayerPickupInteractor : MonoBehaviour
                 DestructibleDebrisCollision.ExcludeDebrisLayer(outlineMask.value),
                 QueryTriggerInteraction.Collide);
 
-        WorldPickupItem closestPickup = null;
-        float closestDistance = float.MaxValue;
-        for (int i = 0; i < hitCount; i++)
-        {
-            RaycastHit hit = outlineHits[i];
-            if (hit.collider == null || hit.collider.transform.IsChildOf(transform))
-                continue;
-
-            if (hit.distance >= closestDistance)
-                continue;
-
-            closestDistance = hit.distance;
-            TryGetPickupFromHit(hit, out closestPickup);
-        }
-
-        return closestPickup;
-    }
-
-    private bool TryGetPickupFromHit(RaycastHit hit, out WorldPickupItem pickupItem)
-    {
-        pickupItem = null;
-
-        if (hit.collider == null)
-            return false;
-
-        if (hit.collider.transform.IsChildOf(transform))
-            return false;
-
-        WorldPickupItem candidate = hit.collider.GetComponentInParent<WorldPickupItem>();
-        if (!IsValidPickupOutlineTarget(candidate))
-            return false;
-
-        pickupItem = candidate;
-        return true;
+        return FindVisiblePickup(outlineHits, hitCount);
     }
 
     private static bool IsValidPickupOutlineTarget(WorldPickupItem pickupItem)
@@ -1002,6 +1081,7 @@ public class PlayerPickupInteractor : MonoBehaviour
         return pickupItem != null
             && pickupItem.gameObject.activeInHierarchy
             && !pickupItem.IsEquipped
+            && pickupItem.CanBePickedUp
             && !pickupItem.IsPresentationClone;
     }
 
