@@ -78,6 +78,7 @@ public class EnemyAttack : MonoBehaviour
     private bool hasPreviousWeaponTip;
     private Vector3 previousWeaponTipPosition;
     private Vector3 cachedAttackForward = Vector3.forward;
+    private float emotionalDamageMultiplier = 1f;
 
     public bool AttackEnabled => attackEnabled;
     public bool CanStartAttack => attackEnabled && isActiveAndEnabled && IsEffectivelyAlive();
@@ -88,6 +89,11 @@ public class EnemyAttack : MonoBehaviour
     public bool IsAttackLocked => CanStartAttack && Time.time < attackLockedUntil;
     public bool CanTrackTargetDuringCurrentAttack => IsAttackLocked
         && GetCurrentAttackNormalizedTime() <= Mathf.Clamp01(attackTurnTrackingEndNormalizedTime);
+
+    public void SetEmotionalDamageMultiplier(float multiplier)
+    {
+        emotionalDamageMultiplier = Mathf.Max(0f, multiplier);
+    }
 
     private void Awake()
     {
@@ -274,7 +280,7 @@ public class EnemyAttack : MonoBehaviour
                 return;
 
             playerHealth.ReceiveEnemyDamage(
-                attackDamage,
+                attackDamage * emotionalDamageMultiplier,
                 gameObject,
                 hitPoint,
                 hitDirection,
@@ -332,7 +338,7 @@ public class EnemyAttack : MonoBehaviour
                 return;
 
             playerHealth.ReceiveEnemyDamage(
-                attackDamage,
+                attackDamage * emotionalDamageMultiplier,
                 gameObject,
                 hitPoint,
                 hitDirection,

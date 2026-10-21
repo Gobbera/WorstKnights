@@ -89,10 +89,39 @@ public class AudioCue : ScriptableObject
         if (audioSource == null)
             return;
 
+        ConfigureAudioSourceInternal(
+            audioSource, clip, fallbackMixerGroup, forceLoop,
+            GetRandomizedVolume(), GetRandomizedPitch());
+    }
+
+    public void ConfigureAudioSource(
+        AudioSource audioSource,
+        AudioClip clip,
+        float volume,
+        float pitch,
+        AudioMixerGroup fallbackMixerGroup = null,
+        bool forceLoop = false)
+    {
+        if (audioSource == null)
+            return;
+
+        ConfigureAudioSourceInternal(
+            audioSource, clip, fallbackMixerGroup, forceLoop,
+            Mathf.Max(0f, volume), Mathf.Clamp(pitch, -3f, 3f));
+    }
+
+    private void ConfigureAudioSourceInternal(
+        AudioSource audioSource,
+        AudioClip clip,
+        AudioMixerGroup fallbackMixerGroup,
+        bool forceLoop,
+        float volume,
+        float pitch)
+    {
         audioSource.clip = clip;
         audioSource.loop = forceLoop || loop;
-        audioSource.volume = GetRandomizedVolume();
-        audioSource.pitch = GetRandomizedPitch();
+        audioSource.volume = volume;
+        audioSource.pitch = pitch;
         audioSource.spatialBlend = Is3D ? spatialBlend : 0f;
         audioSource.spread = Is3D ? spread : 0f;
         audioSource.minDistance = minDistance;

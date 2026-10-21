@@ -35,6 +35,7 @@ public sealed class EnemyVision : MonoBehaviour
     public bool EnableVision => enableVision;
     public float ViewDistance => Mathf.Max(0f, viewDistance);
     public float ViewAngle => Mathf.Clamp(viewAngle, 1f, 360f);
+    public float DetectionUpdateInterval => Mathf.Max(0.02f, detectionUpdateInterval);
     public Transform EyeTransform => eyeTransform;
     public Vector3 EyePosition => eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * Mathf.Max(0f, eyeHeightFallback);
     public Vector3 EyeForward => ResolvePlanarForward();

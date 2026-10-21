@@ -221,6 +221,10 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
         if (IsValidTarget(currentTarget))
             return currentTarget;
 
+        if ((enemyBrain != null && enemyBrain.UseLastSeenSearchFlow)
+            || (enemySetup != null && !enemySetup.HasAuthority))
+            return null;
+
         if (nearestTargetFallbackRadius <= 0f)
             return null;
 

@@ -9,6 +9,7 @@ public sealed class EnemyStateMachine
     private readonly EnemyAIState attackState;
     private readonly EnemyAIState searchState;
     private readonly EnemyAIState returnState;
+    private readonly EnemyAIState reflectionState;
 
     private EnemyAIState currentState;
 
@@ -24,6 +25,7 @@ public sealed class EnemyStateMachine
         attackState = new EnemyAttackState(brain);
         searchState = new EnemySearchState(brain);
         returnState = new EnemyReturnState(brain);
+        reflectionState = new EnemyReflectionState(brain);
     }
 
     public EnemyState CurrentStateId => currentState != null ? currentState.StateId : EnemyState.Idle;
@@ -61,6 +63,8 @@ public sealed class EnemyStateMachine
                 return searchState;
             case EnemyState.Return:
                 return returnState;
+            case EnemyState.Reflection:
+                return reflectionState;
             default:
                 return idleState;
         }

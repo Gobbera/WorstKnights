@@ -164,6 +164,9 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
     private GlowProfile overrideProfile;
     private float overrideUntil;
     private int overridePriority;
+    private Color moodEyeColor = Color.white;
+    private float moodColorBlend;
+    private float moodIntensityMultiplier = 1f;
 
     public int ResolvedEyeMaterialSlotCount => eyeMaterialSlots.Count;
 
@@ -191,6 +194,15 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
             RefreshEyeMaterialSlots();
 
         GlowProfile targetProfile = ResolveActiveProfile();
+        EnemyState state = ResolveState();
+        if (!overrideActive && state != EnemyState.PreSpawn && state != EnemyState.Spawning
+            && state != EnemyState.Stunned && state != EnemyState.Dead)
+        {
+            targetProfile.baseColor = Color.Lerp(targetProfile.baseColor, moodEyeColor, moodColorBlend);
+            targetProfile.emissionColor = Color.Lerp(targetProfile.emissionColor, moodEyeColor, moodColorBlend);
+            targetProfile.emissionIntensity *= moodIntensityMultiplier;
+        }
+
         float targetIntensity = ResolveAnimatedIntensity(targetProfile);
         float blend = ResolveBlendFactor(Time.deltaTime);
 
@@ -257,6 +269,13 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
         overrideActive = false;
         overridePriority = 0;
         overrideUntil = 0f;
+    }
+
+    public void SetMoodVisual(Color eyeColor, float colorBlend, float intensityMultiplier)
+    {
+        moodEyeColor = eyeColor;
+        moodColorBlend = Mathf.Clamp01(colorBlend);
+        moodIntensityMultiplier = Mathf.Max(0f, intensityMultiplier);
     }
 
     [ContextMenu("Refresh Eye Material Slots")]
@@ -399,6 +418,7 @@ public sealed class BeholderEyeGlowController : MonoBehaviour
             case EnemyState.Alert:
                 return SanitizeProfile(alert);
             case EnemyState.Search:
+            case EnemyState.Reflection:
                 return SanitizeProfile(search);
             case EnemyState.Chase:
                 return SanitizeProfile(chase);

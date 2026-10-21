@@ -28,10 +28,21 @@ public sealed class EnemyAlertState : EnemyAIState
             return;
         }
 
-        if (TryChaseVisibleTarget())
+        if (Brain.UseLastSeenSearchFlow)
+        {
+            if (Brain.TryRefreshPursuitTarget())
+            {
+                Brain.ConfirmTargetDuringAlert();
+                TickTargetAlert(deltaTime);
+                return;
+            }
+        }
+        else if (TryChaseVisibleTarget())
+        {
             return;
+        }
 
-        if (Brain.TryConsumeHeardNoise(out NoiseEvent noiseEvent))
+        if (Brain.TryConsumeHeardNoise(out NoiseEvent noiseEvent) && Brain.CanTriggerAlert)
         {
             Brain.BeginInvestigationAlert(noiseEvent.Position);
             ConfigureActiveAlert();
@@ -86,9 +97,7 @@ public sealed class EnemyAlertState : EnemyAIState
     {
         Brain.StopNavigation();
 
-        Brain.TryRefreshVisibleTarget();
-        Brain.TryRefreshCombatMemoryTarget();
-        Brain.TryRefreshCloseAwarenessTarget();
+        Brain.TryRefreshPursuitTarget();
 
         if (Brain.RotateDuringAlert && Brain.HasLastKnownTargetPosition)
             Brain.RotateTowards(Brain.LastKnownTargetPosition, deltaTime);
@@ -102,6 +111,7 @@ public sealed class EnemyAlertState : EnemyAIState
             return;
         }
 
+        Brain.ClearCurrentTarget();
         Brain.ChangeState(Brain.HasLastKnownTargetPosition ? EnemyState.Search : EnemyState.Return);
     }
 }

@@ -1,5 +1,134 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &483005001000000022
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 483005001000000023}
+  - component: {fileID: 483005001000000024}
+  m_Layer: 0
+  m_Name: Beholder Voice
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &483005001000000023
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 483005001000000022}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.00682, z: 0.00579}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4698095723635238635}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!82 &483005001000000024
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 483005001000000022}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 0
+  MinDistance: 2
+  MaxDistance: 30
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &1055526843041453982
 GameObject:
   m_ObjectHideFlags: 0
@@ -786,11 +915,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.18
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 42
+      value: 44
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -982,6 +1111,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4482014314314769754, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6347438505640577334}
+    - targetCorrespondingSourceObject: {fileID: 4482014314314769754, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 483005001000000023}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
@@ -1049,6 +1181,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 483005001000000019}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 483005001000000020}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 483005001000000021}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 398792819100171015}
@@ -1207,7 +1345,7 @@ MonoBehaviour:
   observableSearch: 2
   ObservedComponents:
   - {fileID: 483005001000000014}
-  sceneViewId: 0
+  sceneViewId: 4
   InstantiationId: 0
   isRuntimeInstantiated: 0
 --- !u!114 &483005001000000003
@@ -1285,7 +1423,7 @@ MonoBehaviour:
   maxChaseDistance: 0
   chaseDestinationUpdateInterval: 0.25
   chaseStoppingDistance: 1.75
-  lostSightGraceDuration: 1.25
+  lostSightGraceDuration: 3
   combatLostSightGraceDuration: 10
   combatMemoryDuration: 45
   combatMemoryAwarenessRadius: 55
@@ -1298,12 +1436,20 @@ MonoBehaviour:
   enableCloseAwareness: 1
   closeAwarenessRadius: 8
   closeAwarenessRequiresLineOfSight: 0
-  searchDuration: 14
-  searchRadius: 10
-  searchPointCount: 5
-  searchSpeed: 3
+  searchDuration: 18
+  searchRadius: 8
+  searchPointCount: 4
+  searchSpeed: 15
   searchStoppingDistance: 0.75
-  searchPointWaitTime: 0.6
+  searchPointWaitTime: 0.8
+  useLastSeenSearchFlow: 1
+  reflectionPauseDuration: 2.5
+  searchToReflectionDelay: 4
+  lastSeenStallTimeout: 6
+  lastSeenProgressDistance: 0.4
+  targetSwitchDistanceAdvantage: 2
+  roomChangeConfirmationTime: 0.2
+  playerEvidenceLifetime: 45
   returnSpeed: 3
   returnStoppingDistance: 0.75
   drawDebugGizmos: 1
@@ -1372,8 +1518,8 @@ MonoBehaviour:
   enemySetup: {fileID: 483005001000000003}
   eyeTransform: {fileID: 0}
   enableVision: 1
-  viewDistance: 26
-  viewAngle: 170
+  viewDistance: 12
+  viewAngle: 100
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -1400,6 +1546,8 @@ MonoBehaviour:
   enableHearing: 1
   hearingMultiplier: 1.4
   minimumAudibleIntensity: 0.05
+  detectPlayerMovement: 1
+  playerMovementScanInterval: 0.35
   drawHearingGizmo: 1
   previewHearingRadius: 18
   hearingGizmoColor: {r: 0, g: 0.44140768, b: 0.7830189, a: 0.25}
@@ -1549,6 +1697,8 @@ MonoBehaviour:
   enemyMotor: {fileID: 483005001000000005}
   enemyAttack: {fileID: 483005001000000010}
   enemyHealth: {fileID: 483005001000000011}
+  beholderMood: {fileID: 483005001000000020}
+  beholderDialogue: {fileID: 483005001000000021}
   remotePositionLerpSpeed: 12
   remoteRotationLerpSpeed: 16
   remoteTeleportDistance: 4
@@ -1652,6 +1802,7 @@ MonoBehaviour:
   preserveCurrentHeight: 1
   turnSpeed: 10
   timeBetweenTraversals: 1.5
+  routeStallTimeout: 2.5
   canOpenDoors: 1
   closeAndReopenMisdirectedOpenDoors: 1
   useTemporaryCapsuleRadius: 1
@@ -1982,6 +2133,155 @@ MonoBehaviour:
     pulseSpeed: 0
     flickerAmount: 0
     flickerSpeed: 0
+--- !u!114 &483005001000000020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8340882834624413408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36d2602606914491b11548294bdb2946, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BeholderMoodController
+  enemySetup: {fileID: 483005001000000003}
+  enemyHealth: {fileID: 483005001000000011}
+  enemyBrain: {fileID: 483005001000000004}
+  enemyAttack: {fileID: 483005001000000010}
+  eyeGlow: {fileID: 483005001000000019}
+  maxPoints: 200
+  irritatedAt: 50
+  angryAt: 100
+  infuriatedAt: 150
+  hysteresis: 5
+  eventRules:
+  - eventId: DamageReceived
+    points: 10
+  neutral:
+    damageMultiplier: 1
+    movementSpeedMultiplier: 1
+    searchPersistenceMultiplier: 0.5
+    chasePersistenceMultiplier: 1
+    eyeColor: {r: 1, g: 1, b: 1, a: 1}
+    eyeColorBlend: 0
+    eyeIntensityMultiplier: 1
+  irritated:
+    damageMultiplier: 1.1
+    movementSpeedMultiplier: 1.05
+    searchPersistenceMultiplier: 1
+    chasePersistenceMultiplier: 1.35
+    eyeColor: {r: 1, g: 0.6, b: 0.25, a: 1}
+    eyeColorBlend: 0.25
+    eyeIntensityMultiplier: 1.15
+  angry:
+    damageMultiplier: 1.25
+    movementSpeedMultiplier: 1.12
+    searchPersistenceMultiplier: 2
+    chasePersistenceMultiplier: 1.75
+    eyeColor: {r: 1, g: 0.25, b: 0.1, a: 1}
+    eyeColorBlend: 0.45
+    eyeIntensityMultiplier: 1.35
+  infuriated:
+    damageMultiplier: 1.5
+    movementSpeedMultiplier: 1.2
+    searchPersistenceMultiplier: 3
+    chasePersistenceMultiplier: 2.25
+    eyeColor: {r: 1, g: 0.08, b: 0.04, a: 1}
+    eyeColorBlend: 0.7
+    eyeIntensityMultiplier: 1.6
+--- !u!114 &483005001000000021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8340882834624413408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bf8e50b95cb4678a69bc26b32f5d3c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BeholderDialogueController
+  enemySetup: {fileID: 483005001000000003}
+  enemyBrain: {fileID: 483005001000000004}
+  enemyHealth: {fileID: 483005001000000011}
+  moodController: {fileID: 483005001000000020}
+  voiceSource: {fileID: 483005001000000024}
+  linesByState:
+  - state: 0
+    neutral:
+    - {fileID: 11400000, guid: 7ecec0290ab92b946bf19f4cfdceb14c, type: 2}
+    irritated: []
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  - state: 6
+    neutral:
+    - {fileID: 11400000, guid: 29b8962f89203514bba0b72b804fa430, type: 2}
+    irritated:
+    - {fileID: 11400000, guid: cb76b648d6ad1054c84d515371e5bddc, type: 2}
+    angry: []
+    infuriated:
+    - {fileID: 11400000, guid: 65f64a53cbfc9bc4ca456b90ac2a280f, type: 2}
+    intervalSeconds: {x: 8, y: 14}
+  - state: 7
+    neutral:
+    - {fileID: 11400000, guid: 3dee29311349338459b4d59db65e1d50, type: 2}
+    irritated:
+    - {fileID: 11400000, guid: d5d123c09398aee49ae3abe71cb9fef6, type: 2}
+    - {fileID: 11400000, guid: d9c8f363ae75c5246852c6803b47ced8, type: 2}
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  - state: 8
+    neutral:
+    - {fileID: 11400000, guid: a4a7059c10358ef4b9eb01593a2c40f4, type: 2}
+    irritated:
+    - {fileID: 11400000, guid: 7ecec0290ab92b946bf19f4cfdceb14c, type: 2}
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 4, y: 7}
+  - state: 12
+    neutral:
+    - {fileID: 11400000, guid: e85eabf2e66d02b4492726b1bb02d892, type: 2}
+    irritated:
+    - {fileID: 11400000, guid: 8cb267fa89e034a41b5b6e2e794b30bb, type: 2}
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  - state: 1
+    neutral:
+    - {fileID: 11400000, guid: 2b1adaed6b0a03344a184b22eeb3f57a, type: 2}
+    irritated:
+    - {fileID: 11400000, guid: 8b18d928bc67c004fb5e821e888fa46b, type: 2}
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  - state: 2
+    neutral: []
+    irritated: []
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  - state: 9
+    neutral: []
+    irritated: []
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  - state: 10
+    neutral: []
+    irritated: []
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  - state: 11
+    neutral: []
+    irritated: []
+    angry: []
+    infuriated: []
+    intervalSeconds: {x: 8, y: 14}
+  chaseSearchTransitionCooldown: 2
 --- !u!65 &398792819100171015
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2012,7 +2312,7 @@ NavMeshAgent:
   m_GameObject: {fileID: 8340882834624413408}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.2
+  m_Radius: 0.75
   m_Speed: 2.4
   m_Acceleration: 8
   avoidancePriority: 50

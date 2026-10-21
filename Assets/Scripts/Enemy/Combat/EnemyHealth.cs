@@ -1,3 +1,4 @@
+using System;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -23,6 +24,7 @@ public class EnemyHealth : CombatHealth
     public override CombatAlignment Alignment => CombatAlignment.Enemy;
     public int DamageSequence { get; private set; }
     public bool DestroysOnDeath => destroyOnDeath;
+    public event Action<DamageInfo> DamageApplied;
 
     protected override void Awake()
     {
@@ -103,6 +105,7 @@ public class EnemyHealth : CombatHealth
             DamageSequence++;
 
         NotifyBrainDamaged(damageInfo);
+        DamageApplied?.Invoke(damageInfo);
 
         if (suppressDamageKnockback)
             return;

@@ -36,9 +36,7 @@ public sealed class EnemyAttackState : EnemyAIState
             return;
         }
 
-        bool canSeeTarget = Brain.TryRefreshVisibleTarget()
-            || Brain.TryRefreshCombatMemoryTarget()
-            || Brain.TryRefreshCloseAwarenessTarget();
+        bool canSeeTarget = Brain.TryRefreshPursuitTarget();
         if (!canSeeTarget)
         {
             Brain.ChangeState(Brain.HasLastKnownTargetPosition ? EnemyState.Chase : EnemyState.Search);

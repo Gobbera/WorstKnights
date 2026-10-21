@@ -83,8 +83,32 @@ public class EnemyMotor : MonoBehaviour
             return;
         }
 
-        Vector3 moveDirection = planarOffset.normalized;
-        float safeMoveSpeed = Mathf.Max(0f, moveSpeed);
+        MoveInDirection(planarOffset.normalized * moveSpeed, deltaTime);
+    }
+
+    public void MoveInDirection(Vector3 planarVelocity, float deltaTime)
+    {
+        if (!isAlive)
+        {
+            CurrentPlanarSpeed = 0f;
+            return;
+        }
+
+        if (HasActiveDamageKnockback())
+        {
+            CurrentPlanarSpeed = GetDamageKnockbackPlanarSpeed();
+            return;
+        }
+
+        if (planarVelocity.sqrMagnitude <= 0.0001f)
+        {
+            StopPlanarMotion();
+            CurrentPlanarSpeed = 0f;
+            return;
+        }
+
+        Vector3 moveDirection = planarVelocity.normalized;
+        float safeMoveSpeed = Mathf.Min(Mathf.Max(0f, moveSpeed), planarVelocity.magnitude);
         CurrentPlanarSpeed = safeMoveSpeed;
 
         Rigidbody rb = ResolveRigidbody();

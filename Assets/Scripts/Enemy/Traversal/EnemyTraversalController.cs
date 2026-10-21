@@ -31,6 +31,7 @@ public sealed class EnemyTraversalController : MonoBehaviour
     [SerializeField] private bool preserveCurrentHeight = true;
     [SerializeField] [Min(0f)] private float turnSpeed = 10f;
     [SerializeField] [Min(0f)] private float timeBetweenTraversals = 1.5f;
+    [SerializeField] [Min(0f)] private float routeStallTimeout = 2.5f;
 
     [Header("Door Interaction")]
     [SerializeField] private bool canOpenDoors;
@@ -49,6 +50,8 @@ public sealed class EnemyTraversalController : MonoBehaviour
     [SerializeField] private Color activeRouteColor = new Color(1f, 0.2f, 0.85f, 0.9f);
 
     private readonly List<Vector3> activeRoute = new List<Vector3>(6);
+    private readonly List<BoxCollider> temporarilyDisabledBodyColliders = new List<BoxCollider>(2);
+    private readonly List<Collider> ignoredDoorColliders = new List<Collider>(4);
     private readonly HashSet<EnemyTraversalVolume> overlappingVolumes = new HashSet<EnemyTraversalVolume>();
     private EnemyTraversalVolume activeVolume;
     private EnemyTraversalVolume blockedVolumeUntilExit;
@@ -57,15 +60,19 @@ public sealed class EnemyTraversalController : MonoBehaviour
     private EnemyTraversalSide blockedExitSide;
     private DoorPreparationState doorPreparationState;
     private DoorController activeDoor;
+    private DoorController traversalDoor;
     private int activeRouteIndex;
     private bool traversing;
     private bool waitingForExitPause;
-    private bool advancedPastEntryPoint;
     private float waitUntil;
     private float nextTraversalAllowedTime;
     private float cooldownVolumeBlockedUntil;
     private float doorPreparationDeadline;
     private Vector3 activeDoorInteractorPosition;
+    private Vector3 traversalEntryPosition;
+    private float lastRouteProgressDistance;
+    private float lastRouteProgressTime;
+    private int lastRouteProgressIndex;
     private float originalCapsuleRadius;
     private bool hasOriginalCapsuleRadius;
 
@@ -85,6 +92,7 @@ public sealed class EnemyTraversalController : MonoBehaviour
     private void OnDisable()
     {
         CancelTraversal();
+        overlappingVolumes.Clear();
     }
 
     private void FixedUpdate()
@@ -103,11 +111,27 @@ public sealed class EnemyTraversalController : MonoBehaviour
             return;
         }
 
+        KeepTemporaryBodyCollisionShape();
+
         if (!UpdateDoorPreparation())
         {
             if (traversing)
                 StopMotion();
 
+            return;
+        }
+
+        if (doorPreparationState == DoorPreparationState.None && traversalDoor != null
+            && (!traversalDoor.IsOpen || traversalDoor.IsMoving))
+        {
+            if (!canOpenDoors || traversalDoor.IsLocked)
+            {
+                CancelTraversal();
+                return;
+            }
+
+            BeginDoorPreparation(activeVolume, traversalEntryPosition);
+            StopMotion();
             return;
         }
 
@@ -160,15 +184,14 @@ public sealed class EnemyTraversalController : MonoBehaviour
         if (!CanStartTraversal(forceClosedDoorRetry))
             return false;
 
-        if (forceClosedDoorRetry)
-            ClearTraversalBlock(traversalVolume);
-        else if (IsVolumeBlocked(traversalVolume))
+        if (!forceClosedDoorRetry && IsVolumeBlocked(traversalVolume))
             return false;
 
-        if (!forceClosedDoorRetry && !ShouldStartForNavigationDestination(traversalVolume, bodyPosition))
+        if (!ShouldStartForNavigationDestination(traversalVolume, bodyPosition))
             return false;
 
-        if (!traversalVolume.TryBuildRoute(bodyPosition, activeRoute, out _, out EnemyTraversalSide exitSide))
+        EnemyTraversalSide entrySide = traversalVolume.ResolveSide(bodyPosition);
+        if (!traversalVolume.TryBuildRoute(entrySide, bodyPosition, activeRoute, out EnemyTraversalSide exitSide))
             return false;
 
         if (!CanPrepareDoorForTraversal(traversalVolume, bodyPosition))
@@ -176,6 +199,9 @@ public sealed class EnemyTraversalController : MonoBehaviour
             activeRoute.Clear();
             return false;
         }
+
+        if (forceClosedDoorRetry)
+            ClearTraversalCooldown(traversalVolume);
 
         BeginTraversal(traversalVolume, exitSide);
         return true;
@@ -188,14 +214,16 @@ public sealed class EnemyTraversalController : MonoBehaviour
         activeExitSide = exitSide;
         traversing = true;
         waitingForExitPause = false;
-        advancedPastEntryPoint = false;
         activeRouteIndex = 0;
         waitUntil = Time.time + traversalVolume.EntryPauseDuration;
+        traversalEntryPosition = ResolveBodyPosition();
+        traversalDoor = TryResolveTraversalDoor(traversalVolume, out DoorController door) ? door : null;
+        ResetRouteProgress();
 
         enemyBrain?.BeginTraversal();
-        enemyNavigation?.Stop();
         StopMotion();
         ApplyTemporaryCapsuleRadius();
+        ApplyTemporaryBodyCollisionShape();
         BeginDoorPreparation(traversalVolume, ResolveBodyPosition());
         TriggerTraversalAnimation();
     }
@@ -215,12 +243,18 @@ public sealed class EnemyTraversalController : MonoBehaviour
         if (planarOffset.sqrMagnitude <= reachDistance * reachDistance)
         {
             activeRouteIndex++;
-            if (activeRouteIndex > 0)
-                advancedPastEntryPoint = true;
-
+            ResetRouteProgress();
             if (activeRouteIndex >= activeRoute.Count)
                 StartExitPauseOrComplete();
 
+            return;
+        }
+
+        if (HasRouteStalled(planarOffset.magnitude))
+        {
+            Debug.LogWarning($"[EnemyTraversal] '{name}' parou no ponto {activeRouteIndex + 1} de "
+                + $"'{activeVolume.name}' em {bodyPosition}. Verifique a largura da passagem e os pontos Side A/B.", this);
+            CancelTraversal();
             return;
         }
 
@@ -247,13 +281,15 @@ public sealed class EnemyTraversalController : MonoBehaviour
 
     private void CompleteTraversal()
     {
+        RestoreDoorCollision();
+        RestoreBodyCollisionShape();
         RestoreCapsuleRadius();
         EnemyTraversalVolume completedVolume = activeVolume;
         EnemyTraversalSide completedExitSide = activeExitSide;
         traversing = false;
         waitingForExitPause = false;
-        advancedPastEntryPoint = false;
         activeVolume = null;
+        traversalDoor = null;
         activeExitSide = EnemyTraversalSide.None;
         activeRoute.Clear();
         activeRouteIndex = 0;
@@ -268,13 +304,17 @@ public sealed class EnemyTraversalController : MonoBehaviour
         if (!traversing)
             return;
 
+        RestoreDoorCollision();
+        RestoreBodyCollisionShape();
         RestoreCapsuleRadius();
         EnemyTraversalVolume cancelledVolume = activeVolume;
-        bool requireExitBeforeRetry = advancedPastEntryPoint;
+        bool requireExitBeforeRetry = cancelledVolume != null
+            && activeExitSide != EnemyTraversalSide.None
+            && cancelledVolume.ResolveSide(ResolveBodyPosition()) == activeExitSide;
         traversing = false;
         waitingForExitPause = false;
-        advancedPastEntryPoint = false;
         activeVolume = null;
+        traversalDoor = null;
         activeExitSide = EnemyTraversalSide.None;
         activeRoute.Clear();
         activeRouteIndex = 0;
@@ -336,12 +376,22 @@ public sealed class EnemyTraversalController : MonoBehaviour
 
     private void TryStartOverlappingTraversal()
     {
-        if (overlappingVolumes.Count == 0)
-            return;
-
         foreach (EnemyTraversalVolume traversalVolume in overlappingVolumes)
         {
             if (traversalVolume == null)
+                continue;
+
+            if (TryStartTraversal(traversalVolume))
+                return;
+        }
+
+        Vector3 bodyPosition = ResolveBodyPosition();
+        float approachDistance = capsule != null ? capsule.radius + 0.2f : 0.8f;
+        foreach (EnemyTraversalVolume traversalVolume in EnemyTraversalVolume.ActiveVolumes)
+        {
+            if (traversalVolume == null || overlappingVolumes.Contains(traversalVolume)
+                || traversalVolume.gameObject.scene != gameObject.scene
+                || !traversalVolume.IsWithinApproachDistance(bodyPosition, approachDistance))
                 continue;
 
             if (TryStartTraversal(traversalVolume))
@@ -524,13 +574,17 @@ public sealed class EnemyTraversalController : MonoBehaviour
             return false;
         }
 
-        if (traversalVolume.ShouldReorientDoorForTraversal(doorController, bodyPosition))
-            return true;
+        if (!traversalVolume.ReorientOpenDoorWhenNeeded
+            || !doorController.IsOpen
+            || !doorController.WouldChangeOpenDirectionFromWorldPosition(bodyPosition))
+        {
+            return false;
+        }
 
-        return traversalVolume.ReorientOpenDoorWhenNeeded
-            && doorController.IsOpen
-            && doorController.WouldChangeOpenDirectionFromWorldPosition(bodyPosition)
-            && IsDoorContactObstructingTraversal(doorController);
+        return !traversalVolume.ReorientOnlyWhenDoorObstructsTraversal
+            || traversalVolume.IsDoorObstructingTraversalRoute(
+                doorController, bodyPosition, activeRoute, ResolveDoorProbeRadius(traversalVolume))
+            || IsDoorContactObstructingTraversal(doorController);
     }
 
     private bool IsDoorObstructingTraversalRoute(EnemyTraversalVolume traversalVolume, DoorController doorController)
@@ -541,7 +595,8 @@ public sealed class EnemyTraversalController : MonoBehaviour
         if (!doorController.IsOpen && IsClosedDoorContactBlockingTraversal(doorController))
             return true;
 
-        if (traversalVolume != null && traversalVolume.IsDoorObstructingTraversalRoute(doorController))
+        if (traversalVolume != null && traversalVolume.IsDoorObstructingTraversalRoute(
+                doorController, ResolveBodyPosition(), activeRoute, ResolveDoorProbeRadius(traversalVolume)))
             return true;
 
         return IsDoorContactObstructingTraversal(doorController);
@@ -555,13 +610,34 @@ public sealed class EnemyTraversalController : MonoBehaviour
         if (doorController == null || doorController.IsOpen)
             return false;
 
+        if (traversalVolume != null
+            && enemyNavigation != null
+            && enemyNavigation.HasDestination
+            && traversalVolume.IsDestinationAcrossSides(bodyPosition, enemyNavigation.CurrentDestination))
+            return true;
+
         return IsDoorObstructingTraversalRoute(traversalVolume, doorController)
             || ShouldForceClosedDoorTraversalRetry(traversalVolume, bodyPosition);
     }
 
     private bool ShouldForceClosedDoorTraversalRetry(EnemyTraversalVolume traversalVolume, Vector3 bodyPosition)
     {
-        if (!canOpenDoors || traversalVolume == null || !traversalVolume.ContainsPoint(bodyPosition))
+        if (!canOpenDoors
+            || traversalVolume == null
+            || !traversalVolume.ContainsPoint(bodyPosition)
+            || enemyNavigation == null
+            || !enemyNavigation.HasDestination
+            || !traversalVolume.IsDestinationAcrossSides(bodyPosition, enemyNavigation.CurrentDestination))
+            return false;
+
+        bool retryBeforeCrossing = blockedVolumeUntilExit != traversalVolume
+            && cooldownVolume == traversalVolume
+            && Time.time < cooldownVolumeBlockedUntil;
+        bool reverseCompletedCrossing = blockedVolumeUntilExit == traversalVolume
+            && blockedExitSide != EnemyTraversalSide.None
+            && traversalVolume.ResolveSide(bodyPosition) == blockedExitSide
+            && traversalVolume.ResolveSide(enemyNavigation.CurrentDestination) != blockedExitSide;
+        if (!retryBeforeCrossing && !reverseCompletedCrossing)
             return false;
 
         if (!TryResolveTraversalDoor(traversalVolume, out DoorController doorController))
@@ -615,6 +691,8 @@ public sealed class EnemyTraversalController : MonoBehaviour
 
     private void CompleteDoorPreparation()
     {
+        IgnoreOpenDoorCollision();
+        ResetRouteProgress();
         float settleDelay = activeVolume != null ? activeVolume.DoorSettleDelay : 0f;
         if (settleDelay > 0f)
             waitUntil = Mathf.Max(waitUntil, Time.time + settleDelay);
@@ -663,28 +741,14 @@ public sealed class EnemyTraversalController : MonoBehaviour
         blockedExitSide = EnemyTraversalSide.None;
     }
 
-    private void ClearTraversalBlock(EnemyTraversalVolume traversalVolume)
+    private void ClearTraversalCooldown(EnemyTraversalVolume traversalVolume)
     {
-        if (traversalVolume == null)
+        if (traversalVolume == null || cooldownVolume != traversalVolume)
             return;
 
-        bool clearedBlock = false;
-        if (blockedVolumeUntilExit == traversalVolume)
-        {
-            blockedVolumeUntilExit = null;
-            blockedExitSide = EnemyTraversalSide.None;
-            clearedBlock = true;
-        }
-
-        if (cooldownVolume == traversalVolume)
-        {
-            cooldownVolume = null;
-            cooldownVolumeBlockedUntil = float.NegativeInfinity;
-            clearedBlock = true;
-        }
-
-        if (clearedBlock)
-            nextTraversalAllowedTime = Mathf.Min(nextTraversalAllowedTime, Time.time);
+        cooldownVolume = null;
+        cooldownVolumeBlockedUntil = float.NegativeInfinity;
+        nextTraversalAllowedTime = Mathf.Min(nextTraversalAllowedTime, Time.time);
     }
 
     private void BlockCompletedVolume(EnemyTraversalVolume traversalVolume, EnemyTraversalSide exitSide)
@@ -705,7 +769,15 @@ public sealed class EnemyTraversalController : MonoBehaviour
         ArmTraversalCooldown(traversalVolume);
 
         if (!requireExitBeforeRetry)
+        {
+            if (blockedVolumeUntilExit == traversalVolume)
+            {
+                blockedVolumeUntilExit = null;
+                blockedExitSide = EnemyTraversalSide.None;
+            }
+
             return;
+        }
 
         blockedVolumeUntilExit = traversalVolume;
         blockedExitSide = EnemyTraversalSide.None;
@@ -735,6 +807,20 @@ public sealed class EnemyTraversalController : MonoBehaviour
     {
         float volumeSpeed = activeVolume != null ? activeVolume.TraversalSpeed : 0f;
         return Mathf.Max(0.01f, volumeSpeed > 0f ? volumeSpeed : defaultTraversalSpeed);
+    }
+
+    private float ResolveDoorProbeRadius(EnemyTraversalVolume traversalVolume)
+    {
+        float configuredRadius = traversalVolume.DoorObstructionProbeRadius;
+        if (capsule == null)
+            return configuredRadius;
+
+        float originalRadius = hasOriginalCapsuleRadius ? originalCapsuleRadius : capsule.radius;
+        float traversalRadius = useTemporaryCapsuleRadius
+            ? Mathf.Min(originalRadius, Mathf.Max(minimumTraversalCapsuleRadius,
+                originalRadius * traversalCapsuleRadiusMultiplier))
+            : originalRadius;
+        return Mathf.Min(configuredRadius, traversalRadius + 0.05f);
     }
 
     private Vector3 ResolveTargetPosition(Vector3 routePoint, Vector3 bodyPosition)
@@ -798,6 +884,104 @@ public sealed class EnemyTraversalController : MonoBehaviour
             minimumTraversalCapsuleRadius,
             originalCapsuleRadius * Mathf.Clamp(traversalCapsuleRadiusMultiplier, 0.1f, 1f));
         capsule.radius = Mathf.Min(originalCapsuleRadius, targetRadius);
+    }
+
+    private void ApplyTemporaryBodyCollisionShape()
+    {
+        if (capsule == null || !capsule.enabled)
+            return;
+
+        BoxCollider[] bodyColliders = GetComponents<BoxCollider>();
+        for (int i = 0; i < bodyColliders.Length; i++)
+        {
+            BoxCollider bodyCollider = bodyColliders[i];
+            if (bodyCollider == null || !bodyCollider.enabled || bodyCollider.isTrigger)
+                continue;
+
+            temporarilyDisabledBodyColliders.Add(bodyCollider);
+            bodyCollider.enabled = false;
+        }
+    }
+
+    private void KeepTemporaryBodyCollisionShape()
+    {
+        for (int i = 0; i < temporarilyDisabledBodyColliders.Count; i++)
+        {
+            BoxCollider bodyCollider = temporarilyDisabledBodyColliders[i];
+            if (bodyCollider != null && bodyCollider.enabled)
+                bodyCollider.enabled = false;
+        }
+    }
+
+    private void RestoreBodyCollisionShape()
+    {
+        bool isAlive = enemySetup == null || enemySetup.EnemyHealth == null || enemySetup.EnemyHealth.IsAlive;
+        for (int i = 0; i < temporarilyDisabledBodyColliders.Count; i++)
+        {
+            BoxCollider bodyCollider = temporarilyDisabledBodyColliders[i];
+            if (bodyCollider != null && isAlive)
+                bodyCollider.enabled = true;
+        }
+
+        temporarilyDisabledBodyColliders.Clear();
+    }
+
+    private void IgnoreOpenDoorCollision()
+    {
+        if (capsule == null || !capsule.enabled || activeDoor == null)
+            return;
+
+        Transform colliderRoot = activeDoor.MovingPart != null ? activeDoor.MovingPart : activeDoor.transform;
+        Collider[] doorColliders = colliderRoot.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < doorColliders.Length; i++)
+        {
+            Collider doorCollider = doorColliders[i];
+            if (doorCollider == null || !doorCollider.enabled || doorCollider.isTrigger
+                || ignoredDoorColliders.Contains(doorCollider))
+                continue;
+
+            Physics.IgnoreCollision(capsule, doorCollider, true);
+            ignoredDoorColliders.Add(doorCollider);
+        }
+    }
+
+    private void RestoreDoorCollision()
+    {
+        if (capsule != null)
+        {
+            for (int i = 0; i < ignoredDoorColliders.Count; i++)
+            {
+                Collider doorCollider = ignoredDoorColliders[i];
+                if (doorCollider != null)
+                    Physics.IgnoreCollision(capsule, doorCollider, false);
+            }
+        }
+
+        ignoredDoorColliders.Clear();
+    }
+
+    private void ResetRouteProgress()
+    {
+        lastRouteProgressDistance = activeRouteIndex < activeRoute.Count
+            ? Vector3.ProjectOnPlane(activeRoute[activeRouteIndex] - ResolveBodyPosition(), Vector3.up).magnitude
+            : 0f;
+        lastRouteProgressIndex = activeRouteIndex;
+        lastRouteProgressTime = Time.time;
+    }
+
+    private bool HasRouteStalled(float distanceToPoint)
+    {
+        if (routeStallTimeout <= 0f)
+            return false;
+
+        if (lastRouteProgressIndex != activeRouteIndex
+            || lastRouteProgressDistance - distanceToPoint >= 0.08f)
+        {
+            ResetRouteProgress();
+            return false;
+        }
+
+        return Time.time - lastRouteProgressTime >= routeStallTimeout;
     }
 
     private void RestoreCapsuleRadius()
@@ -877,6 +1061,7 @@ public sealed class EnemyTraversalController : MonoBehaviour
         pointReachDistance = Mathf.Max(0.01f, pointReachDistance);
         turnSpeed = Mathf.Max(0f, turnSpeed);
         timeBetweenTraversals = Mathf.Max(0f, timeBetweenTraversals);
+        routeStallTimeout = Mathf.Max(0f, routeStallTimeout);
         traversalCapsuleRadiusMultiplier = Mathf.Clamp(traversalCapsuleRadiusMultiplier, 0.1f, 1f);
         minimumTraversalCapsuleRadius = Mathf.Max(0.01f, minimumTraversalCapsuleRadius);
     }

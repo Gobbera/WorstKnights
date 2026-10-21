@@ -69,31 +69,34 @@
    Do instead: when re-entering the menu, if the client is still connected but outside a room, join the lobby directly or disconnect first; never wait on `!PhotonNetwork.IsConnected` unless this scene actually triggered a disconnect.
 
 ## Enemy Navigation & Procedural Animation
-1. **[2026-09-25] Stalker enemies should stay as enemy-base extensions**
-   Do instead: tune `EnemyBrain` with `GlobalWander`, long combat memory/search, and `Max Chase Distance = 0`, then use `EnemyHealth.preventDeath` for stun-only defeat while keeping `EnemyAttack` disabled until special abilities own damage.
+1. **[2026-10-21] Beholder investigation prioritizes sensed points, then room transitions**
+   Do instead: keep `EnemyBrain.Use Last Seen Search Flow` enabled; let authority record each player's latest seen/heard position and confirmed `EnemySearchArea` transition. Room membership alone must not trigger detection. Chase visits sensed positions without restarting Alert, resolving off-NavMesh evidence to a reachable endpoint. Search sweeps the original room before following a physically linked A/B `EnemyTraversalVolume`; door passage must not create evidence. Area membership is the union of attached BoxColliders plus explicit child bounds; child bounds require explicit Points of Interest. Do not use the hidden player's live position as a destination; after Search speech plus delay, enter Reflection.
 
-2. **[2026-10-01] First-detection enemy alert belongs to the base state flow**
-   Do instead: route first target awareness through `EnemyAIState.TryChaseVisibleTarget` and `EnemyAlertState`, use `EnemyBrain.Alert Before Chase On First Target Detection`/`Rotate During Alert`, and keep per-prefab alert trigger/audio cue setup in `EnemyAnimationController`; `AudioEmitter` is optional because alert audio can fall back to `GameAudioService`.
+2. **[2026-10-20] Player movement awareness is an authority-side radius, not an AudioCue**
+   Do instead: tune crouch/walk/sprint radii on `Assets/Resources/Player.prefab`'s `PlayerMovementNoiseSource`, measure short-range hearing from collider edges, let authoritative `EnemyHearing` sample replicated movement via `EnemyTargetRegistry`, and keep hearing-induced Alert/inspection separate from vision/contact-authorized Chase; never treat `NoiseSystem` as automatically fed by audible AudioCues.
 
-3. **[2026-09-25] Large-enemy tight passages should be authored traversal volumes**
-   Do instead: keep the Beholder's real collider presence, use NavMesh radius/bake to reject impossible doors, add `EnemyTraversalVolume` side points with destination-across-side checks, exit-side rearm cooldown, auto-resolved or explicit `DoorController` gate, enemy-open/inside-volume player interaction locks, closed-door in-volume retry, dynamic `DoorNavMeshObstacleController` carving for open blocking doors, door-obstruction probes before opening/reorienting, passive `DoorEnemyObstructionSensor` solid-contact evidence, and only a strict closed-door stuck-inside-trigger auto-open fallback before using temporary traversal-only capsule shrink.
+3. **[2026-10-01] First-detection enemy alert belongs to the base state flow**
+   Do instead: route first target awareness through `EnemyAIState.TryChaseVisibleTarget` and `EnemyAlertState`, let the Beholder trigger Alert only once until Reflection completes (rediscovery while disarmed goes straight to Chase), use `EnemyBrain.Alert Before Chase On First Target Detection`/`Rotate During Alert`, and keep per-prefab alert trigger/audio cue setup in `EnemyAnimationController`; `AudioEmitter` is optional because alert audio can fall back to `GameAudioService`.
 
-4. **[2026-09-25] Combat masks must follow gameplay layers**
+4. **[2026-09-25] Large-enemy tight passages should be authored traversal volumes**
+   Do instead: keep the Beholder's real collider, bake NavMesh for its radius, and author `EnemyTraversalVolume` side points linked to the correct door. Link each door side to a room-owned `EnemySearchArea`. Preserve the requested far-side destination even when NavMesh samples a near-side point; lost-sight Chase must approach the door and verify the body crossed before accepting arrival. Pause/resume navigation during traversal, choose the route from the actor's entry side, and judge canceled crossings by the actor's physical side. The Beholder has both a capsule and a root box: during traversal, narrow the capsule and temporarily disable the box or the box still catches door frames; restore both on exit/death. Ignore only the open door leaf's collision during the route, restore it afterward, and use route-progress timeout plus a point-specific warning for physical stalls. Keep door reorientation conditional on obstruction ahead and retain the contact sensor and interaction lock.
+
+5. **[2026-09-25] Combat masks must follow gameplay layers**
    Do instead: whenever moving enemies/players to dedicated layers, update `PlayerMeleeAttack.hitMask` to include `Enemy`/`Player` and `EnemyAttack.hitMask` to include `Player`; otherwise overlaps stop finding combat colliders before damage code runs.
 
-5. **[2026-09-25] Enemy separation belongs to layers plus NavMesh avoidance**
+6. **[2026-09-25] Enemy separation belongs to layers plus NavMesh avoidance**
    Do instead: put enemy roots/colliders on the `Enemy` layer, disable `Enemy x Enemy` in the Physics matrix, and keep authored `NavMeshAgent` avoidance/radius values aligned so enemies avoid each other without Rigidbody pushing.
 
-6. **[2026-09-25] Floating enemies need vertical ground anchoring**
+7. **[2026-09-25] Floating enemies need vertical ground anchoring**
    Do instead: keep gravity off for hover-style enemies, but add an authority-only ground-probe anchor that preserves the initial floor offset, uses a forward movement probe plus tangent slope velocity for ramps, applies a low-friction capsule material, corrects Rigidbody `Y` after movement, and zeros vertical velocity before trying `FreezePositionY`.
 
-7. **[2026-09-25] Large enemies need authored NavMesh radius parity**
+8. **[2026-09-25] Large enemies need authored NavMesh radius parity**
    Do instead: keep a real `NavMeshAgent` component saved on enemy prefabs, tune its radius/height/baseOffset in Prefab or Scene Mode, leave `EnemyNavigation.Configure Agent From Capsule` off unless intentionally regenerating from the collider, and rebake with the larger radius or a dedicated agent before changing motor code.
 
-8. **[2026-09-25] Beholder eye tracking is an animation overlay**
+9. **[2026-09-25] Beholder eye tracking is an animation overlay**
    Do instead: when the Beholder is not actively tracking a target, do not write eye-bone rotations; when tracking, blend from the Animator's current bone rotation in `LateUpdate` so idle/patrol clips stay authoritative.
 
-9. **[2026-10-01] Beholder eye color drives linked eye VFX**
+10. **[2026-10-01] Beholder eye color drives linked eye VFX**
    Do instead: tune eye material profiles, linked `WKFakeVolumeController` volumes, and eye `Spot Light` references from `BeholderEyeGlowController`; let that controller use the current animated emission color/intensity as the shared source.
 
 ## Movement & Actions
@@ -126,26 +129,26 @@
    Do instead: edit the five `emoteWheelSlots` on `Assets/Resources/Player.prefab`'s `PlayerEmoteWheelController` for emote type, label, and sprite, and use `Assets/Prefabs/UI/EmoteWheel.prefab` only when a scene needs an explicit saved Canvas object.
 
 ## Audio & Feedback
-1. **[2026-09-28] Reverb authoring should stay native-like**
+1. **[2026-10-20] Networked enemy dialogue should use AudioCue configuration with authoritative choices**
+   Do instead: keep a dedicated voice source for one-at-a-time speech, configure it through `AudioCue.ConfigureAudioSource`, and replicate cue/clip indices plus chosen volume, pitch, and start time through the enemy state stream.
+
+2. **[2026-09-28] Reverb authoring should stay native-like**
    Do instead: use a single collider-shaped `BoxReverbZone` prefab for normal room/corridor authoring, choose an `AudioReverbPreset` plus transition time on the component, let the hidden runtime manager drive the listener-following technical zone, and control source participation through `AudioCue.AffectedByEnvironmentReverb`/`EnvironmentReverbSend`.
 
-2. **[2026-09-14] Footsteps are layered by surface plus character**
+3. **[2026-09-14] Footsteps are layered by surface plus character**
    Do instead: keep cadence/events in player or enemy controllers, put shared probe/playback in `FootstepPlaybackController`, resolve terrain through `FootstepSurfaceResolver`, and add per-character boot/armor/bone layers through `FootstepCharacterAudioProfile`.
 
-3. **[2026-09-28] Ambience is scene-local and profile driven**
+4. **[2026-09-28] Ambience is scene-local and profile driven**
    Do instead: use `AmbientAudioController` with a default `AmbientAudioProfile`, switch/mix through local-player-only `AmbientZone` triggers, and use `AmbientRandomEmitter` for localized one-shots instead of networking ambience.
 
-4. **[2026-08-17] Melee VFX context must survive each reaction bridge**
+5. **[2026-08-17] Melee VFX context must survive each reaction bridge**
    Do instead: when adding per-attack VFX parameters, pass `ReactionSignalContext` through both `ImpactReactionSignalBridge` and destructible damage flows; for impact feedback, keep `ImpactReactionSignalBridge` on the same GameObject as `PhotonView` so its lightweight RPC can replay the cosmetic signal on other clients.
 
-5. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
+6. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
    Do instead: configure continuous fire audio through `TorchFlameController.litLoopAudioCue`; keep `Lit` reaction audio for one-shot ignition like `Torch_Woosh`, and let `SetLit`/`SetPresentationVisible` start or stop the loop for wall and hand torches.
 
-6. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
+7. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
    Do instead: drive jump, land, attack, pickup, emote, torch-lit loops, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
-
-7. **[2026-08-20] Ground-aware VFX Graph collision should be bound from runtime raycasts**
-   Do instead: for blood/splatter VFX that use `Collision Shape`, expose ground center/normal/size parameters in the VFX Graph and drive them with `VisualEffectGroundCollisionBinder` instead of hardcoding a world-space box at `y=0`.
 
 8. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
    Do instead: keep `Use Native Vivox Positional Audio` off when native `JoinPositionalChannelAsync` causes `5100/1001`; join a 2D `-sim3d` Vivox channel, map `VivoxParticipant.PlayerId` through Photon `kwkVivoxPlayerId`, and drive per-participant local volume/mute from Photon player distance.

@@ -13,5 +13,6 @@ public enum EnemyState
     Search = 8,
     Return = 9,
     Stunned = 10,
-    Traversal = 11
+    Traversal = 11,
+    Reflection = 12
 }

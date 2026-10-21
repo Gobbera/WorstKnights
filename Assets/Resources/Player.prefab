@@ -35,6 +35,7 @@ GameObject:
   - component: {fileID: 4621555616936060593}
   - component: {fileID: 250730399826881785}
   - component: {fileID: 4101602180630520369}
+  - component: {fileID: 3184000000000000214}
   m_Layer: 13
   m_Name: Player
   m_TagString: Player
@@ -1053,6 +1054,23 @@ MonoBehaviour:
   photonView: {fileID: 4548493642960687680}
   signalId: Hit
   broadcastInMultiplayer: 1
+--- !u!114 &3184000000000000214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 97267524914360842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5f117725b3848129a2d8fed54e23273, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovementNoiseSource
+  playerMovement: {fileID: 6695486303663589364}
+  crouchRadius: 0.5
+  walkRadius: 7
+  sprintRadius: 10
+  minimumPlanarSpeed: 0.15
 --- !u!1 &572334072533572996
 GameObject:
   m_ObjectHideFlags: 0

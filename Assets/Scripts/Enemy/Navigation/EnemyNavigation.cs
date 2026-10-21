@@ -29,7 +29,9 @@ public sealed class EnemyNavigation : MonoBehaviour
     [SerializeField] [Min(0f)] private float reachedDistanceTolerance = 0.15f;
 
     private Vector3 currentDestination;
+    private float baseSpeed;
     private float currentSpeed;
+    private float speedMultiplier = 1f;
     private float currentStoppingDistance;
     private bool hasDestination;
     private bool paused;
@@ -64,6 +66,14 @@ public sealed class EnemyNavigation : MonoBehaviour
             Stop();
     }
 
+    public void SetSpeedMultiplier(float multiplier)
+    {
+        speedMultiplier = Mathf.Max(0f, multiplier);
+        currentSpeed = baseSpeed * speedMultiplier;
+        if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+            navMeshAgent.speed = currentSpeed;
+    }
+
     public bool SetDestination(Vector3 destination, float speed, float stoppingDistance, bool force = false)
     {
         ResolveReferences();
@@ -72,8 +82,15 @@ public sealed class EnemyNavigation : MonoBehaviour
         if (!simulationEnabled)
             return false;
 
-        currentSpeed = Mathf.Max(0f, speed);
+        baseSpeed = Mathf.Max(0f, speed);
+        currentSpeed = baseSpeed * speedMultiplier;
         currentStoppingDistance = Mathf.Max(0f, stoppingDistance);
+
+        if (CanUseAgent())
+        {
+            navMeshAgent.speed = currentSpeed;
+            navMeshAgent.stoppingDistance = currentStoppingDistance;
+        }
 
         if (!force
             && hasDestination
@@ -121,6 +138,13 @@ public sealed class EnemyNavigation : MonoBehaviour
             return;
 
         paused = false;
+        if (navMeshAgent != null && navMeshAgent.enabled
+            && !navMeshAgent.Warp(transform.position)
+            && TrySamplePosition(transform.position, samplePositionDistance, out Vector3 sampledPosition))
+        {
+            navMeshAgent.Warp(sampledPosition);
+        }
+
         if (CanUseAgent())
         {
             navMeshAgent.isStopped = false;
@@ -182,15 +206,84 @@ public sealed class EnemyNavigation : MonoBehaviour
         return navMeshAgent.pathStatus != NavMeshPathStatus.PathInvalid;
     }
 
+    public bool HasUsablePath()
+    {
+        if (!hasDestination)
+            return false;
+
+        if (!CanUseAgent())
+            return useDirectMovementFallback;
+
+        return navMeshAgent.pathPending || navMeshAgent.pathStatus == NavMeshPathStatus.PathComplete;
+    }
+
+    public bool IsReachable(Vector3 destination)
+    {
+        if (!CanUseAgent())
+            return useDirectMovementFallback;
+
+        NavMeshPath path = new NavMeshPath();
+        return navMeshAgent.CalculatePath(destination, path)
+            && path.status == NavMeshPathStatus.PathComplete;
+    }
+
+    public bool TryResolveReachablePosition(Vector3 desired, float maxSampleDistance, out Vector3 reachable)
+    {
+        reachable = desired;
+        if (!CanUseAgent())
+            return !useNavMeshAgent && useDirectMovementFallback;
+
+        if (!TrySamplePosition(desired, maxSampleDistance, out Vector3 sampled))
+            return false;
+
+        NavMeshPath path = new NavMeshPath();
+        if (!navMeshAgent.CalculatePath(sampled, path)
+            || path.status == NavMeshPathStatus.PathInvalid)
+            return false;
+
+        if (path.status == NavMeshPathStatus.PathComplete)
+        {
+            reachable = sampled;
+            return true;
+        }
+
+        Vector3[] corners = path.corners;
+        if (corners.Length == 0)
+            return false;
+
+        reachable = corners[corners.Length - 1];
+        return true;
+    }
+
     public bool ForceRepath()
     {
-        if (!hasDestination || !simulationEnabled)
+        if (!hasDestination || !simulationEnabled || paused)
             return false;
 
         if (CanUseAgent())
             return SetAgentDestination(currentDestination);
 
         return useDirectMovementFallback;
+    }
+
+    public bool TryApproachTraversalEntry(
+        Vector3 entryPosition, EnemyTraversalVolume volume, EnemyTraversalSide entrySide)
+    {
+        if (!hasDestination || !CanUseAgent() || volume == null
+            || !TrySamplePosition(entryPosition, samplePositionDistance, out Vector3 sampledEntry)
+            || volume.ResolveSide(sampledEntry) != entrySide)
+            return false;
+
+        NavMeshPath path = new NavMeshPath();
+        if (!navMeshAgent.CalculatePath(sampledEntry, path)
+            || path.status != NavMeshPathStatus.PathComplete)
+            return false;
+
+        navMeshAgent.speed = Mathf.Max(0f, currentSpeed);
+        navMeshAgent.stoppingDistance = 0f;
+        navMeshAgent.isStopped = false;
+        navMeshAgent.nextPosition = transform.position;
+        return navMeshAgent.SetDestination(sampledEntry);
     }
 
     public bool TrySamplePosition(Vector3 candidatePosition, float maxDistance, out Vector3 sampledPosition)
@@ -216,20 +309,25 @@ public sealed class EnemyNavigation : MonoBehaviour
         if (!CanUseAgent())
             return false;
 
-        if (TrySamplePosition(destination, samplePositionDistance, out Vector3 sampledDestination))
-            destination = sampledDestination;
+        Vector3 sampledDestination = destination;
+        TrySamplePosition(destination, samplePositionDistance, out sampledDestination);
 
-        currentDestination = destination;
         navMeshAgent.speed = Mathf.Max(0f, currentSpeed);
         navMeshAgent.stoppingDistance = Mathf.Max(0f, currentStoppingDistance);
         navMeshAgent.isStopped = false;
         navMeshAgent.nextPosition = transform.position;
-        return navMeshAgent.SetDestination(destination);
+        return navMeshAgent.SetDestination(sampledDestination);
     }
 
     private void MoveUsingNavMeshAgent(float deltaTime)
     {
         navMeshAgent.nextPosition = transform.position;
+
+        if (navMeshAgent.pathPending || navMeshAgent.pathStatus != NavMeshPathStatus.PathComplete)
+        {
+            enemyMotor.Stop();
+            return;
+        }
 
         Vector3 desiredVelocity = navMeshAgent.desiredVelocity;
         Vector3 planarDesiredVelocity = Vector3.ProjectOnPlane(desiredVelocity, Vector3.up);
@@ -243,7 +341,7 @@ public sealed class EnemyNavigation : MonoBehaviour
             return;
         }
 
-        enemyMotor.MoveTowards(moveOffset, deltaTime);
+        enemyMotor.MoveInDirection(moveOffset, deltaTime);
         enemyMotor.RotateTowards(moveOffset, deltaTime);
         navMeshAgent.nextPosition = transform.position;
     }

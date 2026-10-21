@@ -18,6 +18,8 @@ public enum EnemyTraversalSide
 [AddComponentMenu("Enemy/Traversal/Enemy Traversal Volume")]
 public sealed class EnemyTraversalVolume : MonoBehaviour
 {
+    private static readonly HashSet<EnemyTraversalVolume> activeVolumes = new HashSet<EnemyTraversalVolume>();
+
     private sealed class InteractionBlockContact
     {
         public EnemyTraversalController TraversalController;
@@ -56,6 +58,10 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
     [SerializeField] [Min(0f)] private float sideClassificationTolerance = 0.15f;
     [SerializeField] [Min(0f)] private float rearmDistancePastExit = 0.75f;
 
+    [Header("Search Areas")]
+    [SerializeField] private EnemySearchArea sideASearchArea;
+    [SerializeField] private EnemySearchArea sideBSearchArea;
+
     [Header("Debug")]
     [SerializeField] private bool drawTraversalGizmos = true;
     [SerializeField] private Color routeColor = new Color(0.25f, 0.85f, 1f, 0.9f);
@@ -80,6 +86,7 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
     public bool RequireDestinationAcrossSides => requireDestinationAcrossSides;
     public float SideClassificationTolerance => Mathf.Max(0f, sideClassificationTolerance);
     public float RearmDistancePastExit => Mathf.Max(0f, rearmDistancePastExit);
+    public static IReadOnlyCollection<EnemyTraversalVolume> ActiveVolumes => activeVolumes;
 
     public bool TryBuildRoute(Vector3 actorPosition, List<Vector3> route)
     {
@@ -92,25 +99,25 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         out EnemyTraversalSide entrySide,
         out EnemyTraversalSide exitSide)
     {
-        entrySide = EnemyTraversalSide.None;
-        exitSide = EnemyTraversalSide.None;
+        entrySide = ResolveNearestSide(actorPosition);
+        return TryBuildRoute(entrySide, route, out exitSide);
+    }
 
+    public bool TryBuildRoute(EnemyTraversalSide entrySide, List<Vector3> route, out EnemyTraversalSide exitSide)
+    {
+        exitSide = EnemyTraversalSide.None;
         if (route == null)
             return false;
 
         route.Clear();
-        if (sideA == null || sideB == null)
+        if (sideA == null || sideB == null || entrySide == EnemyTraversalSide.None)
             return false;
 
         Vector3 sideAPosition = sideA.position;
         Vector3 sideBPosition = sideB.position;
-        float sideADistanceSqr = Vector3.ProjectOnPlane(sideAPosition - actorPosition, Vector3.up).sqrMagnitude;
-        float sideBDistanceSqr = Vector3.ProjectOnPlane(sideBPosition - actorPosition, Vector3.up).sqrMagnitude;
-        bool enterFromA = sideADistanceSqr <= sideBDistanceSqr;
 
-        if (enterFromA)
+        if (entrySide == EnemyTraversalSide.SideA)
         {
-            entrySide = EnemyTraversalSide.SideA;
             exitSide = EnemyTraversalSide.SideB;
             AddPoint(route, sideAPosition);
             AddMidpoints(route, forward: true);
@@ -118,7 +125,6 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         }
         else
         {
-            entrySide = EnemyTraversalSide.SideB;
             exitSide = EnemyTraversalSide.SideA;
             AddPoint(route, sideBPosition);
             AddMidpoints(route, forward: false);
@@ -126,6 +132,28 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         }
 
         return route.Count >= 2;
+    }
+
+    public bool TryBuildRoute(
+        EnemyTraversalSide entrySide,
+        Vector3 actorPosition,
+        List<Vector3> route,
+        out EnemyTraversalSide exitSide)
+    {
+        if (!TryBuildRoute(entrySide, route, out exitSide))
+            return false;
+
+        Vector3 firstSegment = Vector3.ProjectOnPlane(route[1] - route[0], Vector3.up);
+        float segmentLength = firstSegment.magnitude;
+        if (segmentLength > 0.001f)
+        {
+            Vector3 direction = firstSegment / segmentLength;
+            Vector3 entryToActor = Vector3.ProjectOnPlane(actorPosition - route[0], Vector3.up);
+            float progress = Mathf.Clamp(Vector3.Dot(entryToActor, direction), 0f, segmentLength);
+            route[0] += direction * progress;
+        }
+
+        return true;
     }
 
     public bool IsDestinationAcrossSides(Vector3 actorPosition, Vector3 destination)
@@ -170,6 +198,30 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         float sideADistanceSqr = Vector3.ProjectOnPlane(sideAPosition - position, Vector3.up).sqrMagnitude;
         float sideBDistanceSqr = Vector3.ProjectOnPlane(sideBPosition - position, Vector3.up).sqrMagnitude;
         return sideADistanceSqr <= sideBDistanceSqr ? EnemyTraversalSide.SideA : EnemyTraversalSide.SideB;
+    }
+
+    public bool TryGetSidePosition(EnemyTraversalSide side, out Vector3 position)
+    {
+        Transform point = side == EnemyTraversalSide.SideA ? sideA
+            : side == EnemyTraversalSide.SideB ? sideB : null;
+        position = point != null ? point.position : Vector3.zero;
+        return point != null;
+    }
+
+    public EnemySearchArea GetSearchArea(EnemyTraversalSide side)
+    {
+        return side == EnemyTraversalSide.SideA ? sideASearchArea
+            : side == EnemyTraversalSide.SideB ? sideBSearchArea : null;
+    }
+
+    public bool IsWithinApproachDistance(Vector3 position, float distance)
+    {
+        BoxCollider triggerCollider = GetComponent<BoxCollider>();
+        if (triggerCollider == null || !triggerCollider.enabled)
+            return false;
+
+        Vector3 closestPoint = triggerCollider.ClosestPoint(position);
+        return (closestPoint - position).sqrMagnitude <= distance * distance;
     }
 
     public bool HasPassedSide(Vector3 position, EnemyTraversalSide side)
@@ -305,7 +357,50 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         return IsAnyDoorColliderCloseToSegment(doorColliders, previous, end);
     }
 
-    private bool IsAnyDoorColliderCloseToSegment(Collider[] doorColliders, Vector3 segmentStart, Vector3 segmentEnd)
+    public bool IsDoorObstructingTraversalRoute(
+        DoorController resolvedDoorController,
+        Vector3 actorPosition,
+        IReadOnlyList<Vector3> route,
+        float probeRadius)
+    {
+        if (resolvedDoorController == null || route == null || route.Count == 0)
+            return false;
+
+        Transform colliderRoot = resolvedDoorController.MovingPart != null
+            ? resolvedDoorController.MovingPart
+            : resolvedDoorController.transform;
+        Collider[] doorColliders = colliderRoot.GetComponentsInChildren<Collider>(true);
+        if ((doorColliders == null || doorColliders.Length == 0) && colliderRoot != resolvedDoorController.transform)
+            doorColliders = resolvedDoorController.GetComponentsInChildren<Collider>(true);
+
+        if (doorColliders == null || doorColliders.Length == 0)
+            return false;
+
+        int firstPoint = 0;
+        if (route.Count > 1)
+        {
+            Vector3 entryDirection = Vector3.ProjectOnPlane(route[1] - route[0], Vector3.up);
+            Vector3 entryToActor = Vector3.ProjectOnPlane(actorPosition - route[0], Vector3.up);
+            if (Vector3.Dot(entryToActor, entryDirection) > 0f)
+                firstPoint = 1;
+        }
+
+        Vector3 previous = actorPosition;
+        previous.y = route[firstPoint].y;
+        float radius = Mathf.Max(0.01f, probeRadius);
+        for (int i = firstPoint; i < route.Count; i++)
+        {
+            if (IsAnyDoorColliderCloseToSegment(doorColliders, previous, route[i], radius))
+                return true;
+
+            previous = route[i];
+        }
+
+        return false;
+    }
+
+    private bool IsAnyDoorColliderCloseToSegment(
+        Collider[] doorColliders, Vector3 segmentStart, Vector3 segmentEnd, float probeRadius = -1f)
     {
         for (int i = 0; i < doorColliders.Length; i++)
         {
@@ -313,44 +408,46 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
             if (doorCollider == null || !doorCollider.enabled || doorCollider.isTrigger)
                 continue;
 
-            if (IsColliderCloseToSegment(doorCollider, segmentStart, segmentEnd))
+            if (IsColliderCloseToSegment(doorCollider, segmentStart, segmentEnd, probeRadius))
                 return true;
         }
 
         return false;
     }
 
-    private bool IsColliderCloseToSegment(Collider doorCollider, Vector3 segmentStart, Vector3 segmentEnd)
+    private bool IsColliderCloseToSegment(
+        Collider doorCollider, Vector3 segmentStart, Vector3 segmentEnd, float probeRadius)
     {
         Vector3 planarSegment = Vector3.ProjectOnPlane(segmentEnd - segmentStart, Vector3.up);
         float segmentLength = planarSegment.magnitude;
         if (segmentLength <= 0.001f)
-            return IsColliderCloseToPoint(doorCollider, segmentStart);
+            return IsColliderCloseToPoint(doorCollider, segmentStart, probeRadius);
 
         int stepCount = Mathf.Max(1, Mathf.CeilToInt(segmentLength / DoorObstructionProbeSpacing));
         for (int i = 0; i <= stepCount; i++)
         {
             float t = i / (float)stepCount;
             Vector3 samplePoint = Vector3.Lerp(segmentStart, segmentEnd, t);
-            if (IsColliderCloseToPoint(doorCollider, samplePoint))
+            if (IsColliderCloseToPoint(doorCollider, samplePoint, probeRadius))
                 return true;
         }
 
         return false;
     }
 
-    private bool IsColliderCloseToPoint(Collider doorCollider, Vector3 samplePoint)
+    private bool IsColliderCloseToPoint(Collider doorCollider, Vector3 samplePoint, float probeRadius)
     {
+        float radius = probeRadius > 0f ? probeRadius : DoorObstructionProbeRadius;
         Bounds bounds = doorCollider.bounds;
-        if (samplePoint.y < bounds.min.y - DoorObstructionProbeRadius
-            || samplePoint.y > bounds.max.y + DoorObstructionProbeRadius)
+        if (samplePoint.y < bounds.min.y - radius
+            || samplePoint.y > bounds.max.y + radius)
         {
             return false;
         }
 
         Vector3 closestPoint = doorCollider.ClosestPoint(samplePoint);
         Vector3 planarOffset = Vector3.ProjectOnPlane(closestPoint - samplePoint, Vector3.up);
-        return planarOffset.sqrMagnitude <= DoorObstructionProbeRadius * DoorObstructionProbeRadius;
+        return planarOffset.sqrMagnitude <= radius * radius;
     }
 
     private void AddMidpoints(List<Vector3> route, bool forward)
@@ -395,8 +492,14 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         CleanupInteractionBlockContacts();
     }
 
+    private void OnEnable()
+    {
+        activeVolumes.Add(this);
+    }
+
     private void OnDisable()
     {
+        activeVolumes.Remove(this);
         ClearInteractionBlockContacts();
     }
 

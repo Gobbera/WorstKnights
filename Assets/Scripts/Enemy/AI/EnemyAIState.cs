@@ -23,14 +23,15 @@ public abstract class EnemyAIState
     protected bool TryChaseVisibleTarget()
     {
         bool hadTargetAwareness = Brain.HasTargetAwareness;
-        if (!Brain.TryRefreshVisibleTarget()
-            && !Brain.TryRefreshCombatMemoryTarget()
-            && !Brain.TryRefreshCloseAwarenessTarget())
+        if (!Brain.TryRefreshPursuitTarget())
         {
             return false;
         }
 
-        if (Brain.ShouldAlertBeforeChase(hadTargetAwareness))
+        bool rediscoveredDuringSearch = Brain.UseLastSeenSearchFlow
+            && (StateId == EnemyState.Search || StateId == EnemyState.Reflection);
+        if ((rediscoveredDuringSearch && Brain.CanTriggerAlert)
+            || Brain.ShouldAlertBeforeChase(hadTargetAwareness))
         {
             Brain.BeginTargetAlert();
             Brain.ChangeState(EnemyState.Alert);
@@ -48,6 +49,17 @@ public abstract class EnemyAIState
     {
         if (!Brain.TryConsumeHeardNoise(out NoiseEvent noiseEvent))
             return false;
+
+        if (!Brain.CanTriggerAlert)
+        {
+            PlayerHealth player = noiseEvent.Source != null
+                ? noiseEvent.Source.GetComponentInParent<PlayerHealth>() : null;
+            if (!Brain.UseLastSeenSearchFlow || !Brain.TryBeginPursuitFromHeardPlayer(player, noiseEvent.Position))
+                return false;
+
+            Brain.ChangeState(EnemyState.Chase);
+            return true;
+        }
 
         Brain.BeginInvestigationAlert(noiseEvent.Position);
         Brain.ChangeState(EnemyState.Alert);

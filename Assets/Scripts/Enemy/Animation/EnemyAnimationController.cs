@@ -121,7 +121,7 @@ public class EnemyAnimationController : MonoBehaviour
         bool isChasing = state == EnemyState.Chase;
         bool isPatrolling = state == EnemyState.Patrol;
         bool isAlert = state == EnemyState.Alert;
-        bool isSearching = state == EnemyState.Search;
+        bool isSearching = state == EnemyState.Search || state == EnemyState.Reflection;
         bool isReturning = state == EnemyState.Return;
         bool isStunned = state == EnemyState.Stunned;
         bool isTraversing = state == EnemyState.Traversal;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 #if UNITY_EDITOR
@@ -9,6 +10,8 @@ using UnityEditor;
 [RequireComponent(typeof(EnemyHealth), typeof(EnemyMotor), typeof(EnemyAttack))]
 public class EnemyBrain : MonoBehaviour
 {
+    private const float RecentContactDuration = 0.15f;
+
     [Header("References")]
     [SerializeField] private EnemySetup enemySetup;
     [SerializeField] private EnemyHealth enemyHealth;
@@ -87,6 +90,18 @@ public class EnemyBrain : MonoBehaviour
     [SerializeField] [Min(0f)] private float searchStoppingDistance = 0.75f;
     [SerializeField] [Min(0f)] private float searchPointWaitTime = 0.6f;
 
+    [Header("Last Seen Search")]
+    [SerializeField] private bool useLastSeenSearchFlow;
+    [SerializeField] [Min(0f)] private float reflectionPauseDuration = 2.5f;
+    [SerializeField] [Min(0f)] private float searchToReflectionDelay = 4f;
+    [SerializeField] [Min(0f)] private float lastSeenStallTimeout = 6f;
+    [SerializeField] [Min(0.05f)] private float lastSeenProgressDistance = 0.4f;
+    [SerializeField] [Min(0f)] private float targetSwitchDistanceAdvantage = 2f;
+
+    [Header("Room Investigation")]
+    [SerializeField] [Min(0f)] private float roomChangeConfirmationTime = 0.2f;
+    [SerializeField] [Min(1f)] private float playerEvidenceLifetime = 45f;
+
     [Header("Return")]
     [SerializeField] [Min(0f)] private float returnSpeed = 2.75f;
     [SerializeField] [Min(0f)] private float returnStoppingDistance = 0.75f;
@@ -117,15 +132,56 @@ public class EnemyBrain : MonoBehaviour
     private bool hasCombatAwareness;
     private bool activeAlertHasTarget;
     private int activeAlertSequence;
+    private bool alertArmed = true;
+    private PlayerHealth recentlyTouchedPlayer;
+    private float lastPlayerContactTime = float.NegativeInfinity;
+    private EnemyTraversalVolume investigationDoorVolume;
+    private EnemyTraversalSide investigationDoorSide;
+    private EnemySearchArea lastKnownRoom;
     private float stunnedUntil = float.NegativeInfinity;
     private int traversalLockCount;
+    private BeholderMoodController beholderMood;
+    private readonly EnemyInvestigationMemory investigationMemory = new EnemyInvestigationMemory();
+    private float nextEvidenceVisionScanTime;
+    private float lastCurrentTargetHearingTime = float.NegativeInfinity;
 
     public EnemyState CurrentState => externalStateOverrideActive ? externalStateOverride : (stateMachine != null ? stateMachine.CurrentStateId : EnemyState.Idle);
     public PlayerHealth CurrentTarget => currentTarget;
     public Vector3 LastKnownTargetPosition => lastKnownTargetPosition;
+    public EnemySearchArea CurrentRoom
+    {
+        get
+        {
+            if (lastKnownRoom != null && lastKnownRoom.isActiveAndEnabled
+                && lastKnownRoom.ContainsPoint(transform.position))
+                return lastKnownRoom;
+
+            EnemySearchArea room = EnemySearchArea.FindContaining(transform.position, gameObject.scene);
+            if (room != null)
+                lastKnownRoom = room;
+            return lastKnownRoom != null && lastKnownRoom.isActiveAndEnabled ? lastKnownRoom : null;
+        }
+    }
+    public Vector3 LastKnownPursuitPosition
+    {
+        get
+        {
+            if (!HasDoorInvestigation
+                || !investigationDoorVolume.TryGetSidePosition(investigationDoorSide, out Vector3 exitPosition))
+                return lastKnownTargetPosition;
+
+            Vector3 exitOffset = Vector3.ProjectOnPlane(lastKnownTargetPosition - exitPosition, Vector3.up);
+            return investigationDoorVolume.ResolveSide(lastKnownTargetPosition) == investigationDoorSide
+                && (investigationDoorVolume.HasPassedSide(lastKnownTargetPosition, investigationDoorSide, 0f)
+                    || exitOffset.sqrMagnitude <= 0.45f * 0.45f)
+                ? lastKnownTargetPosition : exitPosition;
+        }
+    }
     public Vector3 InvestigationPosition => investigationPosition;
     public Vector3 HomePosition => homePosition;
     public bool HasLastKnownTargetPosition => hasLastKnownTargetPosition;
+    public bool HasDoorInvestigation => investigationDoorVolume != null
+        && investigationDoorSide != EnemyTraversalSide.None;
     public bool HasInvestigationPosition => hasInvestigationPosition;
     public bool HasValidTarget => currentTarget != null && currentTarget.CanBeTargetedByEnemy;
     public bool HasPatrolPoints => CountResolvedPatrolPoints() > 0;
@@ -135,6 +191,8 @@ public class EnemyBrain : MonoBehaviour
     public bool HasTargetAwareness => HasValidTarget || HasActiveCombatMemory;
     public bool HasActiveTargetAlert => activeAlertHasTarget && HasValidTarget;
     public int ActiveAlertSequence => activeAlertSequence;
+    public bool CanTriggerAlert => !useLastSeenSearchFlow || alertArmed;
+    public bool AlertArmed => alertArmed;
     public bool IsAttackLocked => enemyAttack != null && enemyAttack.IsAttackLocked;
     public bool CanStartAttack => enemyAttack != null && enemyAttack.CanStartAttack;
     public bool IsStunned => Time.time < stunnedUntil;
@@ -171,12 +229,29 @@ public class EnemyBrain : MonoBehaviour
     public float SearchSpeed => Mathf.Max(0f, searchSpeed);
     public float SearchStoppingDistance => Mathf.Max(0f, searchStoppingDistance);
     public float SearchPointWaitTime => Mathf.Max(0f, searchPointWaitTime);
+    public bool UseLastSeenSearchFlow => useLastSeenSearchFlow;
+    public bool HasRoomEvidenceForCurrentTarget => useLastSeenSearchFlow
+        && investigationMemory.TryGetSignalArea(currentTarget, out _);
+    public bool HasInvestigationOrigin => investigationMemory.HasInvestigationOrigin;
+    public bool HasFreshCurrentTargetHearing => Time.time - lastCurrentTargetHearingTime <= 0.5f;
+    public float ReflectionPauseDuration => Mathf.Max(0f, reflectionPauseDuration);
+    public float SearchToReflectionDelay => Mathf.Max(0f, searchToReflectionDelay);
+    public float LastSeenStallTimeout => Mathf.Max(0f, lastSeenStallTimeout);
+    public float LastSeenProgressDistance => Mathf.Max(0.05f, lastSeenProgressDistance);
     public float ReturnSpeed => Mathf.Max(0f, returnSpeed);
+    public event Action ReflectionCompleted;
+
+    public void SetEmotionalSpeedMultiplier(float multiplier)
+    {
+        enemyNavigation?.SetSpeedMultiplier(multiplier);
+    }
+
     public float ReturnStoppingDistance => Mathf.Max(0f, returnStoppingDistance);
 
     private void Awake()
     {
         ResolveReferences();
+        beholderMood = GetComponent<BeholderMoodController>();
         stateMachine = new EnemyStateMachine(this);
         homePosition = transform.position;
         homeRotation = transform.rotation;
@@ -187,8 +262,18 @@ public class EnemyBrain : MonoBehaviour
     private void OnEnable()
     {
         ResolveReferences();
+        beholderMood = GetComponent<BeholderMoodController>();
         if (stateMachine == null)
             stateMachine = new EnemyStateMachine(this);
+
+        if (enemyPerception != null && enemyPerception.Hearing != null)
+            enemyPerception.Hearing.PlayerHeard += OnPlayerHeard;
+    }
+
+    private void OnDisable()
+    {
+        if (enemyPerception != null && enemyPerception.Hearing != null)
+            enemyPerception.Hearing.PlayerHeard -= OnPlayerHeard;
     }
 
     private void FixedUpdate()
@@ -202,6 +287,7 @@ public class EnemyBrain : MonoBehaviour
         {
             ClearCurrentTarget();
             ClearCombatAwareness();
+            investigationMemory.Clear();
             ClearActiveAlertContext();
             StopNavigation();
             SetExternalState(EnemyState.Dead);
@@ -237,6 +323,63 @@ public class EnemyBrain : MonoBehaviour
         enemyNavigation?.Tick(deltaTime);
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        ReportPlayerContact(collision.collider.GetComponentInParent<PlayerHealth>());
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        ReportPlayerContact(collision.collider.GetComponentInParent<PlayerHealth>());
+    }
+
+    public void ReportPlayerContact(PlayerHealth player)
+    {
+        if (!useLastSeenSearchFlow || !simulationEnabled || ShouldWaitForSpawnSequence()
+            || (enemySetup != null && !enemySetup.HasAuthority)
+            || enemyHealth == null || !enemyHealth.IsAlive
+            || player == null || !player.CanBeTargetedByEnemy)
+            return;
+
+        if ((CurrentState == EnemyState.Chase || CurrentState == EnemyState.Attack)
+            && currentTarget != null && currentTarget != player)
+        {
+            RecordPlayerEvidence(player, player.transform.position);
+            return;
+        }
+
+        recentlyTouchedPlayer = player;
+        lastPlayerContactTime = Time.time;
+        investigationMemory.ClearOrigin();
+        currentTarget = player;
+        Vector3 position = player.transform.position;
+        ClearDoorInvestigation();
+        RegisterCombatAwareness(position);
+        RecordPlayerEvidence(player, position);
+        SetInvestigationPosition(position);
+
+        EnemyState state = CurrentState;
+        if (state == EnemyState.Chase || state == EnemyState.Attack)
+            return;
+
+        if (state == EnemyState.Alert)
+        {
+            if (!HasActiveTargetAlert)
+                ConfirmTargetDuringAlert();
+            return;
+        }
+
+        if (CanTriggerAlert)
+        {
+            BeginTargetAlert();
+            ChangeState(EnemyState.Alert);
+        }
+        else
+        {
+            ChangeState(EnemyState.Chase);
+        }
+    }
+
     public void SetSimulationEnabled(bool enabled)
     {
         if (simulationEnabled == enabled)
@@ -246,7 +389,11 @@ public class EnemyBrain : MonoBehaviour
         if (!enabled)
         {
             ClearCurrentTarget();
+            recentlyTouchedPlayer = null;
+            lastPlayerContactTime = float.NegativeInfinity;
+            ClearDoorInvestigation();
             ClearCombatAwareness();
+            investigationMemory.Clear();
             ClearActiveAlertContext();
             traversalLockCount = 0;
             StopNavigation();
@@ -289,6 +436,14 @@ public class EnemyBrain : MonoBehaviour
             StopNavigation();
     }
 
+    public void ApplyReplicatedAlertArmed(bool armed)
+    {
+        if (enemySetup != null && enemySetup.HasAuthority)
+            return;
+
+        alertArmed = armed;
+    }
+
     public void CompleteSpawnSequence()
     {
         spawnSequenceStarted = true;
@@ -314,7 +469,8 @@ public class EnemyBrain : MonoBehaviour
     public void BeginTraversal()
     {
         traversalLockCount++;
-        StopNavigation();
+        enemyNavigation?.Pause();
+        enemyMotor?.Stop();
         SetExternalState(EnemyState.Traversal);
     }
 
@@ -329,6 +485,12 @@ public class EnemyBrain : MonoBehaviour
 
         if (CurrentState == EnemyState.Traversal)
             ClearExternalState();
+
+        if (simulationEnabled
+            && (enemySetup == null || enemySetup.HasAuthority)
+            && !IsStunned
+            && (enemyHealth == null || enemyHealth.IsAlive))
+            enemyNavigation?.Resume();
 
         EnsureBehaviorState();
     }
@@ -352,6 +514,7 @@ public class EnemyBrain : MonoBehaviour
             currentTarget = instigatorHealth;
             Vector3 targetPosition = instigatorHealth.transform.position;
             RegisterCombatAwareness(targetPosition);
+            RecordPlayerEvidence(instigatorHealth, targetPosition);
             SetInvestigationPosition(targetPosition);
             ChangeState(EnemyState.Chase);
             return;
@@ -359,6 +522,14 @@ public class EnemyBrain : MonoBehaviour
 
         Vector3 stimulusPosition = ResolveDamageStimulusPosition(damageInfo);
         RegisterCombatAwareness(stimulusPosition);
+        if (!CanTriggerAlert)
+        {
+            if (CurrentState != EnemyState.Chase && CurrentState != EnemyState.Attack
+                && CurrentState != EnemyState.Alert)
+                ChangeState(EnemyState.Search);
+            return;
+        }
+
         BeginInvestigationAlert(stimulusPosition);
         ChangeState(EnemyState.Alert);
     }
@@ -397,6 +568,9 @@ public class EnemyBrain : MonoBehaviour
         if (state != EnemyState.Alert)
             ClearActiveAlertContext();
 
+        if (useLastSeenSearchFlow && state == EnemyState.Chase)
+            alertArmed = false;
+
         if (stateMachine == null)
             stateMachine = new EnemyStateMachine(this);
 
@@ -411,6 +585,7 @@ public class EnemyBrain : MonoBehaviour
         if (defaultState == EnemyState.Chase
             || defaultState == EnemyState.Attack
             || defaultState == EnemyState.Search
+            || defaultState == EnemyState.Reflection
             || defaultState == EnemyState.Return
             || defaultState == EnemyState.Alert
             || defaultState == EnemyState.Dead
@@ -430,12 +605,84 @@ public class EnemyBrain : MonoBehaviour
         if (enemyPerception == null)
             return false;
 
-        if (!enemyPerception.TryGetVisibleTarget(currentTarget, out PlayerHealth visibleTarget, out Vector3 visiblePosition))
+        if (useLastSeenSearchFlow && currentTarget != null
+            && (CurrentState == EnemyState.Chase || CurrentState == EnemyState.Attack)
+            && enemyPerception.Vision != null)
+        {
+            if (!enemyPerception.Vision.CanSeeTarget(currentTarget, out Vector3 trackedPosition))
+                return false;
+
+            ClearDoorInvestigation();
+            RegisterCombatAwareness(trackedPosition);
+            RecordPlayerEvidence(currentTarget, trackedPosition);
+            investigationMemory.ClearOrigin();
+            return true;
+        }
+
+        PlayerHealth preferredTarget = useLastSeenSearchFlow ? null : currentTarget;
+        if (!enemyPerception.TryGetVisibleTarget(preferredTarget, out PlayerHealth visibleTarget, out Vector3 visiblePosition))
             return false;
 
+        if (useLastSeenSearchFlow && currentTarget != null && currentTarget != visibleTarget
+            && enemyPerception.Vision != null
+            && enemyPerception.Vision.CanSeeTarget(currentTarget, out Vector3 currentPosition))
+        {
+            Vector3 origin = enemyPerception.Vision.EyePosition;
+            float currentDistance = Vector3.ProjectOnPlane(currentPosition - origin, Vector3.up).magnitude;
+            float candidateDistance = Vector3.ProjectOnPlane(visiblePosition - origin, Vector3.up).magnitude;
+            if (candidateDistance + targetSwitchDistanceAdvantage >= currentDistance)
+            {
+                visibleTarget = currentTarget;
+                visiblePosition = currentPosition;
+            }
+        }
+
+        if (!HasDoorInvestigation || currentTarget != visibleTarget
+            || investigationDoorVolume.ResolveSide(visiblePosition) != investigationDoorSide
+            || HasEnteredDoorInvestigationSide())
+            ClearDoorInvestigation();
         currentTarget = visibleTarget;
         RegisterCombatAwareness(visiblePosition);
+        RecordPlayerEvidence(visibleTarget, visiblePosition);
+        investigationMemory.ClearOrigin();
         return true;
+    }
+
+    public bool TryRefreshPursuitTarget()
+    {
+        if (useLastSeenSearchFlow && recentlyTouchedPlayer != null
+            && recentlyTouchedPlayer.CanBeTargetedByEnemy
+            && Time.time <= lastPlayerContactTime + RecentContactDuration)
+        {
+            currentTarget = recentlyTouchedPlayer;
+            RegisterCombatAwareness(currentTarget.transform.position);
+            RecordPlayerEvidence(currentTarget, currentTarget.transform.position);
+            investigationMemory.ClearOrigin();
+            return true;
+        }
+
+        if (TryRefreshVisibleTarget())
+            return true;
+
+        return !useLastSeenSearchFlow
+            && (TryRefreshCombatMemoryTarget() || TryRefreshCloseAwarenessTarget());
+    }
+
+    public void ApplyReplicatedTarget(PlayerHealth target)
+    {
+        if (enemySetup != null && enemySetup.HasAuthority)
+            return;
+
+        currentTarget = target;
+    }
+
+    public void NotifyReflectionCompleted()
+    {
+        alertArmed = true;
+        recentlyTouchedPlayer = null;
+        lastPlayerContactTime = float.NegativeInfinity;
+        ReflectionCompleted?.Invoke();
+        investigationMemory.Clear();
     }
 
     public bool TryRefreshCloseAwarenessTarget()
@@ -447,6 +694,7 @@ public class EnemyBrain : MonoBehaviour
         {
             currentTarget = preferredTarget;
             RegisterCombatAwareness(preferredPosition);
+            RecordPlayerEvidence(preferredTarget, preferredPosition);
             SetInvestigationPosition(preferredPosition);
             return true;
         }
@@ -479,6 +727,7 @@ public class EnemyBrain : MonoBehaviour
 
         currentTarget = nearestTarget;
         RegisterCombatAwareness(nearestPosition);
+        RecordPlayerEvidence(nearestTarget, nearestPosition);
         SetInvestigationPosition(nearestPosition);
         return true;
     }
@@ -498,6 +747,7 @@ public class EnemyBrain : MonoBehaviour
         }
 
         RegisterCombatAwareness(targetPosition);
+        RecordPlayerEvidence(currentTarget, targetPosition);
         SetInvestigationPosition(targetPosition);
         return true;
     }
@@ -508,15 +758,34 @@ public class EnemyBrain : MonoBehaviour
         return enemyPerception != null && enemyPerception.TryConsumeHeardNoise(out noiseEvent);
     }
 
+    public bool TryBeginPursuitFromHeardPlayer(PlayerHealth player, Vector3 position)
+    {
+        if (!useLastSeenSearchFlow || player == null || !player.CanBeTargetedByEnemy)
+            return false;
+
+        currentTarget = player;
+        recentlyTouchedPlayer = null;
+        lastPlayerContactTime = float.NegativeInfinity;
+        investigationMemory.ClearOrigin();
+        ClearDoorInvestigation();
+        RegisterCombatAwareness(position);
+        RecordPlayerEvidence(player, position);
+        return true;
+    }
+
     public bool ShouldAlertBeforeChase(bool hadTargetAwareness)
     {
         return alertBeforeChaseOnFirstTargetDetection
             && AlertDuration > 0f
+            && CanTriggerAlert
             && !hadTargetAwareness;
     }
 
     public void BeginTargetAlert()
     {
+        if (useLastSeenSearchFlow)
+            alertArmed = false;
+
         activeAlertHasTarget = HasValidTarget;
         if (HasValidTarget)
         {
@@ -528,8 +797,22 @@ public class EnemyBrain : MonoBehaviour
         activeAlertSequence++;
     }
 
+    public void ConfirmTargetDuringAlert()
+    {
+        if (!HasValidTarget)
+            return;
+
+        activeAlertHasTarget = true;
+        Vector3 targetPosition = currentTarget.transform.position;
+        RegisterCombatAwareness(targetPosition);
+        SetInvestigationPosition(targetPosition);
+    }
+
     public void BeginInvestigationAlert(Vector3 position)
     {
+        if (useLastSeenSearchFlow)
+            alertArmed = false;
+
         activeAlertHasTarget = false;
         SetInvestigationPosition(position);
         activeAlertSequence++;
@@ -550,6 +833,7 @@ public class EnemyBrain : MonoBehaviour
     {
         hasLastKnownTargetPosition = false;
         lastKnownTargetPosition = Vector3.zero;
+        ClearDoorInvestigation();
     }
 
     public void SetInvestigationPosition(Vector3 position)
@@ -567,6 +851,192 @@ public class EnemyBrain : MonoBehaviour
     public void ClearCurrentTarget()
     {
         currentTarget = null;
+        lastCurrentTargetHearingTime = float.NegativeInfinity;
+    }
+
+    public void BeginLastKnownInvestigation()
+    {
+        if (useLastSeenSearchFlow)
+            investigationMemory.BeginInvestigation(currentTarget);
+    }
+
+    public bool TryPursueNextPlayerEvidence()
+    {
+        if (!useLastSeenSearchFlow)
+            return false;
+
+        PlayerHealth previousTarget = currentTarget;
+        investigationMemory.MarkPointVisited(previousTarget);
+        if (!investigationMemory.TryGetNextPoint(previousTarget, Time.time, playerEvidenceLifetime,
+                out PlayerHealth nextTarget, out Vector3 position))
+            return false;
+
+        currentTarget = nextTarget;
+        recentlyTouchedPlayer = null;
+        lastPlayerContactTime = float.NegativeInfinity;
+        lastCurrentTargetHearingTime = float.NegativeInfinity;
+        ClearDoorInvestigation();
+        RegisterCombatAwareness(position);
+        return true;
+    }
+
+    public void BuildRoomSearchRoute(List<EnemySearchArea> route)
+    {
+        investigationMemory.BuildSearchRoute(route, Time.time, playerEvidenceLifetime);
+    }
+
+    public EnemySearchArea InvestigationPrimaryArea => investigationMemory.PrimaryArea;
+    public PlayerHealth InvestigationPrimaryPlayer => investigationMemory.PrimaryPlayer;
+
+    public void CaptureInvestigation(List<EnemyInvestigationMemory.Snapshot> snapshots)
+    {
+        investigationMemory.Capture(snapshots, Time.time, playerEvidenceLifetime);
+    }
+
+    public void ApplyReplicatedInvestigation(List<EnemyInvestigationMemory.Snapshot> snapshots,
+        EnemySearchArea primaryArea, PlayerHealth primaryPlayer, Vector3 lastKnown,
+        bool hasLastKnown, float transportAge)
+    {
+        if (enemySetup != null && enemySetup.HasAuthority)
+            return;
+
+        investigationMemory.Restore(snapshots, primaryArea, primaryPlayer, Time.time, transportAge);
+        if (hasLastKnown)
+            SetLastKnownTargetPosition(lastKnown);
+        else
+            ClearLastKnownTargetPosition();
+    }
+
+    public void RestoreAuthorityAfterHandoff(EnemyState state, PlayerHealth target,
+        Vector3 lastKnown, bool hasLastKnown, bool wasAlertArmed)
+    {
+        currentTarget = target;
+        alertArmed = wasAlertArmed;
+        if (hasLastKnown)
+            SetLastKnownTargetPosition(lastKnown);
+
+        EnemyState resumeState = state == EnemyState.Traversal || state == EnemyState.Attack
+            ? EnemyState.Chase : state;
+        if (resumeState == EnemyState.Chase && !hasLastKnown)
+            resumeState = EnemyState.Search;
+        if (resumeState == EnemyState.Search && !hasLastKnown)
+            resumeState = ResolveDefaultBehaviorState();
+        if (resumeState == EnemyState.Alert && target == null)
+            resumeState = hasLastKnown ? EnemyState.Search : ResolveDefaultBehaviorState();
+        ChangeState(resumeState);
+    }
+
+    public bool TryPrepareDoorForCurrentEvidence()
+    {
+        if (!HasRoomEvidenceForCurrentTarget
+            || !investigationMemory.TryGetSignalArea(currentTarget, out EnemySearchArea destination))
+            return false;
+
+        EnemySearchArea currentArea = CurrentRoom;
+        if (currentArea == destination)
+        {
+            ClearDoorInvestigation();
+            return false;
+        }
+
+        if (HasDoorInvestigation && investigationDoorVolume.GetSearchArea(investigationDoorSide) == destination)
+            return true;
+
+        return currentArea != null && currentArea != destination
+            && TryPrepareDoorBetweenAreas(currentArea, destination);
+    }
+
+    public bool TryPrepareDoorBetweenAreas(EnemySearchArea from, EnemySearchArea to)
+    {
+        if (from == null || to == null || from == to)
+            return false;
+
+        EnemyTraversalVolume nearest = null;
+        EnemyTraversalSide exitSide = EnemyTraversalSide.None;
+        float nearestDistanceSqr = float.PositiveInfinity;
+        foreach (EnemyTraversalVolume volume in EnemyTraversalVolume.ActiveVolumes)
+        {
+            if (volume == null || volume.gameObject.scene != gameObject.scene
+                || (volume.DoorController != null && volume.DoorController.IsLocked))
+                continue;
+
+            EnemyTraversalSide candidateSide = volume.GetSearchArea(EnemyTraversalSide.SideA) == from
+                && volume.GetSearchArea(EnemyTraversalSide.SideB) == to ? EnemyTraversalSide.SideB
+                : volume.GetSearchArea(EnemyTraversalSide.SideB) == from
+                    && volume.GetSearchArea(EnemyTraversalSide.SideA) == to ? EnemyTraversalSide.SideA
+                    : EnemyTraversalSide.None;
+            if (candidateSide == EnemyTraversalSide.None
+                || !volume.TryGetSidePosition(candidateSide, out _))
+                continue;
+
+            float distanceSqr = (volume.transform.position - transform.position).sqrMagnitude;
+            if (distanceSqr >= nearestDistanceSqr)
+                continue;
+
+            nearest = volume;
+            exitSide = candidateSide;
+            nearestDistanceSqr = distanceSqr;
+        }
+
+        if (nearest == null)
+            return false;
+
+        SetDoorInvestigation(nearest, exitSide);
+        return true;
+    }
+
+    public bool TryGetDoorInvestigation(out EnemyTraversalVolume volume, out EnemyTraversalSide side)
+    {
+        volume = investigationDoorVolume;
+        side = investigationDoorSide;
+        return HasDoorInvestigation;
+    }
+
+    public bool HasEnteredDoorInvestigationSide()
+    {
+        if (!TryGetDoorInvestigation(out EnemyTraversalVolume volume, out EnemyTraversalSide side))
+            return true;
+
+        EnemySearchArea destinationRoom = volume.GetSearchArea(side);
+        if (destinationRoom != null)
+            return CurrentRoom == destinationRoom;
+
+        if (volume.ResolveSide(transform.position) != side
+            || !volume.TryGetSidePosition(side, out Vector3 sidePosition))
+            return false;
+
+        Vector3 offset = Vector3.ProjectOnPlane(transform.position - sidePosition, Vector3.up);
+        return offset.sqrMagnitude <= 0.45f * 0.45f
+            || volume.HasPassedSide(transform.position, side, 0.15f);
+    }
+
+    public bool TryApproachDoorInvestigationEntry()
+    {
+        if (!TryGetDoorInvestigation(out EnemyTraversalVolume volume, out EnemyTraversalSide exitSide)
+            || enemyNavigation == null)
+            return false;
+
+        EnemyTraversalSide entrySide = exitSide == EnemyTraversalSide.SideA
+            ? EnemyTraversalSide.SideB : EnemyTraversalSide.SideA;
+        return volume.TryGetSidePosition(entrySide, out Vector3 entryPosition)
+            && enemyNavigation.TryApproachTraversalEntry(entryPosition, volume, entrySide);
+    }
+
+    private void SetDoorInvestigation(EnemyTraversalVolume volume, EnemyTraversalSide side)
+    {
+        investigationDoorVolume = volume;
+        investigationDoorSide = side;
+    }
+
+    private void ClearDoorInvestigation()
+    {
+        investigationDoorVolume = null;
+        investigationDoorSide = EnemyTraversalSide.None;
+    }
+
+    public void ClearRoomCrossing()
+    {
+        ClearDoorInvestigation();
     }
 
     public void RegisterCombatAwareness(Vector3 position)
@@ -596,9 +1066,53 @@ public class EnemyBrain : MonoBehaviour
         return enemyNavigation.SetDestination(destination, speed, stoppingDistance, force);
     }
 
+    public bool SetLastKnownNavigationDestination(float speed, float stoppingDistance, bool force)
+    {
+        if (enemyNavigation == null || !hasLastKnownTargetPosition)
+            return false;
+
+        Vector3 destination = LastKnownPursuitPosition;
+        if (HasDoorInvestigation && !HasEnteredDoorInvestigationSide())
+            return enemyNavigation.SetDestination(destination, speed, stoppingDistance, force);
+
+        return enemyNavigation.TryResolveReachablePosition(destination, SearchRadius, out Vector3 reachable)
+            && enemyNavigation.SetDestination(reachable, speed, stoppingDistance, force);
+    }
+
+    public bool TryResolveReachableNavigationPosition(Vector3 desired, float maxDistance, out Vector3 reachable)
+    {
+        if (enemyNavigation != null)
+            return enemyNavigation.TryResolveReachablePosition(desired, maxDistance, out reachable);
+
+        reachable = desired;
+        return false;
+    }
+
     public bool NavigationHasReachedDestination()
     {
         return enemyNavigation == null || enemyNavigation.HasReachedDestination();
+    }
+
+    public bool HasReachedLastKnownTargetPosition()
+    {
+        if (!hasLastKnownTargetPosition || enemyNavigation == null || !enemyNavigation.HasDestination
+            || !HasEnteredDoorInvestigationSide()
+            || !NavigationHasReachedDestination())
+            return false;
+
+        Vector3 offset = Vector3.ProjectOnPlane(enemyNavigation.CurrentDestination - transform.position, Vector3.up);
+        float reachDistance = SearchStoppingDistance + 0.15f;
+        return offset.sqrMagnitude <= reachDistance * reachDistance;
+    }
+
+    public bool NavigationHasUsablePath()
+    {
+        return enemyNavigation != null && enemyNavigation.HasUsablePath();
+    }
+
+    public bool NavigationCanReach(Vector3 destination)
+    {
+        return enemyNavigation != null && enemyNavigation.IsReachable(destination);
     }
 
     public bool TrySampleNavigationPosition(Vector3 candidatePosition, float maxDistance, out Vector3 sampledPosition)
@@ -676,9 +1190,20 @@ public class EnemyBrain : MonoBehaviour
 
     public float ResolveLostSightGraceDuration()
     {
+        if (useLastSeenSearchFlow)
+            return Mathf.Max(1f, LostSightGraceDuration * (beholderMood != null
+                ? beholderMood.ChasePersistenceMultiplier : 1f));
+
         return IsCombatMemoryActive()
             ? Mathf.Max(LostSightGraceDuration, CombatLostSightGraceDuration)
             : LostSightGraceDuration;
+    }
+
+    public float ResolveLastSeenStallTimeout()
+    {
+        float multiplier = useLastSeenSearchFlow && beholderMood != null
+            ? beholderMood.ChasePersistenceMultiplier : 1f;
+        return LastSeenStallTimeout * Mathf.Max(0.1f, multiplier);
     }
 
     public float ResolveActiveSearchDuration()
@@ -828,7 +1353,70 @@ public class EnemyBrain : MonoBehaviour
 
     private void TickPerception()
     {
-        enemyPerception?.Tick(currentTarget);
+        enemyPerception?.Tick(useLastSeenSearchFlow ? null : currentTarget);
+        if (enemyPerception == null)
+            return;
+
+        if (useLastSeenSearchFlow)
+        {
+            EnemyVision vision = enemyPerception.Vision;
+            if (vision != null && Time.time >= nextEvidenceVisionScanTime)
+            {
+                nextEvidenceVisionScanTime = Time.time + vision.DetectionUpdateInterval;
+                EnemyTargetRegistry.PruneInvalidTargets();
+                if (EnemyTargetRegistry.Count == 0)
+                    EnemyTargetRegistry.RefreshFromScene();
+                for (int i = 0; i < EnemyTargetRegistry.Count; i++)
+                {
+                    PlayerHealth player = EnemyTargetRegistry.GetTarget(i);
+                    if (vision.CanSeeTarget(player, out Vector3 position))
+                        RecordPlayerEvidence(player, position);
+                }
+            }
+
+            enemyPerception.Hearing?.ScanMovingPlayers();
+            investigationMemory.ObserveRoomChanges(Time.time, roomChangeConfirmationTime,
+                playerEvidenceLifetime, gameObject.scene);
+        }
+
+        if (enemyPerception.Hearing == null)
+            return;
+
+        if (!CanTriggerAlert)
+        {
+            if (CurrentState == EnemyState.Chase || CurrentState == EnemyState.Attack
+                || CurrentState == EnemyState.Alert
+                || enemyPerception.Hearing.PendingNoise.Source == null
+                || enemyPerception.Hearing.PendingNoise.Source.GetComponentInParent<PlayerHealth>() == null)
+                enemyPerception.TryConsumeHeardNoise(out _);
+            return;
+        }
+
+        if (CurrentState == EnemyState.Chase || CurrentState == EnemyState.Attack)
+            enemyPerception.Hearing.ClearPendingPlayerMovementNoise();
+        else if (!useLastSeenSearchFlow && !enemyPerception.HasVisibleTarget)
+            enemyPerception.Hearing.ScanMovingPlayers();
+    }
+
+    private void OnPlayerHeard(PlayerHealth player, Vector3 position)
+    {
+        if (!useLastSeenSearchFlow || !simulationEnabled
+            || (enemySetup != null && !enemySetup.HasAuthority))
+            return;
+
+        RecordPlayerEvidence(player, position);
+        if (player == currentTarget
+            && (CurrentState == EnemyState.Chase || CurrentState == EnemyState.Attack))
+        {
+            lastCurrentTargetHearingTime = Time.time;
+            RegisterCombatAwareness(position);
+        }
+    }
+
+    private void RecordPlayerEvidence(PlayerHealth player, Vector3 position)
+    {
+        if (useLastSeenSearchFlow && (enemySetup == null || enemySetup.HasAuthority))
+            investigationMemory.Record(player, position, Time.time, gameObject.scene);
     }
 
     private bool ShouldWaitForSpawnSequence()
@@ -1080,6 +1668,9 @@ public class EnemyBrain : MonoBehaviour
             if (sampledNavigation)
                 candidate = sampledPosition;
             else if (requireNavigationSample)
+                continue;
+
+            if (requireNavigationSample && !enemyNavigation.IsReachable(candidate))
                 continue;
 
             if (!hasFallback)
