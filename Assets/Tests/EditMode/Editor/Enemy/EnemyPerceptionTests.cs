@@ -491,6 +491,46 @@ public class EnemyPerceptionTests
     }
 
     [Test]
+    public void EnemyVision_MoodRangeAndAngleChangeActualDetection()
+    {
+        GameObject enemy = new GameObject("Enemy");
+        GameObject player = new GameObject("Player");
+        try
+        {
+            EnemyVision vision = enemy.AddComponent<EnemyVision>();
+            CapsuleCollider playerCollider = player.AddComponent<CapsuleCollider>();
+            PlayerHealth playerHealth = player.AddComponent<PlayerHealth>();
+            playerCollider.center = Vector3.up;
+            playerCollider.height = 2f;
+            playerCollider.radius = 0.35f;
+
+            var settings = new SerializedObject(vision);
+            settings.FindProperty("viewDistance").floatValue = 12f;
+            settings.FindProperty("viewAngle").floatValue = 100f;
+            settings.FindProperty("eyeHeightFallback").floatValue = 1f;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+
+            player.transform.position = Vector3.forward * 17f;
+            Physics.SyncTransforms();
+            Assert.That(vision.CanSeeTarget(playerHealth, out _), Is.False);
+            vision.SetMoodVisionMultipliers(1.5f, 1.2f);
+            Assert.That(vision.CanSeeTarget(playerHealth, out _), Is.True);
+
+            player.transform.position = Quaternion.AngleAxis(55f, Vector3.up) * Vector3.forward * 10f;
+            Physics.SyncTransforms();
+            vision.SetMoodVisionMultipliers(1f, 1f);
+            Assert.That(vision.CanSeeTarget(playerHealth, out _), Is.False);
+            vision.SetMoodVisionMultipliers(1.5f, 1.2f);
+            Assert.That(vision.CanSeeTarget(playerHealth, out _), Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(player);
+            Object.DestroyImmediate(enemy);
+        }
+    }
+
+    [Test]
     public void EnemyVision_CanSenseCloseTargetOutsideViewCone()
     {
         GameObject enemy = new GameObject("Enemy");

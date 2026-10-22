@@ -83,6 +83,15 @@ public class BeholderMoodTests
         Assert.That(moodData.FindProperty("infuriated").FindPropertyRelative("chasePersistenceMultiplier").floatValue,
             Is.EqualTo(2.25f));
 
+        Assert.That(moodData.FindProperty("enemyVision").objectReferenceValue,
+            Is.SameAs(prefab.GetComponent<EnemyVision>()));
+        Assert.That(moodData.FindProperty("enemyHearing").objectReferenceValue,
+            Is.SameAs(prefab.GetComponent<EnemyHearing>()));
+        AssertPerceptionProfile(moodData.FindProperty("neutral"), 1f, 1f, 1f, 0f);
+        AssertPerceptionProfile(moodData.FindProperty("irritated"), 7f / 6f, 1.07f, 1.1f, 1f);
+        AssertPerceptionProfile(moodData.FindProperty("angry"), 4f / 3f, 1.13f, 1.2f, 2f);
+        AssertPerceptionProfile(moodData.FindProperty("infuriated"), 1.5f, 1.2f, 1.3f, 3f);
+
         SerializedObject networkData = new SerializedObject(network);
         Assert.That(networkData.FindProperty("beholderMood").objectReferenceValue, Is.SameAs(mood));
         Assert.That(networkData.FindProperty("beholderDialogue").objectReferenceValue, Is.SameAs(dialogue));
@@ -108,6 +117,51 @@ public class BeholderMoodTests
             settings.FindProperty("lostSightGraceDuration").floatValue = 0.1f;
             settings.ApplyModifiedPropertiesWithoutUndo();
             Assert.That(brain.ResolveLostSightGraceDuration(), Is.EqualTo(1f).Within(0.001f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(enemy);
+        }
+    }
+
+    [Test]
+    public void MoodPerception_UsesApprovedRangesAndRestoresNeutralBaselines()
+    {
+        GameObject enemy = new GameObject("Beholder");
+        try
+        {
+            EnemyVision vision = enemy.AddComponent<EnemyVision>();
+            EnemyHearing hearing = enemy.AddComponent<EnemyHearing>();
+            var visionSettings = new SerializedObject(vision);
+            visionSettings.FindProperty("viewDistance").floatValue = 12f;
+            visionSettings.FindProperty("viewAngle").floatValue = 100f;
+            visionSettings.FindProperty("detectionUpdateInterval").floatValue = 0.15f;
+            visionSettings.ApplyModifiedPropertiesWithoutUndo();
+            var hearingSettings = new SerializedObject(hearing);
+            hearingSettings.FindProperty("hearingMultiplier").floatValue = 1.4f;
+            hearingSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            BeholderMoodController mood = enemy.AddComponent<BeholderMoodController>();
+            AssertPerception(vision, hearing, 12f, 100f, 0.5f, 7f, 10f, 14f);
+
+            mood.ApplyReplicatedState(50, BeholderMood.Irritated);
+            AssertPerception(vision, hearing, 14f, 107f, 0.55f, 7.7f, 11f, 15f);
+
+            mood.ApplyReplicatedState(100, BeholderMood.Angry);
+            AssertPerception(vision, hearing, 16f, 113f, 0.6f, 8.4f, 12f, 16f);
+
+            mood.ApplyReplicatedState(150, BeholderMood.Infuriated);
+            AssertPerception(vision, hearing, 18f, 120f, 0.65f, 9.1f, 13f, 17f);
+            Assert.That(hearing.ResolveAudibleRadius(100f), Is.EqualTo(103f).Within(0.001f));
+            Assert.That(hearing.CanHear(new NoiseEvent(new Vector3(16.9f, 0f, 0f),
+                10f, 1f, NoiseType.Footstep, null)), Is.True);
+            Assert.That(hearing.CanHear(new NoiseEvent(new Vector3(17.1f, 0f, 0f),
+                10f, 1f, NoiseType.Footstep, null)), Is.False);
+
+            mood.ApplyReplicatedState(0, BeholderMood.Neutral);
+            AssertPerception(vision, hearing, 12f, 100f, 0.5f, 7f, 10f, 14f);
+            Assert.That(visionSettings.FindProperty("viewDistance").floatValue, Is.EqualTo(12f));
+            Assert.That(hearingSettings.FindProperty("hearingMultiplier").floatValue, Is.EqualTo(1.4f));
         }
         finally
         {
@@ -193,5 +247,31 @@ public class BeholderMoodTests
     private static BeholderMood Resolve(int points, BeholderMood current)
     {
         return BeholderMoodController.ResolveMood(points, current, 50, 100, 150, 5);
+    }
+
+    private static void AssertPerceptionProfile(SerializedProperty profile,
+        float distance, float angle, float hearing, float cap)
+    {
+        Assert.That(profile.FindPropertyRelative("visionDistanceMultiplier").floatValue,
+            Is.EqualTo(distance).Within(0.001f));
+        Assert.That(profile.FindPropertyRelative("visionAngleMultiplier").floatValue,
+            Is.EqualTo(angle).Within(0.001f));
+        Assert.That(profile.FindPropertyRelative("hearingRadiusMultiplier").floatValue,
+            Is.EqualTo(hearing).Within(0.001f));
+        Assert.That(profile.FindPropertyRelative("hearingBonusCap").floatValue,
+            Is.EqualTo(cap).Within(0.001f));
+    }
+
+    private static void AssertPerception(EnemyVision vision, EnemyHearing hearing,
+        float distance, float angle, float crouch, float walk, float sprint, float genericNoise)
+    {
+        Assert.That(vision.ViewDistance, Is.EqualTo(distance).Within(0.001f));
+        Assert.That(vision.ViewAngle, Is.EqualTo(angle).Within(0.001f));
+        Assert.That(vision.DetectionUpdateInterval, Is.EqualTo(0.15f).Within(0.001f));
+        Assert.That(hearing.ResolveAudibleRadius(0f), Is.Zero);
+        Assert.That(hearing.ResolveAudibleRadius(0.5f), Is.EqualTo(crouch).Within(0.001f));
+        Assert.That(hearing.ResolveAudibleRadius(7f), Is.EqualTo(walk).Within(0.001f));
+        Assert.That(hearing.ResolveAudibleRadius(10f), Is.EqualTo(sprint).Within(0.001f));
+        Assert.That(hearing.ResolveAudibleRadius(14f), Is.EqualTo(genericNoise).Within(0.001f));
     }
 }

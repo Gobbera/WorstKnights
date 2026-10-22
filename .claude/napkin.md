@@ -87,14 +87,14 @@
 6. **[2026-09-25] Enemy separation belongs to layers plus NavMesh avoidance**
    Do instead: put enemy roots/colliders on the `Enemy` layer, disable `Enemy x Enemy` in the Physics matrix, and keep authored `NavMeshAgent` avoidance/radius values aligned so enemies avoid each other without Rigidbody pushing.
 
-7. **[2026-09-25] Floating enemies need vertical ground anchoring**
-   Do instead: keep gravity off for hover-style enemies, but add an authority-only ground-probe anchor that preserves the initial floor offset, uses a forward movement probe plus tangent slope velocity for ramps, applies a low-friction capsule material, corrects Rigidbody `Y` after movement, and zeros vertical velocity before trying `FreezePositionY`.
+7. **[2026-09-25] Floating enemies need one vertical movement driver**
+   Do instead: use either gravity-driven collision or the authority-only `EnemyGroundAnchor`, not both at once. For a gravity trial, disable the entire anchor component: it applies a zero-friction capsule material even when `enableGroundAnchor` is false. Keep hover on the visual child if gravity proves reliable; evaluate ramp behavior before settling on a permanent mode.
 
 8. **[2026-09-25] Large enemies need authored NavMesh radius parity**
    Do instead: keep a real `NavMeshAgent` component saved on enemy prefabs, tune its radius/height/baseOffset in Prefab or Scene Mode, leave `EnemyNavigation.Configure Agent From Capsule` off unless intentionally regenerating from the collider, and rebake with the larger radius or a dedicated agent before changing motor code.
 
-9. **[2026-09-25] Beholder eye tracking is an animation overlay**
-   Do instead: when the Beholder is not actively tracking a target, do not write eye-bone rotations; when tracking, blend from the Animator's current bone rotation in `LateUpdate` so idle/patrol clips stay authoritative.
+9. **[2026-10-22] Beholder Hip and eye tracking are animation overlays**
+   Do instead: apply bounded Hip yaw/pitch before eye tracking in `BeholderProceduralAnimationController.LateUpdate`, use the replicated AI target on remote clients, and restore the animated Hip pose as tracking releases; when eyes are not tracking, do not write eye-bone rotations.
 
 10. **[2026-10-01] Beholder eye color drives linked eye VFX**
    Do instead: tune eye material profiles, linked `WKFakeVolumeController` volumes, and eye `Spot Light` references from `BeholderEyeGlowController`; let that controller use the current animated emission color/intensity as the shared source.
@@ -203,8 +203,8 @@
 4. **[2026-05-22] Enemy hit reactions must bypass locomotion fallback**
    Do instead: when adding enemy damage states, drive them from a replicated damage sequence and suppress Idle/Walk fallback while the hit state is active, otherwise the locomotion crossfade can cancel the reaction immediately.
 
-5. **[2026-05-06] Preserved FBX GUID swaps must not leave the old file beside the replacement**
-   Do instead: once the replacement model is staged with the old `.meta`, delete the original FBX and its `.meta` immediately so Animator clip references re-resolve against the final asset instead of a duplicate-guid stale path.
+5. **[2026-10-22] FBX reimports must preserve GUID and single Animator ownership**
+   Do instead: replace an FBX in place with its `.meta` and remove any old duplicate-GUID copy. When changing Avatar Definition, check whether Unity adds an imported Animator alongside prefab-added Animators; leave only the gameplay-referenced Animator active, clear conflicting scene overrides, and verify the clip preview.
 
 6. **[2026-06-25] Hand pose masks must resolve from the saved player sockets**
    Do instead: when retargeting grip or emote hand layers, derive the right/left hand bone paths from `Assets/Resources/Player.prefab` socket parents and rerun `Tools/Animation/Sync Player Hand Animator` so the AvatarMask paths still match the live `Model/EditedKnight` hierarchy.

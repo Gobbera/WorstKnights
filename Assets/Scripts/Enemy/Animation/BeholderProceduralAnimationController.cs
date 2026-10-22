@@ -19,6 +19,16 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
     [SerializeField] private EnemyHealth enemyHealth;
     [SerializeField] private Transform[] eyeBones = Array.Empty<Transform>();
 
+    [Header("Hip Tracking")]
+    [SerializeField] private bool enableHipTracking = true;
+    [Tooltip("Optional. Finds Beholder_Armature/Root/Hip automatically when empty.")]
+    [SerializeField] private Transform hipBone;
+    [SerializeField] [Range(0f, 90f)] private float maxHipYaw = 12f;
+    [SerializeField] [Range(0f, 80f)] private float maxHipPitchUp = 28f;
+    [SerializeField] [Range(0f, 80f)] private float maxHipPitchDown = 14f;
+    [Tooltip("Time to ease toward the target and back to animation. Zero is immediate.")]
+    [SerializeField] [Min(0f)] private float hipSmoothTime = 0.2f;
+
     [Header("Eye Tracking")]
     [SerializeField] private bool enableEyeTracking = true;
     [SerializeField] private bool autoResolveEyeBones = true;
@@ -48,31 +58,47 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
     private float currentEyeWeightVelocity;
     private Vector3 currentAimPosition;
     private bool hasCurrentAimPosition;
+    private float currentHipYaw;
+    private float currentHipPitch;
+    private float hipYawVelocity;
+    private float hipPitchVelocity;
+    private Quaternion lastAnimatedHipLocalRotation;
+    private Quaternion lastAppliedHipLocalRotation;
+    private bool hasAppliedHipRotation;
 
     private void Awake()
     {
         ResolveReferences();
         CacheEyeBones();
+        CacheHipBone();
     }
 
     private void OnEnable()
     {
         ResolveReferences();
         CacheEyeBones();
+        CacheHipBone();
+    }
+
+    private void OnDisable()
+    {
+        RestoreHipPose();
+        currentHipYaw = 0f;
+        currentHipPitch = 0f;
+        hipYawVelocity = 0f;
+        hipPitchVelocity = 0f;
+        currentEyeWeight = 0f;
+        currentEyeWeightVelocity = 0f;
+        hasCurrentAimPosition = false;
     }
 
     private void LateUpdate()
     {
         ResolveReferences();
 
-        if (!enableEyeTracking || resolvedEyeBones.Length == 0)
-        {
-            currentEyeWeight = 0f;
-            hasCurrentAimPosition = false;
-            return;
-        }
-
-        PlayerHealth target = ShouldTrackEyes() ? ResolveEyeTrackingTarget() : null;
+        bool trackEyes = enableEyeTracking && resolvedEyeBones.Length > 0 && ShouldTrackEyes();
+        bool trackHip = enableHipTracking && hipBone != null && ShouldTrackHip();
+        PlayerHealth target = trackEyes || trackHip ? ResolveEyeTrackingTarget() : null;
         bool hasTarget = target != null;
         if (hasTarget)
         {
@@ -80,9 +106,11 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
             hasCurrentAimPosition = true;
         }
 
-        float desiredWeight = hasTarget ? Mathf.Clamp01(eyeTrackingWeight) : 0f;
+        ApplyHipTracking(trackHip && hasTarget);
+
+        float desiredWeight = trackEyes && hasTarget ? Mathf.Clamp01(eyeTrackingWeight) : 0f;
         currentEyeWeight = SmoothTowards(currentEyeWeight, desiredWeight, desiredWeight > currentEyeWeight ? acquireSmoothTime : releaseSmoothTime);
-        if (!hasTarget && currentEyeWeight <= 0.001f)
+        if (!hasTarget && currentEyeWeight <= 0.001f && Mathf.Abs(currentHipYaw) <= 0.001f && Mathf.Abs(currentHipPitch) <= 0.001f)
             hasCurrentAimPosition = false;
 
         ApplyEyeTracking();
@@ -129,6 +157,27 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
                 Bone = bone,
                 LocalLookAxis = ResolveLocalLookAxis(bone)
             };
+        }
+    }
+
+    private void CacheHipBone()
+    {
+        if (hipBone != null)
+            return;
+
+        Transform modelRoot = enemySetup != null ? enemySetup.ModelRoot : transform;
+        hipBone = modelRoot.Find("Beholder_Armature/Root/Hip");
+        if (hipBone != null)
+            return;
+
+        Transform[] descendants = modelRoot.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < descendants.Length; i++)
+        {
+            if (string.Equals(descendants[i].name, "Hip", StringComparison.Ordinal))
+            {
+                hipBone = descendants[i];
+                return;
+            }
         }
     }
 
@@ -213,6 +262,88 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
             || (trackDuringAttack && state == EnemyState.Attack)
             || (trackDuringAlert && state == EnemyState.Alert)
             || (trackDuringSearch && state == EnemyState.Search);
+    }
+
+    private bool ShouldTrackHip()
+    {
+        if (enemyHealth != null && !enemyHealth.IsAlive)
+            return false;
+
+        EnemyState state = enemyBrain != null ? enemyBrain.CurrentState : EnemyState.Idle;
+        return state == EnemyState.Alert || state == EnemyState.Chase || state == EnemyState.Attack;
+    }
+
+    private void ApplyHipTracking(bool hasTarget)
+    {
+        if (hipBone == null)
+            return;
+
+        Vector2 targetAngles = hasTarget
+            ? ResolveHipAngles(transform, hipBone, currentAimPosition, maxHipYaw, maxHipPitchUp, maxHipPitchDown)
+            : Vector2.zero;
+        if (hipSmoothTime <= 0f)
+        {
+            currentHipYaw = targetAngles.x;
+            currentHipPitch = targetAngles.y;
+            hipYawVelocity = 0f;
+            hipPitchVelocity = 0f;
+        }
+        else
+        {
+            currentHipYaw = Mathf.SmoothDamp(currentHipYaw, targetAngles.x,
+                ref hipYawVelocity, hipSmoothTime);
+            currentHipPitch = Mathf.SmoothDamp(currentHipPitch, targetAngles.y,
+                ref hipPitchVelocity, hipSmoothTime);
+        }
+
+        currentHipYaw = Mathf.Clamp(currentHipYaw, -maxHipYaw, maxHipYaw);
+        currentHipPitch = Mathf.Clamp(currentHipPitch, -maxHipPitchDown, maxHipPitchUp);
+
+        Quaternion animatedLocalRotation = hipBone.localRotation;
+        if (hasAppliedHipRotation && Quaternion.Angle(animatedLocalRotation, lastAppliedHipLocalRotation) < 0.01f)
+            animatedLocalRotation = lastAnimatedHipLocalRotation;
+
+        if (!hasTarget && Mathf.Abs(currentHipYaw) < 0.001f && Mathf.Abs(currentHipPitch) < 0.001f)
+        {
+            if (hasAppliedHipRotation)
+                hipBone.localRotation = animatedLocalRotation;
+            hasAppliedHipRotation = false;
+            return;
+        }
+
+        Quaternion yaw = Quaternion.AngleAxis(currentHipYaw, transform.up);
+        Quaternion pitch = Quaternion.AngleAxis(-currentHipPitch, yaw * transform.right);
+        Quaternion animatedWorldRotation = hipBone.parent != null
+            ? hipBone.parent.rotation * animatedLocalRotation : animatedLocalRotation;
+        hipBone.rotation = pitch * yaw * animatedWorldRotation;
+        lastAnimatedHipLocalRotation = animatedLocalRotation;
+        lastAppliedHipLocalRotation = hipBone.localRotation;
+        hasAppliedHipRotation = true;
+    }
+
+    private void RestoreHipPose()
+    {
+        if (hipBone != null && hasAppliedHipRotation
+            && Quaternion.Angle(hipBone.localRotation, lastAppliedHipLocalRotation) < 0.01f)
+        {
+            hipBone.localRotation = lastAnimatedHipLocalRotation;
+        }
+
+        hasAppliedHipRotation = false;
+    }
+
+    private static Vector2 ResolveHipAngles(Transform root, Transform hip, Vector3 aimPosition,
+        float maxYaw, float maxPitchUp, float maxPitchDown)
+    {
+        Vector3 direction = root.InverseTransformDirection(aimPosition - hip.position);
+        if (direction.sqrMagnitude < 0.0001f)
+            return Vector2.zero;
+
+        float yaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+        float horizontalDistance = new Vector2(direction.x, direction.z).magnitude;
+        float pitch = Mathf.Atan2(direction.y, horizontalDistance) * Mathf.Rad2Deg;
+        return new Vector2(Mathf.Clamp(yaw, -maxYaw, maxYaw),
+            Mathf.Clamp(pitch, -maxPitchDown, maxPitchUp));
     }
 
     private PlayerHealth ResolveEyeTrackingTarget()
@@ -348,6 +479,10 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
             fallbackLocalLookAxis = Vector3.forward;
 
         eyeTrackingWeight = Mathf.Clamp01(eyeTrackingWeight);
+        maxHipYaw = Mathf.Clamp(maxHipYaw, 0f, 90f);
+        maxHipPitchUp = Mathf.Clamp(maxHipPitchUp, 0f, 80f);
+        maxHipPitchDown = Mathf.Clamp(maxHipPitchDown, 0f, 80f);
+        hipSmoothTime = Mathf.Max(0f, hipSmoothTime);
         acquireSmoothTime = Mathf.Max(0f, acquireSmoothTime);
         releaseSmoothTime = Mathf.Max(0f, releaseSmoothTime);
         targetHeightFallback = Mathf.Max(0f, targetHeightFallback);

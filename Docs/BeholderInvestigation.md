@@ -31,6 +31,28 @@ receive state, target, position, dialogue, and a compact evidence snapshot
 through `EnemyNetworkSync`. The snapshot lets a new Master resume the current
 investigation if authority changes; it does not broadcast every sensing tick.
 
+## Emotional perception
+
+The Beholder keeps its authored vision distance (12 m), view angle (100 degrees),
+and hearing multiplier (1.4 for `NoiseSystem`) as baselines. Mood profiles add
+runtime-only perception modifiers; vision check frequency and player-authored
+movement noise radii do not change. The approved tuning is:
+
+| Mood | Vision distance | View angle | Hearing factor | Maximum hearing bonus |
+| --- | ---: | ---: | ---: | ---: |
+| Neutral | 12 m | 100 degrees | 1.0 | 0 m |
+| Irritated | 14 m | 107 degrees | 1.1 | 1 m |
+| Angry | 16 m | 113 degrees | 1.2 | 2 m |
+| Infuriated | 18 m | 120 degrees | 1.3 | 3 m |
+
+For either player movement or a `NoiseSystem` event, the effective hearing
+radius is `base + min(mood bonus cap, base * (mood factor - 1))`. Player movement
+uses its crouch/walk/sprint radius as `base`; other noise uses event radius,
+intensity, and the existing 1.4 hearing multiplier. A zero-radius idle player
+remains silent, and low-radius sounds stay proportionally quiet. Only the
+authority performs perception; replicated mood applies the same local profile
+on remote instances and after authority handoff.
+
 ## Map setup
 
 1. Put one `EnemySearchArea` on each room's `Point of Interest` object. Give it

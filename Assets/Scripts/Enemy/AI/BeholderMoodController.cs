@@ -31,6 +31,10 @@ public sealed class BeholderMoodController : MonoBehaviour
         public Color eyeColor;
         [Range(0f, 1f)] public float eyeColorBlend;
         [Min(0f)] public float eyeIntensityMultiplier;
+        [Min(1f)] public float visionDistanceMultiplier;
+        [Min(1f)] public float visionAngleMultiplier;
+        [Min(1f)] public float hearingRadiusMultiplier;
+        [Min(0f)] public float hearingBonusCap;
 
         public MoodProfile(float damage, float speed, Color color, float blend, float intensity,
             float searchPersistence, float chasePersistence)
@@ -43,6 +47,10 @@ public sealed class BeholderMoodController : MonoBehaviour
             eyeIntensityMultiplier = intensity;
             chasePersistenceMultiplier = chasePersistence;
             searchPersistenceMultiplier = searchPersistence;
+            visionDistanceMultiplier = 1f;
+            visionAngleMultiplier = 1f;
+            hearingRadiusMultiplier = 1f;
+            hearingBonusCap = 0f;
         }
     }
 
@@ -52,6 +60,8 @@ public sealed class BeholderMoodController : MonoBehaviour
     [SerializeField] private EnemyBrain enemyBrain;
     [SerializeField] private EnemyAttack enemyAttack;
     [SerializeField] private BeholderEyeGlowController eyeGlow;
+    [SerializeField] private EnemyVision enemyVision;
+    [SerializeField] private EnemyHearing enemyHearing;
 
     [Header("Score Thresholds")]
     [SerializeField, Min(3)] private int maxPoints = 200;
@@ -68,9 +78,27 @@ public sealed class BeholderMoodController : MonoBehaviour
 
     [Header("Mood Profiles")]
     [SerializeField] private MoodProfile neutral = new MoodProfile(1f, 1f, Color.white, 0f, 1f, 0.5f, 1f);
-    [SerializeField] private MoodProfile irritated = new MoodProfile(1.1f, 1.05f, new Color(1f, 0.6f, 0.25f), 0.25f, 1.15f, 1f, 1.35f);
-    [SerializeField] private MoodProfile angry = new MoodProfile(1.25f, 1.12f, new Color(1f, 0.25f, 0.1f), 0.45f, 1.35f, 2f, 1.75f);
-    [SerializeField] private MoodProfile infuriated = new MoodProfile(1.5f, 1.2f, new Color(1f, 0.08f, 0.04f), 0.7f, 1.6f, 3f, 2.25f);
+    [SerializeField] private MoodProfile irritated = new MoodProfile(1.1f, 1.05f, new Color(1f, 0.6f, 0.25f), 0.25f, 1.15f, 1f, 1.35f)
+    {
+        visionDistanceMultiplier = 7f / 6f,
+        visionAngleMultiplier = 1.07f,
+        hearingRadiusMultiplier = 1.1f,
+        hearingBonusCap = 1f
+    };
+    [SerializeField] private MoodProfile angry = new MoodProfile(1.25f, 1.12f, new Color(1f, 0.25f, 0.1f), 0.45f, 1.35f, 2f, 1.75f)
+    {
+        visionDistanceMultiplier = 4f / 3f,
+        visionAngleMultiplier = 1.13f,
+        hearingRadiusMultiplier = 1.2f,
+        hearingBonusCap = 2f
+    };
+    [SerializeField] private MoodProfile infuriated = new MoodProfile(1.5f, 1.2f, new Color(1f, 0.08f, 0.04f), 0.7f, 1.6f, 3f, 2.25f)
+    {
+        visionDistanceMultiplier = 1.5f,
+        visionAngleMultiplier = 1.2f,
+        hearingRadiusMultiplier = 1.3f,
+        hearingBonusCap = 3f
+    };
 
     private int points;
     private BeholderMood mood;
@@ -189,6 +217,8 @@ public sealed class BeholderMoodController : MonoBehaviour
         enemyBrain?.SetEmotionalSpeedMultiplier(profile.movementSpeedMultiplier);
         enemyAttack?.SetEmotionalDamageMultiplier(profile.damageMultiplier);
         eyeGlow?.SetMoodVisual(profile.eyeColor, profile.eyeColorBlend, profile.eyeIntensityMultiplier);
+        enemyVision?.SetMoodVisionMultipliers(profile.visionDistanceMultiplier, profile.visionAngleMultiplier);
+        enemyHearing?.SetMoodHearing(profile.hearingRadiusMultiplier, profile.hearingBonusCap);
     }
 
     private MoodProfile ResolveProfile()
@@ -209,6 +239,8 @@ public sealed class BeholderMoodController : MonoBehaviour
         if (enemyBrain == null) enemyBrain = GetComponent<EnemyBrain>();
         if (enemyAttack == null) enemyAttack = GetComponent<EnemyAttack>();
         if (eyeGlow == null) eyeGlow = GetComponent<BeholderEyeGlowController>();
+        if (enemyVision == null) enemyVision = GetComponent<EnemyVision>();
+        if (enemyHearing == null) enemyHearing = GetComponent<EnemyHearing>();
     }
 
     private void OnValidate()

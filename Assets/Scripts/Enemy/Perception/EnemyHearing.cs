@@ -13,7 +13,7 @@ public sealed class EnemyHearing : MonoBehaviour
     [SerializeField] [Min(0f)] private float minimumAudibleIntensity = 0.05f;
 
     [Header("Player Movement")]
-    [Tooltip("Checks the player's movement radius directly; Hearing Multiplier only affects NoiseSystem events.")]
+    [Tooltip("Uses the player's movement radius before mood scaling; Hearing Multiplier only affects NoiseSystem events.")]
     [SerializeField] private bool detectPlayerMovement;
     [SerializeField] [Min(0.05f)] private float playerMovementScanInterval = 0.35f;
 
@@ -27,6 +27,8 @@ public sealed class EnemyHearing : MonoBehaviour
     private bool pendingFromPlayerMovement;
     private float nextPlayerMovementScanTime;
     private Collider bodyCollider;
+    private float moodRadiusMultiplier = 1f;
+    private float moodBonusCap;
 
     public bool EnableHearing => enableHearing;
     public float HearingMultiplier => Mathf.Max(0f, hearingMultiplier);
@@ -50,6 +52,19 @@ public sealed class EnemyHearing : MonoBehaviour
         NoiseSystem.NoiseEmitted -= HandleNoiseEmitted;
         hasPendingNoise = false;
         pendingFromPlayerMovement = false;
+    }
+
+    public void SetMoodHearing(float radiusMultiplier, float bonusCap)
+    {
+        moodRadiusMultiplier = Mathf.Max(1f, radiusMultiplier);
+        moodBonusCap = Mathf.Max(0f, bonusCap);
+        nextPlayerMovementScanTime = 0f;
+    }
+
+    public float ResolveAudibleRadius(float baseRadius)
+    {
+        float radius = Mathf.Max(0f, baseRadius);
+        return radius + Mathf.Min(moodBonusCap, radius * (moodRadiusMultiplier - 1f));
     }
 
     public bool TryConsumeNoise(out NoiseEvent noiseEvent)
@@ -100,7 +115,7 @@ public sealed class EnemyHearing : MonoBehaviour
             if (source == null || !source.isActiveAndEnabled)
                 continue;
 
-            float radius = source.CurrentRadius;
+            float radius = ResolveAudibleRadius(source.CurrentRadius);
             if (radius <= 0f)
                 continue;
 
@@ -146,7 +161,8 @@ public sealed class EnemyHearing : MonoBehaviour
         if (!enableHearing || noiseEvent.Intensity < minimumAudibleIntensity)
             return false;
 
-        float audibleRadius = noiseEvent.Radius * Mathf.Max(0f, noiseEvent.Intensity) * HearingMultiplier;
+        float audibleRadius = ResolveAudibleRadius(
+            noiseEvent.Radius * Mathf.Max(0f, noiseEvent.Intensity) * HearingMultiplier);
         if (audibleRadius <= 0.0001f)
             return false;
 
@@ -230,6 +246,7 @@ public sealed class EnemyHearing : MonoBehaviour
             return;
 
         Gizmos.color = hearingGizmoColor;
-        Gizmos.DrawWireSphere(transform.position, Mathf.Max(0f, previewHearingRadius) * HearingMultiplier);
+        Gizmos.DrawWireSphere(transform.position,
+            ResolveAudibleRadius(Mathf.Max(0f, previewHearingRadius) * HearingMultiplier));
     }
 }

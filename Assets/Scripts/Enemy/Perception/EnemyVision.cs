@@ -31,10 +31,12 @@ public sealed class EnemyVision : MonoBehaviour
     private Vector3 cachedVisibleTargetPosition;
     private float nextDetectionTime;
     private bool hasCachedVisibleTarget;
+    private float moodDistanceMultiplier = 1f;
+    private float moodAngleMultiplier = 1f;
 
     public bool EnableVision => enableVision;
-    public float ViewDistance => Mathf.Max(0f, viewDistance);
-    public float ViewAngle => Mathf.Clamp(viewAngle, 1f, 360f);
+    public float ViewDistance => Mathf.Max(0f, viewDistance) * moodDistanceMultiplier;
+    public float ViewAngle => Mathf.Clamp(viewAngle * moodAngleMultiplier, 1f, 360f);
     public float DetectionUpdateInterval => Mathf.Max(0.02f, detectionUpdateInterval);
     public Transform EyeTransform => eyeTransform;
     public Vector3 EyePosition => eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * Mathf.Max(0f, eyeHeightFallback);
@@ -43,6 +45,19 @@ public sealed class EnemyVision : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
+    }
+
+    public void SetMoodVisionMultipliers(float distanceMultiplier, float angleMultiplier)
+    {
+        float distance = Mathf.Max(1f, distanceMultiplier);
+        float angle = Mathf.Max(1f, angleMultiplier);
+        if (Mathf.Approximately(moodDistanceMultiplier, distance)
+            && Mathf.Approximately(moodAngleMultiplier, angle))
+            return;
+
+        moodDistanceMultiplier = distance;
+        moodAngleMultiplier = angle;
+        nextDetectionTime = 0f;
     }
 
     public bool TryGetVisibleTarget(PlayerHealth preferredTarget, out PlayerHealth visibleTarget, out Vector3 visiblePosition)
