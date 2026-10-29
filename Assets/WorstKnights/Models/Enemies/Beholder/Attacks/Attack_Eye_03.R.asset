@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35b74fbf777d0f54383cd8e7ebb485a4, type: 3}
+  m_Name: Attack_Eye_03.R
+  m_EditorClassIdentifier: Assembly-CSharp::BeholderLightningBeamAttack
+  priority: 1
+  canMove: 1
+  movementSpeed: 1.5
+  cooldown: 12
+  animation: {fileID: 7400000, guid: a4195601bac841a469a9fbd883246165, type: 2}
+  mask: {fileID: 31900000, guid: 392d6392237ed84428b993e7c975a83f, type: 2}
+  animatorState: Attack
+  originName: Eye_03.R.Mesh
+  tentacleRootName: Root.Tentacule_03.R
+  activationTime: 2.75
+  recoveryDuration: 0
+  aimLockLeadTime: 0.2
+  attackAudio: {fileID: 11400000, guid: c7020eae75a223243a046ac7c32bbf18, type: 2}
+  attackAudioTime: 2.2
+  dialogues: []
+  dialogueTime: 0.1
+  vfxPrefab: {fileID: 5240297546538663529, guid: 69b1177ae92d25849957292af72d6b6f, type: 3}
+  duration: 4
+  range: 50
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 16379
+  aimMode: 1
+  trackingSpeed: 30
+  aimBoneName: Bone.005.Tentacule_03.R
+  damagePerTick: 5
+  hitInterval: 0.25
+  loopAudio: {fileID: 0}

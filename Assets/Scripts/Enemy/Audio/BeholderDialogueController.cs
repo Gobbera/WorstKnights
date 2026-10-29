@@ -72,6 +72,8 @@ public sealed class BeholderDialogueController : MonoBehaviour
     private bool hasObservedState;
     private EnemyState observedState;
     private float voiceEndsAt;
+    private float attackVoiceEndsAt;
+    private BeholderAttackController attackController;
 
     public int CueSequence => cueSequence;
     public EnemyState CueState => cueState;
@@ -81,7 +83,8 @@ public sealed class BeholderDialogueController : MonoBehaviour
     public float CueVolume => cueVolume;
     public float CuePitch => cuePitch;
     public double CueStartedAt => cueStartedAt;
-    public bool IsSearchLinePlaying => voiceSource != null && voiceSource.isPlaying && cueState == EnemyState.Search;
+    public bool IsSearchLinePlaying => voiceSource != null && voiceSource.isPlaying && cueState == EnemyState.Search
+        && Time.time >= attackVoiceEndsAt;
 
     public void SetSearchWindingDown(bool windingDown)
     {
@@ -123,6 +126,9 @@ public sealed class BeholderDialogueController : MonoBehaviour
             return;
         }
 
+        if (voiceSource != null && voiceSource.isPlaying && Time.time < attackVoiceEndsAt)
+            return;
+
         if (enemySetup != null && !enemySetup.HasAuthority)
         {
             PlayPendingReplicatedCues();
@@ -137,6 +143,9 @@ public sealed class BeholderDialogueController : MonoBehaviour
             return;
 
         ObserveState(state);
+
+        if (state == EnemyState.Attack && attackController != null)
+            return;
 
         if (alertCuePending)
         {
@@ -230,6 +239,7 @@ public sealed class BeholderDialogueController : MonoBehaviour
 
     private bool TryPlayStateCue(EnemyState state)
     {
+        if (state == EnemyState.Attack && attackController != null) return false;
         if (moodController == null || voiceSource == null || voiceSource.isPlaying
             || (enemyHealth != null && !enemyHealth.IsAlive))
             return false;
@@ -282,6 +292,12 @@ public sealed class BeholderDialogueController : MonoBehaviour
         if (sequence <= lastAppliedCueSequence)
             return;
 
+        if (state == EnemyState.Attack && attackController != null)
+        {
+            lastAppliedCueSequence = sequence;
+            return;
+        }
+
         if (sequence == cueSequence && voiceSource != null && voiceSource.isPlaying)
         {
             lastAppliedCueSequence = sequence;
@@ -300,6 +316,14 @@ public sealed class BeholderDialogueController : MonoBehaviour
             pitch = pitch,
             startedAt = startedAt
         };
+
+        bool protectedAttackPlaying = voiceSource != null && voiceSource.isPlaying && Time.time < attackVoiceEndsAt;
+        if (protectedAttackPlaying)
+        {
+            pendingReplicatedCues.Clear();
+            pendingReplicatedCues.Enqueue(cue);
+            return;
+        }
 
         bool protectedChasePlaying = voiceSource != null && voiceSource.isPlaying
             && cueState == EnemyState.Chase;
@@ -471,6 +495,54 @@ public sealed class BeholderDialogueController : MonoBehaviour
         voiceSource.Play();
     }
 
+    public bool PlayAttackDialogue(AudioCue[] cues, int attackIndex)
+    {
+        ResolveReferences();
+        if ((enemySetup != null && !enemySetup.HasAuthority) || voiceSource == null
+            || (enemyHealth != null && !enemyHealth.IsAlive) || cues == null) return false;
+        int selected = ChooseCueIndex(cues, 1000 + attackIndex, true);
+        if (selected < 0) return false;
+        int clipIndex = ChooseClipIndex(cues[selected]);
+        if (clipIndex < 0) return false;
+        AudioCue cue = cues[selected];
+        float volume = cue.GetRandomizedVolume();
+        float pitch = cue.GetRandomizedPitch();
+        double began = ResolveNetworkTime();
+        ApplyAttackDialogue(cue, clipIndex, volume, pitch, began);
+        PhotonView view = GetComponent<PhotonView>();
+        if (PhotonNetwork.InRoom && view != null && view.ViewID != 0)
+            view.RPC(nameof(RpcAttackDialogue), RpcTarget.Others, attackIndex, selected, clipIndex, volume, pitch, began);
+        return true;
+    }
+
+    private void ApplyAttackDialogue(AudioCue cue, int clipIndex, float volume, float pitch, double began)
+    {
+        if (voiceSource == null || cue == null || clipIndex < 0 || clipIndex >= cue.Clips.Length || cue.Clips[clipIndex] == null) return;
+        AudioClip clip = cue.Clips[clipIndex];
+        float elapsed = Mathf.Max(0f, (float)(ResolveNetworkTime() - began));
+        float remaining = PlaybackDuration(clip, pitch) - elapsed;
+        if (remaining <= 0f) return;
+        pendingReplicatedCues.Clear();
+        alertCuePending = chaseCuePending = reflectionCuePending = false;
+        float offset = pitch < 0f ? clip.length - elapsed * Mathf.Abs(pitch) : elapsed * Mathf.Abs(pitch);
+        PlayCue(cue, clip, offset, volume, pitch);
+        attackVoiceEndsAt = voiceEndsAt = Time.time + remaining;
+        nextSpeakTime = Mathf.Max(nextSpeakTime, voiceEndsAt);
+        lastPlaybackTimes[cue] = Time.unscaledTime;
+    }
+
+    [PunRPC]
+    private void RpcAttackDialogue(int attackIndex, int selected, int clipIndex, float volume, float pitch, double began, PhotonMessageInfo info)
+    {
+        ResolveReferences();
+        PhotonView view = GetComponent<PhotonView>();
+        if (view == null || info.Sender != (view.Owner ?? PhotonNetwork.MasterClient)
+            || (enemyHealth != null && !enemyHealth.IsAlive)) return;
+        AudioCue[] cues = attackController != null ? attackController.GetAttackDialogues(attackIndex) : null;
+        if (cues == null || selected < 0 || selected >= cues.Length) return;
+        ApplyAttackDialogue(cues[selected], clipIndex, volume, pitch, began);
+    }
+
     private static float PlaybackDuration(AudioClip clip, float pitch)
     {
         return clip.length / Mathf.Max(0.01f, Mathf.Abs(pitch));
@@ -492,6 +564,7 @@ public sealed class BeholderDialogueController : MonoBehaviour
         if (enemyBrain == null) enemyBrain = GetComponent<EnemyBrain>();
         if (enemyHealth == null) enemyHealth = GetComponent<EnemyHealth>();
         if (moodController == null) moodController = GetComponent<BeholderMoodController>();
+        if (attackController == null) attackController = GetComponent<BeholderAttackController>();
     }
 
     private static double ResolveNetworkTime()

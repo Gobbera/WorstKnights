@@ -1,0 +1,2 @@
+PASS TestFeedback_FailedAttemptDamagesOnlyTheSubmittingPlayerBy50
+PASS TestFeedback_SolvedAttemptPrintsSuccessWithoutDamagingPlayer

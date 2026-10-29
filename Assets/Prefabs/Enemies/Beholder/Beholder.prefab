@@ -820,15 +820,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 18
+      value: -1.35
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -3
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 44
+      value: 41.285
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1105,6 +1105,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8350827699812910991}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3106442967508829892}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1335933587163402917}
     - targetCorrespondingSourceObject: {fileID: -1868039562616262120, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8482825128256136322}
@@ -1302,6 +1308,7 @@ MonoBehaviour:
   enemyNavigation: {fileID: 483005001000000006}
   enemyPerception: {fileID: 483005001000000009}
   enemyAttack: {fileID: 483005001000000010}
+  beholderAttacks: {fileID: 3106442967508829892}
   enemyAnimationController: {fileID: 483005001000000013}
   requireSpawnAnimation: 0
   spawnTriggerMode: 0
@@ -1629,9 +1636,9 @@ MonoBehaviour:
   eyeBones: []
   enableHipTracking: 1
   hipBone: {fileID: 0}
-  maxHipYaw: 12
-  maxHipPitchUp: 28
-  maxHipPitchDown: 14
+  maxHipYaw: 16
+  maxHipPitchUp: 30
+  maxHipPitchDown: 18
   hipSmoothTime: 0.2
   enableEyeTracking: 1
   autoResolveEyeBones: 1
@@ -2190,12 +2197,6 @@ MonoBehaviour:
     angry: []
     infuriated: []
     intervalSeconds: {x: 8, y: 14}
-  - state: 2
-    neutral: []
-    irritated: []
-    angry: []
-    infuriated: []
-    intervalSeconds: {x: 8, y: 14}
   - state: 9
     neutral: []
     irritated: []
@@ -2355,6 +2356,43 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &3106442967508829892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8340882834624413408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40dff56263a04bc469124a448b17ee89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BeholderAttackController
+  globalCooldown: 8
+  attacks:
+  - enabled: 1
+    settings: {fileID: 11400000, guid: 2b53cbe5a6fbb23418525d27da89a539, type: 2}
+  - enabled: 1
+    settings: {fileID: 11400000, guid: bee8afd82c2ba424f870f151d53c742c, type: 2}
+  enemySetup: {fileID: 483005001000000003}
+  enemyBrain: {fileID: 483005001000000004}
+  enemyVision: {fileID: 483005001000000007}
+  enemyHealth: {fileID: 483005001000000011}
+  animator: {fileID: 3807454185761862095}
+  dialogue: {fileID: 483005001000000021}
+--- !u!114 &1335933587163402917
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8340882834624413408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2dd7451061f3fd040b0d8e5dd65f1b08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BeholderAttackAnimationEvents
+  attackController: {fileID: 3106442967508829892}
 --- !u!4 &8686058380772549722 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 156a89ac993622946b85ec4623a20b6b, type: 3}

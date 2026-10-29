@@ -7,35 +7,37 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-08-19] Shader Graph edits can reimport mid-write and require exact graph references**
-   Do instead: for `.shadergraph`/`.shadersubgraph` rewrites, preserve a blank line between top-level JSON objects, validate multi-object JSON immediately, update `CategoryData.m_ChildObjectList` for new exposed properties, and verify every edge `m_Node.m_Id` points to a graph node object, not a slot object, before Unity imports it.
 
-2. **[2026-07-08] Cross-network tests must prove Photon region and build identity first**
-   Do instead: before debugging Vivox or gameplay RPCs, log and compare `CloudRegion`, `AppVersion`, room name, player count, and a build hash on every client; use the same explicit region during controlled tests.
+1. **[2026-05-12] Unsaved Unity authoring changes are invisible to file-level reads**
+   Do instead: when scene objects are not yet in the `.unity` YAML, prefer a runtime/bootstrap attachment path or ask the user to save before patching references directly. Native tests can load dirty ScriptableObject values that differ from disk; clone assets and bound attack waits by both cooldowns. For plain NUnit validation with a dirty scene, keep it loaded, run fixtures with explicit setup/teardown on the Editor main thread in an additive temporary scene, restore the original active scene and close only the temporary scene; retain the original dirty state.
+   For a Play Mode visual preview, keep the dirty scene loaded beside a saved additive validation scene. Disable other scene roots only after entering Play, then restore the original active scene and close only the validation scene on EnteredEditMode. Compare live scene copies if needed; never save over the user's scene to run the preview.
 
-3. **[2026-04-07] Player physics must not be driven from `Update`**
-   Do instead: cache input in `Update`/controller code and apply Rigidbody forces or velocity corrections in `FixedUpdate`.
+2. **[2026-05-11] Fresh Unity scripts can miss CLI validation until project files regenerate**
+   Do instead: when `dotnet build Assembly-CSharp.csproj` ignores a new `.cs` file, either trigger a Unity project-file refresh before trusting the build or validate by folding the change into an already-included script.
+
+3. **[2026-04-15] Unity script moves must carry `.meta` files with them**
+   Do instead: move `.cs` and matching `.meta` together and delete stray script copies without `.meta`, otherwise Unity imports, prefab references, and generated project files can drift apart.
 
 4. **[2026-05-13] Gameplay player setup now has a single prefab source**
    Do instead: when debugging spawn, camera, model sockets, or runtime composition, inspect `Assets/Resources/Player.prefab` because both the scene reference and Photon spawn use that same asset.
 
-5. **[2026-04-15] Unity script moves must carry `.meta` files with them**
-   Do instead: move `.cs` and matching `.meta` together and delete stray script copies without `.meta`, otherwise Unity imports, prefab references, and generated project files can drift apart.
-
-6. **[2026-05-07] Cross-project scene migrations can keep YAML intact while breaking GUID-linked refs**
+5. **[2026-05-07] Cross-project scene migrations can keep YAML intact while breaking GUID-linked refs**
    Do instead: compare imported scene GUIDs against local `.meta` files, then either preserve the original `.meta` or patch the scene/prefab references before debugging runtime logic.
 
-7. **[2026-04-07] Unity movement refactors need asset serialization checks**
+6. **[2026-04-07] Unity movement refactors need asset serialization checks**
    Do instead: after changing serialized movement fields, open the matching `.asset` YAML or inspector values and confirm new fields were actually written.
 
-8. **[2026-05-11] Fresh Unity scripts can miss CLI validation until project files regenerate**
-   Do instead: when `dotnet build Assembly-CSharp.csproj` ignores a new `.cs` file, either trigger a Unity project-file refresh before trusting the build or validate by folding the change into an already-included script.
-
-9. **[2026-06-29] Parallel runtime/editor CLI builds can lock Unity temp assemblies**
+7. **[2026-06-29] Parallel runtime/editor CLI builds can lock Unity temp assemblies**
    Do instead: run `dotnet build Assembly-CSharp.csproj` and `dotnet build Assembly-CSharp-Editor.csproj` sequentially, because both can contend for `Temp/obj/Assembly-CSharp/*.dll`.
 
-10. **[2026-05-12] Unsaved scene authoring changes are invisible to file-level patching**
-   Do instead: when a user adds scene objects in the editor but they are not yet in the `.unity` YAML on disk, prefer a runtime/bootstrap attachment path or ask them to save the scene before patching references directly.
+8. **[2026-04-07] Player physics must not be driven from `Update`**
+   Do instead: cache input in `Update`/controller code and apply Rigidbody forces or velocity corrections in `FixedUpdate`.
+
+9. **[2026-07-08] Cross-network tests must prove Photon region and build identity first**
+   Do instead: before debugging Vivox or gameplay RPCs, log and compare `CloudRegion`, `AppVersion`, room name, player count, and a build hash on every client; use the same explicit region during controlled tests.
+
+10. **[2026-08-19] Shader Graph edits can reimport mid-write and require exact graph references**
+   Do instead: for `.shadergraph`/`.shadersubgraph` rewrites, preserve a blank line between top-level JSON objects, validate multi-object JSON immediately, update `CategoryData.m_ChildObjectList` for new exposed properties, and verify every edge `m_Node.m_Id` points to a graph node object, not a slot object, before Unity imports it.
 
 ## Domain Behavior Guardrails
 1. **[2026-09-01] Rotating door hinges need closed-pose pivot snapshots**
@@ -130,7 +132,7 @@
 
 ## Audio & Feedback
 1. **[2026-10-20] Networked enemy dialogue should use AudioCue configuration with authoritative choices**
-   Do instead: keep a dedicated voice source for one-at-a-time speech, configure it through `AudioCue.ConfigureAudioSource`, and replicate cue/clip indices plus chosen volume, pitch, and start time through the enemy state stream.
+   Do instead: keep a dedicated voice source for one-at-a-time speech, configure it through `AudioCue.ConfigureAudioSource`, and replicate authoritative cue/clip indices plus chosen volume, pitch, and start time through the enemy state stream or dedicated attack RPCs.
 
 2. **[2026-09-28] Reverb authoring should stay native-like**
    Do instead: use a single collider-shaped `BoxReverbZone` prefab for normal room/corridor authoring, choose an `AudioReverbPreset` plus transition time on the component, let the hidden runtime manager drive the listener-following technical zone, and control source participation through `AudioCue.AffectedByEnvironmentReverb`/`EnvironmentReverbSend`.
@@ -194,8 +196,8 @@
 1. **[2026-08-05] First-person arms sync is owner-local and separate from TP**
    Do instead: drive `Assets/Models/Knight_FPS/Animation/KnightFPS.controller` from `PlayerMovement` action sequences on the imported `KnightFPS` Animator under `FPS_Model`; keep `FPS Base` as the locomotion authority with `Idle`/`Run Forward`, mirror `Run Forward` inside `FPS Right Arm` and `FPS Left Arm` when literal grip-to-run transitions are needed, put right-hand grip/attack/draw/pickup/emotes on `FPS Right Arm` with `Right Arm Mask`, put left-hand/torch/draw/pickup on `FPS Left Arm` with `Left Arm Mask`, configure transitions with explicit TP-style triggers/bools such as `Attack`, `AttackComboStep`, `PickUpItemRight`, `IsRightHandOccupied`, `IsLeftHandOccupied`, `IsLeftTorchEquipped`, and `IsMoving`, avoid reintroducing `FPSState`, force that Animator to `AlwaysAnimate`, keep TP controller transitions untouched, and hide FPS renderers through owner-only perspective rules.
 
-2. **[2026-05-20] Enemy attack clips only fire when the controller trigger matches the replicated attack sequence**
-   Do instead: when adding an enemy attack state, keep a trigger parameter named `Attack` on the saved controller asset and gate the transition into the attack clip from that trigger, not from unconditional exit-time links.
+2. **[2026-05-20] Standard melee attack clips must match the replicated attack trigger**
+   Do instead: for `EnemyAttack`, keep an `Attack` trigger on the saved controller and gate the melee transition from it. The dedicated `BeholderAttackController` instead plays the configured masked layer/state directly; preserve that path.
 
 3. **[2026-07-01] Override action layers can latch the last pose when they return to `Empty`**
    Do instead: when an emote, grip, or other override layer exits to an `Empty` state with no motion, either zero that layer's runtime weight or crossfade into an explicit reset pose so lower layers can retake control immediately.
@@ -239,6 +241,9 @@
 
 6. **[2026-06-30] Scene pose preview is a component override, not a global menu tool**
    Do instead: when the animation preview seems missing, open `FieldTestCharacter`, select the player/model instance that carries `SceneAnimationPosePreview`, and use its custom Inspector; if that Inspector block is absent, check for editor compile errors before assuming the tool was removed.
+
+7. **[2026-10-23] Plain NUnit Run can move Unity tests off the main thread**
+   Do instead: use Unity's test runner normally. When preserving dirty open scenes, invoke focused EditMode cases directly on EditorApplication.update with their SetUp/TearDown and TestCase arguments, recording results. Plain NUnitTestAssemblyRunner.Run starts a background execution thread even with NumberOfTestWorkers=0; GameObject and AssetDatabase calls then fail.
 
 ## Enemy & Combat Networking
 1. **[2026-08-17] Enemy spawn/death lifecycle is code-driven and replicated**
@@ -342,6 +347,44 @@
 
 10. **[2026-08-20] Auto texture tiling should stay renderer-local**
    Do instead: keep `_Texture_Tiling`, `_Texture_Offset`, and `_Texture_Rotation` changes in `MaterialPropertyBlock` on a specific renderer, and keep both WK toon Shader Graphs wired through the same Tiling And Offset/Rotate UV path; editing the saved `.mat` vector changes every mesh using that shared material.
+
+## Shell & Command Reliability
+1. **[2026-10-23] Literal quotes in PowerShell native rg arguments can lose the search path**
+   Do instead: express double quotes as `\x22` in regex patterns or parse structured files with Python; pass explicit search roots. Broken native quoting can make rg search the entire workspace and hang reading its reserved `CON` entry.
+
+2. **[2026-10-23] PowerShell here-strings piped to Python can replace Unicode with question marks**
+   Do instead: use `apply_patch` for Portuguese text and other Unicode edits, or keep piped Python source ASCII with Unicode escape sequences. Verify actual UTF-8 contents rather than relying on PowerShell's default Get-Content display.
+
+3. **[2026-10-27] Unity keyboard refresh can leave old assemblies loaded**
+   Do instead: on Windows, enumerate the active Editor's native Assets menu with `GetMenu`/`GetSubMenu`/`GetMenuString`, resolve Refresh dynamically, and send its `WM_COMMAND` when keyboard focus does not refresh assets. Verify `Library/ScriptAssemblies` DLL timestamps are newer than changed sources before requesting an Editor probe; a pending probe can otherwise execute against old code.
+
+## VFX Graph
+1. **[2026-10-24] Beholder attacks use configuration assets and per-instance executions**
+   Do instead: edit each slot's Settings asset under `Models/Enemies/Beholder/Attacks`; the controller owns selection, phases, animation, common audio and networking. Concrete ScriptableObjects create per-instance executions, target conditions and optional VFX. Start individual/global cooldowns on entry into Recovery or on interruption, once only; keep the active lock through recovery and replicate the authority's start timestamp. Freeze only the masked layer via its `_AttackSpeed` Float, never global Animator.speed. Route damage through PlayerHealth on authority; explicit bite knockback is applied on the player's owner after health decreases, replacing generic push. Bone ownership matches enabled AvatarMask paths exactly: Hip must not claim every tentacle descendant, and procedural overlays yield only owned bones.
+
+2. **[2026-10-24] Beholder attack eligibility depends on Animator bindings, not only list entries**
+   Do instead: inspect the `BeholderAttackController` Inspector warnings first. Each enabled slot needs a Settings asset with a mask-derived layer (dots replaced with underscores), explicit `Animator State` (default `Attack`), matching Motion and existing origin/tentacle names. The binding is independent of clip names. If replacing a clip changes its GUID, repair both Settings.Animation and the state's Motion; retaining the original `.meta` preserves references. Map3 references left/right assets; the base prefab references a separate left default asset. Invalid entries are skipped independently. A higher-priority attack whose cooldown is shorter than the global cooldown wins every selection while eligible. While Attack is locked, refresh the current target's visible position before body turning; Chase's refresh does not run then. Turn toward last seen on lost sight, preserving the beam's separate limited aim speed.
+
+3. **[2026-10-23] A continuous Lightning needs its own width and lifetime setup**
+   Do instead: use the Blue/Purple prefabs in `Assets/VFX/Lightning Strike/Variations` with `LightningBeamController`. Keep one burst particle for each of body/origin/impact, disable aging, replace the strike's zero-start width envelope with a constant, and update impact position/color in Output. Refresh exposed properties while playing; do not Reinit every frame. Standalone Duration zero persists until StopBeam; PlayBetween uses externally resolved endpoints and duration, without raycasting again.
+
+4. **[2026-10-23] Lightning uses a camera-facing quad with length independent of flashes**
+   Do instead: use `LightningStrikeController` and the prefab in `Assets/VFX/Lightning Strike`; set the Lightning particle Size to 1, drive `Lightning Length` and `Impact Offset` together, bind `Beam Bounds Center/Size` on all six systems, and keep `Orient: Fixed Axis` aligned to local +Z. The default particle Size is 0.1; scaling the whole effect stretches flashes, and static one-unit bounds cull distant beam segments.
+
+5. **[2026-10-23] Beholder eye mesh pivots and imported scales differ from the visible eyes**
+   Do instead: sample animated eye geometry with `SkinnedMeshRenderer.BakeMesh(mesh, true)` and transform its bounds center to world space. Eye transforms have scale 100 and model-base pivots; default BakeMesh followed by TransformPoint applies that scale twice. Production origin sampling lives in BeholderAttackContext; the legacy VFX test component has been removed from the prefab. The configured Animator is on the Beholder root, so cloning its GameObject also clones AI, navigation and Rigidbody: isolate those in an empty-scene visual test to prevent the actor falling away from the target.
+
+6. **[2026-10-23] Mask names can contain dots but Animator state-machine names are sanitized**
+   Do instead: keep masks named `Tentacule_03.L`, use `Tentacule_03_L` for the corresponding layer/state machine, and match full state hashes to that normalized name. `Attack_Eye_03` is 24 fps: frame 66 is 2.75 seconds. Cede the animated tentacle in procedural eye tracking until the layer fades out. For beam bone aiming, derive the viewing axis from the eye's `_end` marker, apply the authority's limited beam direction after Animator evaluation (also between remote updates), and resample the skinned origin after rotating.
+
+7. **[2026-10-23] Automated VFX visibility checks need rendered pixels**
+   Do instead: render to a RenderTexture and inspect body pixels separately from endpoint glows, including after StopBeam. A manual Editor Camera.Render can omit GPU particles even when native Play Mode renders correctly; verify with an isolated saved scene and an active camera before changing the graph. Preserve the original scene and restore it on EnteredEditMode, because isPlaying can become false during teardown before SaveScene is allowed. In this project's Editor tests using EnterPlayMode, aliveParticleCount returned zero even while the captured beam was visibly rendered; that counter alone is not proof of visibility or a stopped effect. Avoid lambdas capturing coroutine locals across EnterPlayMode: its domain reload cannot restore compiler-generated closure objects, causing misleading NullReferences on later assignments. Use noncapturing predicates or explicit loops.
+
+8. **[2026-10-26] Bare PlayerHealth fixtures inherit ragdoll and ownership physics setup**
+   Do instead: reuse the existing Rigidbody because PlayerHealth adds a PlayerRagdollController that requires one. Refresh Unity component caches with `== null`, not `??=`, which can retain Editor missing-component wrappers. For bare unowned test players, set the body dynamic after Awake. Validate grounded knockback with the actual Player prefab, active PlayerMovement and opposing walking input: incoming speed can cancel an additive impulse, while ground damping can absorb it during the control lock. Verify displacement and control recovery, not only queued force or free-body speed.
+
+9. **[2026-10-28] Removing VFX graph models can leave pending validation entries detached**
+   Do instead: when batching graph edits through the VFX 17 internal API, unlink removed models and prune only pending error/compile reporter entries whose GetGraph returns null before recompiling; otherwise validation can throw inside CustomHLSL after a successful removal. Surface effects also need a shorter soft-particle fade distance than free jets to remain visible near geometry.
 
 ## User Directives
 1. **[2026-05-26] Large gameplay systems should start from a saved checkpoint plus a staged implementation doc**

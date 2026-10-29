@@ -54,6 +54,7 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
     [SerializeField] private Color eyeTrackingGizmoColor = new Color(0.85f, 0.2f, 1f, 0.9f);
 
     private EyeBoneRuntime[] resolvedEyeBones = Array.Empty<EyeBoneRuntime>();
+    private BeholderAttackController attackController;
     private float currentEyeWeight;
     private float currentEyeWeightVelocity;
     private Vector3 currentAimPosition;
@@ -68,6 +69,7 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
 
     private void Awake()
     {
+        attackController = GetComponent<BeholderAttackController>();
         ResolveReferences();
         CacheEyeBones();
         CacheHipBone();
@@ -278,6 +280,13 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
         if (hipBone == null)
             return;
 
+        if (attackController != null && attackController.OwnsBone(hipBone))
+        {
+            RestoreHipPose();
+            currentHipYaw = currentHipPitch = hipYawVelocity = hipPitchVelocity = 0f;
+            return;
+        }
+
         Vector2 targetAngles = hasTarget
             ? ResolveHipAngles(transform, hipBone, currentAimPosition, maxHipYaw, maxHipPitchUp, maxHipPitchDown)
             : Vector2.zero;
@@ -410,6 +419,8 @@ public sealed class BeholderProceduralAnimationController : MonoBehaviour
         {
             EyeBoneRuntime eyeBone = resolvedEyeBones[i];
             if (eyeBone.Bone == null)
+                continue;
+            if (attackController != null && attackController.OwnsBone(eyeBone.Bone))
                 continue;
 
             Vector3 toTarget = currentAimPosition - eyeBone.Bone.position;

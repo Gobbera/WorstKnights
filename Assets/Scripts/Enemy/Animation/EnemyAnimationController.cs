@@ -25,6 +25,7 @@ public class EnemyAnimationController : MonoBehaviour
     [SerializeField] private EnemyBrain enemyBrain;
     [SerializeField] private EnemyMotor enemyMotor;
     [SerializeField] private EnemyAttack enemyAttack;
+    private BeholderAttackController beholderAttacks;
     [SerializeField] private EnemyHealth enemyHealth;
     [SerializeField] private AudioEmitter audioEmitter;
 
@@ -69,6 +70,7 @@ public class EnemyAnimationController : MonoBehaviour
 
     private void Awake()
     {
+        beholderAttacks = GetComponent<BeholderAttackController>();
         if (enemySetup == null)
             enemySetup = GetComponent<EnemySetup>();
 
@@ -249,7 +251,7 @@ public class EnemyAnimationController : MonoBehaviour
     {
         if (animator == null
             || !isAlive
-            || state == EnemyState.Attack
+            || (state == EnemyState.Attack && (beholderAttacks == null || !beholderAttacks.isActiveAndEnabled))
             || state == EnemyState.Dead
             || state == EnemyState.PreSpawn
             || state == EnemyState.Spawning

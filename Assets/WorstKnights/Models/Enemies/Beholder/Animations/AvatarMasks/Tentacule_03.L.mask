@@ -1,0 +1,393 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Tentacule_03.L
+  m_Mask: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: Beholder
+    m_Weight: 0
+  - m_Path: Beholder_Armature
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/Spot Light
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume/WK
+      Fake Volume Visual
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume/WK
+      Fake Volume Visual/Volume Cone
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/Spot Light
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume/WK
+      Fake Volume Visual
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/Beholder Voice
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.L/Cheek.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.R/Cheek.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Chin
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Chin/Chin_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Forehead
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Forehead/Forehead_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.L/Jaw.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.R/Jaw.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Nose
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Nose/Nose_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L/Bone.005.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L/Bone.005.Tentacule_01.L/Eye.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L/Bone.005.Tentacule_01.L/Eye.Tentacule_01.L/Eye.Tentacule_01.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R/Bone.005.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R/Bone.005.Tentacule_01.R/Eye.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R/Bone.005.Tentacule_01.R/Eye.Tentacule_01.R/Eye.Tentacule_01.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L/Bone.005.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L/Bone.005.Tentacule_02.L/Eye.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L/Bone.005.Tentacule_02.L/Eye.Tentacule_02.L/Eye.Tentacule_02.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R/Bone.005.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R/Bone.005.Tentacule_02.R/Eye.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R/Bone.005.Tentacule_02.R/Eye.Tentacule_02.R/Eye.Tentacule_02.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L/Bone.005.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L/Bone.005.Tentacule_03.L/Eye.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L/Bone.005.Tentacule_03.L/Eye.Tentacule_03.L/Eye.Tentacule_03.L_end
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R/Bone.005.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R/Bone.005.Tentacule_03.R/Eye.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R/Bone.005.Tentacule_03.R/Eye.Tentacule_03.R/Eye.Tentacule_03.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.L/Tongue_05.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.L/Tongue_05.L/Tongue_05.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.R/Tongue_05.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.R/Tongue_05.R/Tongue_05.R_end
+    m_Weight: 0
+  - m_Path: Center Eye
+    m_Weight: 0
+  - m_Path: Eye_01.L.Mesh
+    m_Weight: 0
+  - m_Path: Eye_01.R.Mesh
+    m_Weight: 0
+  - m_Path: Eye_02.L.Mesh
+    m_Weight: 0
+  - m_Path: Eye_02.R.Mesh
+    m_Weight: 0
+  - m_Path: Eye_03.L.Mesh
+    m_Weight: 0
+  - m_Path: Eye_03.R.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_01.L.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_01.R.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_02.L.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_02.R.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_03.L.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_03.R.Mesh
+    m_Weight: 0
+  - m_Path: Rig 1
+    m_Weight: 0
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: Beholder
+    m_Weight: 0
+  - m_Path: Beholder_Armature
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/Spot Light
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume/WK
+      Fake Volume Visual
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume/WK
+      Fake Volume Visual/Volume Cone
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/Spot Light
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume/WK
+      Fake Volume Visual
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/Beholder Voice
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.L/Cheek.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Cheek.R/Cheek.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Chin
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Chin/Chin_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Forehead
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Forehead/Forehead_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.L/Jaw.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Jaw.R/Jaw.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Nose
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Nose/Nose_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L/Bone.005.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L/Bone.005.Tentacule_01.L/Eye.Tentacule_01.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.L/Bone.001.Tentacule_01.L/Bone.002.Tentacule_01.L/Bone.003.Tentacule_01.L/Bone.005.Tentacule_01.L/Eye.Tentacule_01.L/Eye.Tentacule_01.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R/Bone.005.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R/Bone.005.Tentacule_01.R/Eye.Tentacule_01.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_01.R/Bone.001.Tentacule_01.R/Bone.002.Tentacule_01.R/Bone.003.Tentacule_01.R/Bone.005.Tentacule_01.R/Eye.Tentacule_01.R/Eye.Tentacule_01.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L/Bone.005.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L/Bone.005.Tentacule_02.L/Eye.Tentacule_02.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.L/Bone.001.Tentacule_02.L/Bone.002.Tentacule_02.L/Bone.003.Tentacule_02.L/Bone.005.Tentacule_02.L/Eye.Tentacule_02.L/Eye.Tentacule_02.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R/Bone.005.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R/Bone.005.Tentacule_02.R/Eye.Tentacule_02.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_02.R/Bone.001.Tentacule_02.R/Bone.002.Tentacule_02.R/Bone.003.Tentacule_02.R/Bone.005.Tentacule_02.R/Eye.Tentacule_02.R/Eye.Tentacule_02.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L/Bone.005.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L/Bone.005.Tentacule_03.L/Eye.Tentacule_03.L
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.L/Bone.001.Tentacule_03.L/Bone.002.Tentacule_03.L/Bone.003.Tentacule_03.L/Bone.005.Tentacule_03.L/Eye.Tentacule_03.L/Eye.Tentacule_03.L_end
+    m_Weight: 1
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R/Bone.005.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R/Bone.005.Tentacule_03.R/Eye.Tentacule_03.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Root.Tentacule_03.R/Bone.001.Tentacule_03.R/Bone.002.Tentacule_03.R/Bone.003.Tentacule_03.R/Bone.005.Tentacule_03.R/Eye.Tentacule_03.R/Eye.Tentacule_03.R_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.L/Tongue_05.L
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.L/Tongue_05.L/Tongue_05.L_end
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.R/Tongue_05.R
+    m_Weight: 0
+  - m_Path: Beholder_Armature/Root/Hip/Tongue_01/Tongue_02/Tongue_03/Tongue_04.R/Tongue_05.R/Tongue_05.R_end
+    m_Weight: 0
+  - m_Path: Center Eye
+    m_Weight: 0
+  - m_Path: Eye_01.L.Mesh
+    m_Weight: 0
+  - m_Path: Eye_01.R.Mesh
+    m_Weight: 0
+  - m_Path: Eye_02.L.Mesh
+    m_Weight: 0
+  - m_Path: Eye_02.R.Mesh
+    m_Weight: 0
+  - m_Path: Eye_03.L.Mesh
+    m_Weight: 0
+  - m_Path: Eye_03.R.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_01.L.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_01.R.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_02.L.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_02.R.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_03.L.Mesh
+    m_Weight: 0
+  - m_Path: Tentacule_03.R.Mesh
+    m_Weight: 0
+  - m_Path: Rig 1
+    m_Weight: 0

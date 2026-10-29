@@ -74,6 +74,19 @@ MonoBehaviour:
   - RpcApplyLitState
   - RpcReceiveEnemyShieldBlock
   - RpcArmEnemyPlayerInteractionLock
+  - RpcPlayLightningVfx
+  - RpcAttackAudio
+  - RpcAttackDialogue
+  - RpcBeginAttack
+  - RpcCancelAttack
+  - RpcEndAttack
+  - RpcLoopAudio
+  - RpcSegment
+  - RpcSetPhase
+  - RpcReceiveDamageWithKnockback
+  - RpcCheckStatuePuzzle
+  - RpcPlaceStatuePlate
+  - RpcEnvironmentalDamage
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

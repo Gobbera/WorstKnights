@@ -1,0 +1,2 @@
+PREVIEW: range8 pixels=112449, width=968; range4 pixels=66212, width=513
+PASS rendered fire, configurable range, and cleared effect after StopTrap.

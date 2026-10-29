@@ -1,0 +1,2 @@
+RENDER: active=41803; residual=6380; off=0
+PASS surface flow renders, persists briefly, and dissipates after emission stops.

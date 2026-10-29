@@ -19,6 +19,7 @@ public class EnemyBrain : MonoBehaviour
     [SerializeField] private EnemyNavigation enemyNavigation;
     [SerializeField] private EnemyPerception enemyPerception;
     [SerializeField] private EnemyAttack enemyAttack;
+    [SerializeField] private BeholderAttackController beholderAttacks;
     [SerializeField] private EnemyAnimationController enemyAnimationController;
 
     [Header("Spawn")]
@@ -193,8 +194,9 @@ public class EnemyBrain : MonoBehaviour
     public int ActiveAlertSequence => activeAlertSequence;
     public bool CanTriggerAlert => !useLastSeenSearchFlow || alertArmed;
     public bool AlertArmed => alertArmed;
-    public bool IsAttackLocked => enemyAttack != null && enemyAttack.IsAttackLocked;
-    public bool CanStartAttack => enemyAttack != null && enemyAttack.CanStartAttack;
+    public bool UsesBeholderAttacks => beholderAttacks != null && beholderAttacks.isActiveAndEnabled;
+    public bool IsAttackLocked => UsesBeholderAttacks ? beholderAttacks.IsAttacking : enemyAttack != null && enemyAttack.IsAttackLocked;
+    public bool CanStartAttack => UsesBeholderAttacks ? beholderAttacks.CanStartAttack : enemyAttack != null && enemyAttack.CanStartAttack;
     public bool IsStunned => Time.time < stunnedUntil;
     public bool IsTraversing => traversalLockCount > 0;
     public float StunRemaining => Mathf.Max(0f, stunnedUntil - Time.time);
@@ -1134,6 +1136,20 @@ public class EnemyBrain : MonoBehaviour
 
     public void TrackCurrentTargetDuringAttack(float deltaTime)
     {
+        if (UsesBeholderAttacks)
+        {
+            if (!HasValidTarget) return;
+            // Attack state stays locked, so it does not run the Chase visibility refresh.
+            // Refresh the committed target directly instead of keeping the pre-attack facing point.
+            EnemyVision vision = enemyPerception != null ? enemyPerception.Vision : null;
+            if (vision != null && vision.CanSeeTarget(currentTarget, out Vector3 visiblePosition))
+            {
+                RegisterCombatAwareness(visiblePosition);
+                RecordPlayerEvidence(currentTarget, visiblePosition);
+            }
+            if (HasLastKnownTargetPosition) RotateTowards(LastKnownTargetPosition, deltaTime);
+            return;
+        }
         if (enemyAttack == null || !enemyAttack.CanTrackTargetDuringCurrentAttack || !HasValidTarget)
             return;
 
@@ -1146,6 +1162,8 @@ public class EnemyBrain : MonoBehaviour
 
     public bool TryAttackCurrentTarget()
     {
+        if (UsesBeholderAttacks)
+            return HasValidTarget && beholderAttacks.TryStartAttack(currentTarget);
         if (enemyAttack == null || !enemyAttack.CanStartAttack || !HasValidTarget)
             return false;
 
@@ -1159,12 +1177,28 @@ public class EnemyBrain : MonoBehaviour
 
     public bool IsCurrentTargetInsideAttackStartRange()
     {
+        if (UsesBeholderAttacks)
+            return HasValidTarget && beholderAttacks.CanAttackTarget(currentTarget);
         if (!HasValidTarget || enemyAttack == null || !enemyAttack.CanStartAttack)
             return false;
 
         Vector3 planarOffset = Vector3.ProjectOnPlane(currentTarget.transform.position - transform.position, Vector3.up);
         float attackStartRange = enemyAttack.AttackStartRange;
         return planarOffset.sqrMagnitude <= attackStartRange * attackStartRange;
+    }
+
+    public void TickAttackMovement()
+    {
+        BeholderAttackDefinition attack = UsesBeholderAttacks ? beholderAttacks.ActiveAttack : null;
+        if (attack != null && attack.canMove && attack.movementSpeed > 0f && HasValidTarget)
+            SetNavigationDestination(LastKnownTargetPosition, attack.movementSpeed, ChaseStoppingDistance, force: false);
+        else
+            StopNavigation();
+    }
+
+    public void CancelBeholderAttack()
+    {
+        if (beholderAttacks != null) beholderAttacks.CancelAttack();
     }
 
     public bool IsLastKnownPositionBeyondMaxChaseDistance()
@@ -1755,6 +1789,9 @@ public class EnemyBrain : MonoBehaviour
 
         if (enemyAttack == null)
             enemyAttack = GetComponent<EnemyAttack>();
+
+        if (beholderAttacks == null)
+            beholderAttacks = GetComponent<BeholderAttackController>();
 
         if (enemyAnimationController == null)
             enemyAnimationController = GetComponent<EnemyAnimationController>();

@@ -372,7 +372,8 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
         RefreshSurfaceState();
         RefreshMovementVolumeModifiers();
-        rb.linearDamping = IsGrounded && !surfaceState.IsSlidingSlope ? ResolveGroundDrag() : 0f;
+        bool preserveKnockback = Time.time < damageKnockbackControlLockUntil;
+        rb.linearDamping = !preserveKnockback && IsGrounded && !surfaceState.IsSlidingSlope ? ResolveGroundDrag() : 0f;
         UpdateLocomotionSpeedBlend(Time.deltaTime);
         UpdateLandingAnimationState(Time.deltaTime);
         UpdateAttackComboState();
@@ -467,7 +468,11 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
         float safeLockDuration = Mathf.Max(0f, controlLockDuration);
         if (safeLockDuration > 0f)
+        {
             damageKnockbackControlLockUntil = Mathf.Max(damageKnockbackControlLockUntil, Time.time + safeLockDuration);
+            // Protect the first physics step too, before Update can refresh the damping.
+            rb.linearDamping = 0f;
+        }
     }
 
     public void ClearTemporaryMovementPenalties()

@@ -1,0 +1,3 @@
+PASS 17 tests and native Play Mode progressive fade.
+PASS saved Map3 unchanged; live unsaved authoring changes preserved; only Jet Opacity overrides added on the two live dispensers.
+PASS prefab original settings preserved; default fade 0.75s; graph ids unique; all 3 outputs fade; temporary validation assets removed.

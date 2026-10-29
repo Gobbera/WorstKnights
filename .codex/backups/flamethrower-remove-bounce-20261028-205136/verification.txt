@@ -1,0 +1,2 @@
+PASS surface code/VFX removed; original 13 tests passed; both builds succeeded with zero warnings/errors.
+PASS Map3 changed only by removing 10 surface overrides; all other scene/puzzle bindings and prefab settings preserved.

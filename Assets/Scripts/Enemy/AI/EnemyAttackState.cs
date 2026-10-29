@@ -15,13 +15,14 @@ public sealed class EnemyAttackState : EnemyAIState
 
     public override void Tick(float deltaTime)
     {
-        Brain.StopNavigation();
-
         if (Brain.IsAttackLocked)
         {
+            Brain.TickAttackMovement();
             Brain.TrackCurrentTargetDuringAttack(deltaTime);
             return;
         }
+
+        Brain.StopNavigation();
 
         if (!Brain.CanStartAttack)
         {
@@ -53,7 +54,12 @@ public sealed class EnemyAttackState : EnemyAIState
         if (!Brain.TryAttackCurrentTarget())
             return;
 
-        Brain.StopNavigation();
+        Brain.TickAttackMovement();
+    }
+
+    public override void Exit()
+    {
+        Brain.CancelBeholderAttack();
     }
 
     private EnemyState ResolveFallbackState()

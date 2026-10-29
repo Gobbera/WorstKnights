@@ -1,0 +1,3 @@
+RENDER pixels active/end/middle/late/off: 81852/84292/72277/34/0
+PASS natural firing completion fades progressively to zero in native Play Mode.
+RESTORED original scene; dirty=True

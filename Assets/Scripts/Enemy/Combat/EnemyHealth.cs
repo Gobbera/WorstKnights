@@ -55,6 +55,33 @@ public class EnemyHealth : CombatHealth
             damageInfo.HitDirection);
     }
 
+    public void ReceiveEnvironmentalDamage(float amount, GameObject instigator, Vector3 hitPoint, Vector3 hitDirection)
+    {
+        if (!CanApplyDamageLocally())
+        {
+            Player authority = ResolveAuthorityClient();
+            if (authority != null)
+                photonView.RPC(nameof(RpcEnvironmentalDamage), authority, amount,
+                    ResolveInstigatorViewId(instigator), hitPoint, hitDirection);
+            return;
+        }
+
+        bool previousSuppressKnockback = suppressDamageKnockback;
+        suppressDamageKnockback = true;
+        try
+        {
+            ApplyDamageIgnoringImmunity(new DamageInfo(amount, instigator, CombatAlignment.Neutral, hitPoint, hitDirection));
+        }
+        finally { suppressDamageKnockback = previousSuppressKnockback; }
+    }
+
+    [PunRPC]
+    private void RpcEnvironmentalDamage(float amount, int instigatorViewId, Vector3 hitPoint, Vector3 hitDirection)
+    {
+        if (CanApplyDamageLocally())
+            ReceiveEnvironmentalDamage(amount, ResolveInstigatorObject(instigatorViewId), hitPoint, hitDirection);
+    }
+
     public void ReceivePlayerKick(
         DamageInfo damageInfo,
         float baseKnockbackForce,

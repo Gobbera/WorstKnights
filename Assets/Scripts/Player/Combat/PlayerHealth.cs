@@ -135,6 +135,20 @@ public class PlayerHealth : CombatHealth
             controlLockDuration);
     }
 
+    public void ReceiveDamageWithKnockback(DamageInfo damageInfo, Vector3 velocityChange, float controlLockDuration)
+    {
+        if (CanApplyDamageLocally())
+        {
+            ApplyKickDamageAndKnockback(damageInfo, velocityChange, controlLockDuration, requireAppliedDamage: true);
+            return;
+        }
+        if (photonView.Owner == null) return;
+        photonView.RPC(nameof(RpcReceiveDamageWithKnockback), photonView.Owner,
+            damageInfo.Amount, ResolveInstigatorViewId(damageInfo.Instigator), (int)damageInfo.SourceAlignment,
+            (int)damageInfo.PlayerDamageAnimation, (int)damageInfo.PlayerCameraImpact,
+            damageInfo.HitPoint, damageInfo.HitDirection, velocityChange, controlLockDuration);
+    }
+
     public void ReceiveEnemyDamage(
         float amount,
         GameObject instigator,
@@ -526,6 +540,17 @@ public class PlayerHealth : CombatHealth
     }
 
     [PunRPC]
+    private void RpcReceiveDamageWithKnockback(float amount, int instigatorViewId, int sourceAlignment,
+        int playerDamageAnimation, int playerCameraImpact, Vector3 hitPoint, Vector3 hitDirection,
+        Vector3 velocityChange, float controlLockDuration)
+    {
+        ApplyKickDamageAndKnockback(new DamageInfo(amount, ResolveInstigatorObject(instigatorViewId),
+            (CombatAlignment)sourceAlignment, hitPoint, hitDirection,
+            (PlayerDamageAnimationType)playerDamageAnimation, (PlayerCameraImpactType)playerCameraImpact),
+            velocityChange, controlLockDuration, requireAppliedDamage: true);
+    }
+
+    [PunRPC]
     private void RpcRequestImpactRagdoll(
         Vector3 hitPoint,
         Vector3 hitDirection,
@@ -690,22 +715,34 @@ public class PlayerHealth : CombatHealth
         playerMovement?.TriggerShieldBlockAnimation();
     }
 
-    private void ApplyKickDamageAndKnockback(DamageInfo damageInfo, Vector3 velocityChange, float controlLockDuration)
+    private void ApplyKickDamageAndKnockback(DamageInfo damageInfo, Vector3 velocityChange, float controlLockDuration, bool requireAppliedDamage = false)
     {
         bool wasAlive = IsAlive;
+        float previousHealth = CurrentHealth;
         ApplyDamageAndBroadcast(damageInfo, suppressKnockback: true);
 
-        if (!wasAlive || !IsAlive)
+        if (!wasAlive || !IsAlive || (requireAppliedDamage && CurrentHealth >= previousHealth))
             return;
 
-        ApplyExplicitKnockback(velocityChange, controlLockDuration);
+        ApplyExplicitKnockback(velocityChange, controlLockDuration, cancelOpposingVelocity: requireAppliedDamage);
         TryStartImpactRagdollFromStrongKnockback(damageInfo, velocityChange);
     }
 
-    private void ApplyExplicitKnockback(Vector3 velocityChange, float controlLockDuration)
+    private void ApplyExplicitKnockback(Vector3 velocityChange, float controlLockDuration, bool cancelOpposingVelocity = false)
     {
         if (velocityChange.sqrMagnitude <= 0.0001f)
             return;
+
+        if (cancelOpposingVelocity)
+        {
+            if (rb == null) rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                Vector3 direction = velocityChange.normalized;
+                float incomingSpeed = Mathf.Min(0f, Vector3.Dot(rb.linearVelocity, direction));
+                velocityChange -= direction * incomingSpeed;
+            }
+        }
 
         if (playerMovement != null)
         {

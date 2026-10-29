@@ -50,6 +50,8 @@ public class WorldPickupItem : MonoBehaviour
     [SerializeField] [HideInInspector] private bool legacyAuthoringMigrated;
 
     private Transform worldParentBeforeEquip;
+    private Transform placementAnchor;
+    private Transform parentBeforePlacement;
     private bool releaseFromLootAnchorOnEquip;
     private int worldSiblingIndexBeforeEquip;
     private Vector3 worldScaleBeforeEquip = Vector3.one;
@@ -278,6 +280,60 @@ public class WorldPickupItem : MonoBehaviour
         CanBePickedUp = available;
     }
 
+    public bool IsPlacedAtAnchor(Transform anchor)
+    {
+        return anchor != null && placementAnchor == anchor && transform.parent == anchor && !IsEquipped;
+    }
+
+    public void PlaceAtAnchor(Transform anchor, Quaternion localRotation)
+    {
+        PlaceAtAnchor(anchor, Vector3.zero, localRotation);
+    }
+
+    public void PlaceAtAnchor(Transform anchor, Vector3 localPosition, Quaternion localRotation)
+    {
+        if (anchor == null || presentationClone)
+            return;
+
+        DropToWorld(anchor.position, anchor.rotation);
+        ClearIgnoredDropOwnerCollisions();
+        Vector3 placementWorldScale = GetAbsoluteLossyScale(transform);
+        parentBeforePlacement = transform.parent;
+        placementAnchor = anchor;
+        transform.SetParent(anchor, true);
+        transform.SetPositionAndRotation(anchor.TransformPoint(localPosition), anchor.rotation * localRotation);
+        // Account for the final rotation even when the base has non-uniform scale.
+        transform.localScale = Vector3.one;
+        Vector3 inheritedScale = GetAbsoluteLossyScale(transform);
+        transform.localScale = new Vector3(
+            SafeDivide(placementWorldScale.x, inheritedScale.x),
+            SafeDivide(placementWorldScale.y, inheritedScale.y),
+            SafeDivide(placementWorldScale.z, inheritedScale.z));
+
+        foreach (Rigidbody body in GetComponentsInChildren<Rigidbody>(true))
+        {
+            if (!body.isKinematic)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+            body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            body.isKinematic = true;
+            body.useGravity = false;
+        }
+        SyncPhysicsTransforms();
+    }
+
+    private void ReleasePlacementAnchor()
+    {
+        if (placementAnchor == null)
+            return;
+
+        transform.SetParent(parentBeforePlacement, true);
+        placementAnchor = null;
+        parentBeforePlacement = null;
+    }
+
     public void AttachToLootAnchor(Transform anchor)
     {
         if (!Application.isPlaying || presentationClone || IsEquipped || anchor == null)
@@ -323,6 +379,7 @@ public class WorldPickupItem : MonoBehaviour
         if (socket == null)
             return false;
 
+        ReleasePlacementAnchor();
         MigrateLegacyAuthoringIfNeeded();
         EnsureDefaultGripReferences();
         ClearIgnoredDropOwnerCollisions();
@@ -374,6 +431,7 @@ public class WorldPickupItem : MonoBehaviour
 
     public void DropToWorld(Vector3 worldPosition, Quaternion worldRotation, Vector3 linearVelocity, Vector3 angularVelocity)
     {
+        ReleasePlacementAnchor();
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 

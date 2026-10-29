@@ -1,0 +1,42 @@
+SETUP OK
+Assets/Scenes/Map3.unity dirty=False
+Statue_Sword pos=(72.000, 0.584, 34.000) rot=(0.0, 270.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=False
+  bounds: Statue_Sword Center: (72.000, 3.087, 34.000), Extents: (0.967, 2.503, 0.772)
+Statue_Axe pos=(76.000, 0.586, 34.000) rot=(0.0, 270.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=False
+  bounds: Statue_Axe Center: (76.000, 3.089, 34.000), Extents: (0.967, 2.503, 0.772)
+Statue_Hammer pos=(80.000, 0.587, 34.000) rot=(0.0, 270.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=False
+  bounds: Statue_Hammer Center: (80.000, 3.090, 33.950), Extents: (0.967, 2.503, 0.822)
+Statue_Spear pos=(84.000, 0.587, 34.000) rot=(0.0, 270.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=False
+  bounds: Statue_Spear Center: (84.000, 3.090, 34.000), Extents: (0.967, 2.503, 0.772)
+Statue_Base pos=(72.000, 0.000, 34.000) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=True plate=False
+  bounds: Statue_Base Center: (72.000, 0.396, 33.900), Extents: (1.569, 0.401, 1.669)
+Plate_Pivot pos=(72.000, 0.408, 32.371) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Statue_Base slot=False plate=False
+Statue_Base (1) pos=(76.000, 0.000, 34.000) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=True plate=False
+  bounds: Statue_Base (1) Center: (76.000, 0.396, 33.900), Extents: (1.569, 0.401, 1.669)
+Plate_Pivot pos=(76.000, 0.408, 32.371) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Statue_Base (1) slot=False plate=False
+Statue_Base (2) pos=(80.000, 0.000, 34.000) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=True plate=False
+  bounds: Statue_Base (2) Center: (80.000, 0.396, 33.900), Extents: (1.569, 0.401, 1.669)
+Plate_Pivot pos=(80.000, 0.408, 32.371) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Statue_Base (2) slot=False plate=False
+Statue_Base (3) pos=(84.000, 0.000, 34.000) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=True plate=False
+  bounds: Statue_Base (3) Center: (84.000, 0.396, 33.900), Extents: (1.569, 0.401, 1.669)
+Plate_Pivot pos=(84.000, 0.408, 32.371) rot=(0.0, 90.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Statue_Base (3) slot=False plate=False
+Plate Eldric Ferden pos=(79.627, 0.000, 28.481) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=True
+  bounds: Statue_Plate_Eldric_Ferden Center: (79.627, 0.009, 28.481), Extents: (0.341, 0.009, 0.110)
+Statue_Plate_Eldric_Ferden pos=(79.627, 0.000, 28.481) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Model slot=False plate=False
+  bounds: Statue_Plate_Eldric_Ferden Center: (79.627, 0.009, 28.481), Extents: (0.341, 0.009, 0.110)
+Plate Angrad Veyr pos=(79.592, 0.000, 28.035) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=True
+  bounds: Statue_Plate_Angrad_Veyr Center: (79.592, 0.009, 28.035), Extents: (0.341, 0.009, 0.110)
+Statue_Plate_Angrad_Veyr pos=(79.592, 0.000, 28.035) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Model slot=False plate=False
+  bounds: Statue_Plate_Angrad_Veyr Center: (79.592, 0.009, 28.035), Extents: (0.341, 0.009, 0.110)
+Plate Balthor Sabrath pos=(79.636, 0.000, 27.622) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=True
+  bounds: Statue_Plate_Balthor_Sabrath Center: (79.636, 0.009, 27.621), Extents: (0.341, 0.009, 0.110)
+Statue_Plate_Balthor_Sabrath pos=(79.636, 0.000, 27.622) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Model slot=False plate=False
+  bounds: Statue_Plate_Balthor_Sabrath Center: (79.636, 0.009, 27.621), Extents: (0.341, 0.009, 0.110)
+Plate Mothen Hedar pos=(79.660, 0.000, 27.205) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=True
+  bounds: Statue_Plate_Morthen_Hedar Center: (79.660, 0.009, 27.205), Extents: (0.341, 0.009, 0.110)
+Statue_Plate_Morthen_Hedar pos=(79.660, 0.000, 27.205) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent=Model slot=False plate=False
+  bounds: Statue_Plate_Morthen_Hedar Center: (79.660, 0.009, 27.205), Extents: (0.341, 0.009, 0.110)
+Statue Puzzle pos=(0.000, 0.000, 0.000) rot=(0.0, 0.0, 0.0) scale=(1.000, 1.000, 1.000) parent= slot=False plate=False
+  bounds: Statue Puzzle Button Center: (78.000, 1.000, 34.000), Extents: (0.200, 0.100, 0.200)
+Statue Puzzle Button pos=(78.000, 1.000, 34.000) rot=(0.0, 0.0, 0.0) scale=(0.400, 0.200, 0.400) parent=Statue Puzzle slot=False plate=False
+  bounds: Statue Puzzle Button Center: (78.000, 1.000, 34.000), Extents: (0.200, 0.100, 0.200)

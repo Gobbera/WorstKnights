@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02fdfda84de3a104b8243dee36ca777d, type: 3}
+  m_Name: Attack_Eye_03.L
+  m_EditorClassIdentifier: Assembly-CSharp::BeholderLightningStrikeAttack
+  priority: 0
+  canMove: 0
+  movementSpeed: 4.1
+  cooldown: 10
+  animation: {fileID: 7400000, guid: d72c0d786bf582b4d9bd2fc41dab3110, type: 2}
+  mask: {fileID: 31900000, guid: f417c7c26d26bb546a52f61deb05533c, type: 2}
+  animatorState: Attack
+  originName: Eye_03.L.Mesh
+  tentacleRootName: Root.Tentacule_03.L
+  activationTime: 2.75
+  recoveryDuration: 0
+  aimLockLeadTime: 0.2
+  attackAudio: {fileID: 11400000, guid: d5953dc2fd2386349aa8d849ccc69688, type: 2}
+  attackAudioTime: 0.2
+  dialogues:
+  - {fileID: 11400000, guid: d65be1786802a6c499bf246f0294eb53, type: 2}
+  dialogueTime: 0.1
+  vfxPrefab: {fileID: 6510566979082937261, guid: 500777e3379e3b8469678f588cb17816, type: 3}
+  range: 50
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 16379
+  visualLifetime: 2
+  damage: 0

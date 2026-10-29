@@ -1,0 +1,1 @@
+REMOVED: components=1; listeners=1; script and metadata deleted; fire trap binding preserved.

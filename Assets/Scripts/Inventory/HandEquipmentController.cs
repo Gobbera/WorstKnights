@@ -4,7 +4,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PhotonView))]
-public class HandEquipmentController : MonoBehaviour
+public partial class HandEquipmentController : MonoBehaviour
 {
     private const int SlotsPerHand = 2;
     private const int InvalidSlotIndex = -1;
