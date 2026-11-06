@@ -106,13 +106,58 @@ public static class FlamethrowerTrapAuthoringUtility
             effect.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(GraphPath);
             FlamethrowerTrapController controller = root.GetComponent<FlamethrowerTrapController>();
             if (controller == null) controller = root.AddComponent<FlamethrowerTrapController>();
+            Transform lightTransform = root.transform.Find(FlamethrowerTrapController.EndLightObjectName);
+            if (lightTransform == null)
+            {
+                lightTransform = new GameObject(FlamethrowerTrapController.EndLightObjectName).transform;
+                lightTransform.SetParent(root.transform, false);
+            }
+            Light light = lightTransform.GetComponent<Light>();
+            if (light == null)
+            {
+                light = lightTransform.gameObject.AddComponent<Light>();
+                light.shadows = LightShadows.None;
+                light.lightmapBakeType = LightmapBakeType.Realtime;
+            }
+            light.type = LightType.Point;
+            light.enabled = false;
+            light.intensity = 0f;
             var data = new SerializedObject(controller);
             data.FindProperty("flamethrowerPivot").objectReferenceValue = pivot;
             data.FindProperty("flameEffect").objectReferenceValue = effect;
+            data.FindProperty("endLight").objectReferenceValue = light;
             data.ApplyModifiedPropertiesWithoutUndo();
+            light.color = data.FindProperty("endLightColor").colorValue;
+            light.range = data.FindProperty("endLightRange").floatValue;
+            PrepareAudioSource(root);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
+    public static void PrepareAudioSource(GameObject root)
+    {
+        var controller = root.GetComponent<FlamethrowerTrapController>();
+        if (controller == null) throw new InvalidOperationException("O dispenser precisa de FlamethrowerTrapController.");
+        var data = new SerializedObject(controller);
+        var source = (AudioSource)data.FindProperty("flameAudioSource").objectReferenceValue;
+        if (source == null)
+        {
+            Transform audio = root.transform.Find(FlamethrowerTrapController.FlameAudioObjectName);
+            if (audio == null)
+            {
+                audio = new GameObject(FlamethrowerTrapController.FlameAudioObjectName).transform;
+                audio.SetParent(root.transform, false);
+                var pivot = (Transform)data.FindProperty("flamethrowerPivot").objectReferenceValue;
+                if (pivot != null) audio.position = pivot.TransformPoint(data.FindProperty("localPositionOffset").vector3Value);
+            }
+            source = audio.GetComponent<AudioSource>();
+            if (source == null) source = audio.gameObject.AddComponent<AudioSource>();
+        }
+        source.playOnAwake = false;
+        source.dopplerLevel = 0f;
+        data.FindProperty("flameAudioSource").objectReferenceValue = source;
+        data.ApplyModifiedPropertiesWithoutUndo();
     }
 
     [MenuItem("Tools/Hazards/Connect Statue Puzzle Failure To Flamethrower")]

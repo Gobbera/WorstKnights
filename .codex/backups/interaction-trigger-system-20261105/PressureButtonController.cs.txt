@@ -1,0 +1,311 @@
+using System.Collections.Generic;
+using Photon.Pun;
+using Photon.Realtime;
+using UnityEngine;
+using Hashtable = ExitGames.Client.Photon.Hashtable;
+
+[DisallowMultipleComponent]
+[RequireComponent(typeof(BoxCollider), typeof(Rigidbody), typeof(AudioSource))]
+[AddComponentMenu("World/Mechanisms/Pressure Button")]
+public sealed class PressureButtonController : MonoBehaviourPunCallbacks
+{
+    [Header("Activation")]
+    [SerializeField] private StatuePuzzleController puzzle;
+    [Tooltip("Dispensers cujo ciclo e cooldown devem terminar antes de soltar o botao.")]
+    [SerializeField] private FlamethrowerTrapController[] cooldownSources = new FlamethrowerTrapController[0];
+
+    [Header("Plate Movement")]
+    [Tooltip("Quanto a peca desce, em metros mundiais.")]
+    [SerializeField, Min(0f)] private float pressDistance = 0.04f;
+    [SerializeField, Min(0.01f)] private float movementSpeed = 0.25f;
+
+    [Header("Foot Detection")]
+    [SerializeField] private BoxCollider plateCollider;
+    [Tooltip("Altura da regiao acima da superficie original que detecta os pes.")]
+    [SerializeField, Min(0.02f)] private float detectionHeight = 0.2f;
+    [SerializeField, Min(0f)] private float footTolerance = 0.08f;
+    [SerializeField] private LayerMask playerMask = Physics.DefaultRaycastLayers;
+
+    [Header("Press Audio")]
+    [Tooltip("Som tocado uma vez quando o botao e pressionado. Vazio mantem o acionamento silencioso.")]
+    [SerializeField] private AudioCue pressAudioCue;
+    [SerializeField] private AudioSource pressAudioSource;
+
+    [Header("Networking")]
+    [SerializeField] private bool localOnly;
+
+    private Rigidbody plateBody;
+    private Vector3 releasedLocalPosition;
+    private bool poseCaptured;
+    private Collider[] overlaps = new Collider[16];
+    private readonly List<PlayerHealth> occupants = new List<PlayerHealth>(4);
+    private StatuePuzzleController subscribedPuzzle;
+    private AudioCue preparedCue;
+    private AudioSource preparedAudioSource;
+    private string networkKey;
+    private int stateSequence;
+    private int pressSequence;
+    private int pressingPlayerViewId;
+    private int lastRequestedPress;
+    private bool checkPending;
+
+    public bool IsPressed { get; private set; }
+    public int OccupantCount => occupants.Count;
+    public StatuePuzzleController Puzzle => puzzle;
+    private bool Online => Application.IsPlaying(gameObject) && !localOnly && PhotonNetwork.InRoom && !PhotonNetwork.OfflineMode;
+    private bool HasAuthority => !Online || PhotonNetwork.IsMasterClient;
+
+    private void Awake()
+    {
+        ResolveReferences();
+        CapturePose();
+        PrepareAudio();
+    }
+
+    public override void OnEnable()
+    {
+        base.OnEnable();
+        ResolveReferences();
+        CapturePose();
+        SubscribeToPuzzle();
+        PrepareAudio();
+        RestoreNetworkState();
+    }
+
+    private void OnValidate()
+    {
+        pressDistance = Mathf.Max(0f, pressDistance);
+        movementSpeed = Mathf.Max(0.01f, movementSpeed);
+        detectionHeight = Mathf.Max(0.02f, detectionHeight);
+        footTolerance = Mathf.Max(0f, footTolerance);
+    }
+
+    private void FixedUpdate() => RefreshButton(Time.fixedDeltaTime);
+
+    private void RefreshButton(float deltaTime)
+    {
+        ResolveReferences();
+        CapturePose();
+        SubscribeToPuzzle();
+        PrepareAudio();
+        FindOccupants();
+        if (HasAuthority)
+        {
+            if (checkPending && (puzzle == null || !puzzle.isActiveAndEnabled || puzzle.IsSolved
+                || (Online && PhotonView.Find(pressingPlayerViewId) == null))) checkPending = false;
+            if (!IsPressed && occupants.Count > 0) Press(occupants[0]);
+            if (IsPressed && occupants.Count == 0 && !checkPending && !AnyTrapCycleActive())
+            {
+                IsPressed = false;
+                PublishNetworkState();
+            }
+        }
+        if (Online && IsPressed && pressSequence > lastRequestedPress) RequestCheckForOwnedPlayer();
+        MovePlate(deltaTime);
+    }
+
+    private void ResolveReferences()
+    {
+        if (plateCollider == null) plateCollider = GetComponent<BoxCollider>();
+        if (plateBody == null) plateBody = GetComponent<Rigidbody>();
+        if (pressAudioSource == null) pressAudioSource = GetComponent<AudioSource>();
+        if (string.IsNullOrEmpty(networkKey)) networkKey = "pressure-button:" + SceneNetworkStateIdUtility.BuildSceneObjectId(transform);
+    }
+
+    private void CapturePose()
+    {
+        if (poseCaptured) return;
+        releasedLocalPosition = transform.localPosition;
+        poseCaptured = true;
+        if (plateBody != null)
+        {
+            plateBody.isKinematic = true;
+            plateBody.useGravity = false;
+        }
+    }
+
+    private Vector3 ReleasedWorldPosition => transform.parent != null
+        ? transform.parent.TransformPoint(releasedLocalPosition) : releasedLocalPosition;
+
+    private Matrix4x4 ReleasedMatrix => Matrix4x4.TRS(ReleasedWorldPosition, transform.rotation, transform.lossyScale);
+
+    private void GetDetectionBox(out Vector3 center, out Vector3 halfSize, out float surfaceHeight)
+    {
+        Vector3 scale = transform.lossyScale;
+        scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
+        Vector3 size = Vector3.Scale(plateCollider.size, scale);
+        Vector3 surface = ReleasedMatrix.MultiplyPoint3x4(plateCollider.center + Vector3.up * plateCollider.size.y * 0.5f);
+        surfaceHeight = surface.y;
+        center = surface + Vector3.up * (detectionHeight - pressDistance - footTolerance) * 0.5f;
+        halfSize = new Vector3(size.x * 0.5f, (detectionHeight + pressDistance + footTolerance) * 0.5f, size.z * 0.5f);
+    }
+
+    private void FindOccupants()
+    {
+        occupants.Clear();
+        if (plateCollider == null || !plateCollider.enabled) return;
+        GetDetectionBox(out Vector3 center, out Vector3 halfSize, out float surface);
+        int count;
+        while ((count = Physics.OverlapBoxNonAlloc(center, halfSize, overlaps, transform.rotation, playerMask, QueryTriggerInteraction.Ignore)) == overlaps.Length)
+            System.Array.Resize(ref overlaps, overlaps.Length * 2);
+        for (int i = 0; i < count; i++)
+        {
+            Collider collider = overlaps[i];
+            if (collider == null || collider.transform.IsChildOf(transform)) continue;
+            var player = collider.GetComponentInParent<PlayerHealth>();
+            if (player == null || !player.IsAlive || !player.gameObject.activeInHierarchy || occupants.Contains(player)) continue;
+            float feet = collider.bounds.min.y;
+            if (feet < surface - pressDistance - footTolerance || feet > surface + detectionHeight) continue;
+            occupants.Add(player);
+        }
+    }
+
+    private void Press(PlayerHealth player)
+    {
+        IsPressed = true;
+        pressSequence++;
+        var view = player.GetComponent<PhotonView>();
+        pressingPlayerViewId = view != null ? view.ViewID : 0;
+        checkPending = puzzle != null && !puzzle.IsSolved;
+        PlayPressAudio();
+        PublishNetworkState();
+        if (!checkPending) return;
+        if (Online) RequestCheckForOwnedPlayer();
+        else puzzle.ApplyCheckSolution(player);
+    }
+
+    private void RequestCheckForOwnedPlayer()
+    {
+        if (puzzle == null || puzzle.IsSolved)
+        {
+            lastRequestedPress = pressSequence;
+            return;
+        }
+        PhotonView view = PhotonView.Find(pressingPlayerViewId);
+        if (view == null || !view.IsMine) return;
+        var equipment = view.GetComponent<HandEquipmentController>();
+        if (equipment != null && equipment.TryRequestStatuePuzzleCheck(puzzle)) lastRequestedPress = pressSequence;
+    }
+
+    private void SubscribeToPuzzle()
+    {
+        if (subscribedPuzzle == puzzle) return;
+        if (subscribedPuzzle != null) subscribedPuzzle.SolutionChecked -= HandleSolutionChecked;
+        subscribedPuzzle = puzzle;
+        if (subscribedPuzzle != null) subscribedPuzzle.SolutionChecked += HandleSolutionChecked;
+    }
+
+    private void HandleSolutionChecked() => checkPending = false;
+
+    private bool AnyTrapCycleActive()
+    {
+        if (cooldownSources != null)
+            foreach (var trap in cooldownSources)
+                if (trap != null && trap.isActiveAndEnabled && trap.IsCycleActive) return true;
+        return false;
+    }
+
+    private void MovePlate(float deltaTime)
+    {
+        Vector3 target = ReleasedWorldPosition + (IsPressed ? Vector3.down * pressDistance : Vector3.zero);
+        bool moveBody = Application.IsPlaying(gameObject) && plateBody != null;
+        Vector3 current = moveBody ? plateBody.position : transform.position;
+        Vector3 next = Vector3.MoveTowards(current, target, movementSpeed * Mathf.Max(0f, deltaTime));
+        if ((next - current).sqrMagnitude < 0.00000001f) return;
+        if (moveBody) plateBody.MovePosition(next);
+        else transform.position = next;
+    }
+
+    private void PrepareAudio()
+    {
+        if (pressAudioSource != null && preparedAudioSource != pressAudioSource)
+        {
+            pressAudioSource.playOnAwake = false;
+            pressAudioSource.loop = false;
+            pressAudioSource.dopplerLevel = 0f;
+            preparedAudioSource = pressAudioSource;
+        }
+        if (!Application.IsPlaying(gameObject) || pressAudioCue == preparedCue) return;
+        if (pressAudioCue != null && pressAudioCue.Clips != null)
+            foreach (var clip in pressAudioCue.Clips)
+                if (clip != null && clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
+        preparedCue = pressAudioCue;
+    }
+
+    private void PlayPressAudio()
+    {
+        if (!Application.IsPlaying(gameObject) || pressAudioSource == null || pressAudioCue == null) return;
+        AudioClip clip = pressAudioCue.GetRandomClip();
+        if (clip == null) return;
+        pressAudioCue.ConfigureAudioSource(pressAudioSource, clip);
+        pressAudioSource.loop = false;
+        pressAudioSource.Play();
+    }
+
+    private void PublishNetworkState()
+    {
+        if (!Online || !PhotonNetwork.IsMasterClient) return;
+        stateSequence++;
+        PhotonNetwork.CurrentRoom.SetCustomProperties(new Hashtable
+        {
+            { networkKey, new object[] { stateSequence, IsPressed, pressSequence, pressingPlayerViewId } }
+        });
+    }
+
+    private void RestoreNetworkState()
+    {
+        if (Online && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(networkKey, out object value)) ApplyNetworkState(value, true);
+    }
+
+    private void ApplyNetworkState(object value, bool initial)
+    {
+        if (value is not object[] state || state.Length != 4 || state[0] is not int sequence || state[1] is not bool pressed
+            || state[2] is not int presses || state[3] is not int playerId || sequence <= stateSequence) return;
+        bool newPress = presses > pressSequence;
+        stateSequence = sequence;
+        IsPressed = pressed;
+        pressSequence = presses;
+        pressingPlayerViewId = playerId;
+        if (initial) lastRequestedPress = presses;
+        else if (newPress) PlayPressAudio();
+    }
+
+    public override void OnJoinedRoom() { stateSequence = 0; RestoreNetworkState(); }
+    public override void OnMasterClientSwitched(Player newMasterClient) => RestoreNetworkState();
+    public override void OnRoomPropertiesUpdate(Hashtable properties)
+    {
+        if (Online && properties.TryGetValue(networkKey, out object value)) ApplyNetworkState(value, false);
+    }
+
+    public override void OnDisable()
+    {
+        if (subscribedPuzzle != null) subscribedPuzzle.SolutionChecked -= HandleSolutionChecked;
+        subscribedPuzzle = null;
+        occupants.Clear();
+        checkPending = false;
+        bool wasPressed = IsPressed;
+        IsPressed = false;
+        if (wasPressed && HasAuthority) PublishNetworkState();
+        if (poseCaptured)
+        {
+            transform.localPosition = releasedLocalPosition;
+            if (plateBody != null) plateBody.position = transform.position;
+        }
+        if (pressAudioSource != null) pressAudioSource.Stop();
+        base.OnDisable();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (plateCollider == null) plateCollider = GetComponent<BoxCollider>();
+        if (plateCollider == null) return;
+        Vector3 old = releasedLocalPosition;
+        if (!poseCaptured) releasedLocalPosition = transform.localPosition;
+        GetDetectionBox(out Vector3 center, out Vector3 halfSize, out _);
+        Gizmos.color = IsPressed ? Color.yellow : Color.cyan;
+        Gizmos.matrix = Matrix4x4.TRS(center, transform.rotation, Vector3.one);
+        Gizmos.DrawWireCube(Vector3.zero, halfSize * 2f);
+        Gizmos.matrix = Matrix4x4.identity;
+        if (!poseCaptured) releasedLocalPosition = old;
+    }
+}

@@ -301,6 +301,12 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         return RequestSetDoorState(true, isLocked);
     }
 
+    // A single command preserves unlock/open ordering when state is applied by RPC.
+    public bool RequestUnlockAndOpen()
+    {
+        return RequestSetDoorState(true, false);
+    }
+
     public bool RequestOpenAwayFrom(Vector3 interactorWorldPosition)
     {
         return RequestSetDoorState(true, isLocked, ResolveOpenRotationDirection(interactorWorldPosition));

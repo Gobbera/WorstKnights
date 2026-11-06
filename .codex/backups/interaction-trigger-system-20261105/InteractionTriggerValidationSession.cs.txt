@@ -1,0 +1,84 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static partial class InteractionTriggerValidationSession
+{
+    const string Root = "C:/Git/Unity/WorstKnights/";
+    const string Request = Root + "Temp/InteractionTriggerValidation.request";
+    const string Result = Root + ".codex/diagnostics/interaction-trigger-validation-20261105.txt";
+    const string Backup = Root + ".codex/backups/interaction-trigger-system-20261105/";
+    static InteractionTriggerValidationSession() { EditorApplication.update += Update; SetupPlayCallbacks(); }
+    static void Update()
+    {
+        if (SessionState.GetBool("InteractionTrigger.Play", false) && EditorApplication.isPlaying)
+        {
+            try { TickPlay(); }
+            catch (Exception error) { File.AppendAllText(Result, "\nPLAY FAILED " + error); EndPlay(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try
+        {
+            if (command == "configure") Configure();
+            else if (command == "tests") RunTests();
+            else if (command == "play") BeginPlay();
+        }
+        catch (Exception error) { File.AppendAllText(Result, "\nFAILED " + error); }
+    }
+    static void Log(string message) => File.AppendAllText(Result, "\nPASS " + message);
+    static void Configure()
+    {
+        Directory.CreateDirectory(Backup);
+        var original = SceneManager.GetActiveScene();
+        File.WriteAllText(Result, "CONFIGURE " + original.path + " dirty=" + original.isDirty);
+        EditorSceneManager.SaveScene(original, Backup + "Map3.live-before-migration.unity", true);
+        InteractionTriggerAuthoringUtility.PreparePrefabs();
+        var system = InteractionTriggerSceneSetup.Configure(original, InteractionTriggerType.Lever);
+        if (system.Mechanism == null || system.TriggerType != InteractionTriggerType.Lever || system.LinkedSystem == null) throw new InvalidOperationException("Scene migration did not bind the lever.");
+        Log("Existing lever migrated at " + system.transform.position.ToString("F4") + " linked to " + system.LinkedSystem.name);
+        foreach (var type in (InteractionTriggerType[])Enum.GetValues(typeof(InteractionTriggerType)))
+            Log(type + " prefabs=" + string.Join(",", InteractionTriggerAuthoringUtility.FindPrefabs(type).Select(p => p.name)));
+        const string stairPath = "Assets/WK_Pack/Snaps/Roofs/Stair_Circle (1).prefab";
+        var stair = PrefabUtility.LoadPrefabContents(stairPath);
+        try
+        {
+            InteractionTriggerAuthoringUtility.RemoveLegacyPressure(stair);
+            PrefabUtility.SaveAsPrefabAsset(stair, stairPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(stair); }
+        EditorSceneManager.SaveScene(original, Backup + "Map3.live-after-migration.unity", true);
+        EditorSceneManager.SaveScene(original);
+        Log("Map3 saved with user's live scene edits preserved.");
+    }
+    static void RunTests()
+    {
+        var original = SceneManager.GetActiveScene();
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        int passed = 0, failed = 0;
+        try
+        {
+            foreach (var name in new[] { "InteractionTriggerSystemTests", "StatuePuzzleTests", "FlamethrowerTrapTests" })
+            {
+                var type = typeof(StatuePuzzleTests).Assembly.GetType(name);
+                if (type == null) throw new InvalidOperationException("Test fixture not loaded: " + name);
+                foreach (var method in type.GetMethods().Where(m => m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute), false).Length > 0))
+                {
+                    var fixture = Activator.CreateInstance(type);
+                    try { type.GetMethod("SetUp").Invoke(fixture, null); method.Invoke(fixture, null); passed++; Log(name + "." + method.Name); }
+                    catch (Exception error) { failed++; File.AppendAllText(Result, "\nTEST FAILED " + name + "." + method.Name + " " + error); }
+                    finally { type.GetMethod("TearDown").Invoke(fixture, null); }
+                }
+            }
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(scene, true); }
+        Log("EditMode total=" + passed + " failed=" + failed + "; originalDirty=" + original.isDirty);
+    }
+}

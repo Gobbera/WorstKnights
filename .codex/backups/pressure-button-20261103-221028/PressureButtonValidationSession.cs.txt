@@ -1,0 +1,215 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class PressureButtonValidationSession
+{
+    const string Root = "C:/Git/Unity/WorstKnights/";
+    const string Request = Root + "Temp/PressureButtonValidation.request";
+    const string Result = Root + ".codex/diagnostics/pressure-button-validation-20261103.txt";
+    const string Backup = Root + ".codex/backups/pressure-button-20261103-221028/";
+    const string Preview = "Assets/Tests/PressureButtonValidation.unity";
+    const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    static PressureButtonController button;
+    static StatuePuzzleController puzzle;
+    static FlamethrowerTrapController trap;
+    static PlayerHealth player;
+    static AudioSource source;
+    static Vector3 rest;
+    static double deadline;
+    static float enteredAt;
+    static int stage, failed, sourceId;
+
+    static PressureButtonValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("Pressure.Restore", false)) return;
+            SessionState.SetBool("Pressure.Restore", false);
+            Scene original = SceneManager.GetSceneByPath(SessionState.GetString("Pressure.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview);
+            Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+    static void Update()
+    {
+        if (SessionState.GetBool("Pressure.Play", false) && EditorApplication.isPlaying)
+        {
+            try { Tick(); } catch (Exception error) { File.AppendAllText(Result, "\nPLAY FAILED " + error); EndPlay(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Already playing.");
+            if (command == "configure") Configure();
+            else if (command == "tests") RunTests(SceneManager.GetActiveScene());
+            else if (command == "play") BeginPlay();
+            else if (command == "probe") Probe();
+        }
+        catch (Exception error) { File.AppendAllText(Result, "\nFAILED " + error); }
+    }
+    static void Log(string text) => File.AppendAllText(Result, "\nPASS " + text);
+    static void Check(bool valid, string text) { if (!valid) throw new InvalidOperationException(text); }
+    static void Set(object target, string field, object value) => target.GetType().GetField(field, Private).SetValue(target, value);
+    static void Probe()
+    {
+        var plate = SceneManager.GetActiveScene().GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<PressureButtonController>(true)).Single();
+        Physics.SyncTransforms();
+        var bounds = plate.GetComponent<BoxCollider>().bounds;
+        foreach (var hit in Physics.RaycastAll(new Vector3(bounds.center.x, bounds.max.y + 3f, bounds.center.z), Vector3.down, 5f).OrderBy(h => h.distance))
+            Log("Scene surface: " + hit.collider.name + " height=" + hit.point.y + " type=" + hit.collider.GetType().Name);
+        Check(!plate.IsPressed && !EditorApplication.isPlaying && !SceneManager.GetActiveScene().isDirty, "Scene not restored cleanly.");
+        Log("Final scene clean, original pose=" + plate.transform.position.ToString("F4") + " solid top=" + bounds.max.y);
+    }
+    static void Configure()
+    {
+        var original = SceneManager.GetActiveScene();
+        bool dirty = original.isDirty;
+        Directory.CreateDirectory(Backup);
+        EditorSceneManager.SaveScene(original, Backup + "Map3.live-before-pressure-button.unity", true);
+        File.WriteAllText(Result, "CONFIGURE " + original.path + " dirty=" + dirty);
+        var old = original.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<StatuePuzzleSubmitInteractable>(true)).Single();
+        Log("old feedback listeners=" + new SerializedObject(old).FindProperty("onActivated").FindPropertyRelative("m_PersistentCalls.m_Calls").arraySize);
+        var configured = PressureButtonSetupUtility.Configure(original);
+        var data = new SerializedObject(configured);
+        Check(data.FindProperty("cooldownSources").arraySize == 3, "Expected three linked traps.");
+        Check(!old.gameObject.activeSelf, "Old interaction still active.");
+        Check(configured.GetComponent<BoxCollider>().enabled && !configured.GetComponent<BoxCollider>().isTrigger, "Missing solid plate.");
+        Log("scene configured " + configured.name + " traps=3 audio=" + configured.GetComponent<AudioSource>());
+        EditorSceneManager.SaveScene(original, Backup + "Map3.live-after-pressure-button.unity", true);
+        if (!dirty) { EditorSceneManager.SaveScene(original); Log("Map3 saved after authorized scene setup."); }
+        RunTests(original);
+    }
+    static void RunTests(Scene original)
+    {
+        var tests = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        int passed = 0, errors = 0;
+        try
+        {
+            foreach (var type in new[] { typeof(PressureButtonTests), typeof(StatuePuzzleTests), typeof(FlamethrowerTrapTests) })
+            foreach (var method in type.GetMethods().Where(m => m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute), false).Length > 0))
+            {
+                var fixture = Activator.CreateInstance(type);
+                try
+                {
+                    type.GetMethod("SetUp").Invoke(fixture, null);
+                    method.Invoke(fixture, null); passed++; Log(type.Name + "." + method.Name);
+                }
+                catch (Exception error) { errors++; File.AppendAllText(Result, "\nTEST FAILED " + type.Name + "." + method.Name + " " + error); }
+                finally { type.GetMethod("TearDown").Invoke(fixture, null); }
+            }
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(tests, true); }
+        Log("EditMode total=" + passed + " errors=" + errors);
+    }
+    static void BeginPlay()
+    {
+        var original = SceneManager.GetActiveScene();
+        SessionState.SetString("Pressure.Original", original.path);
+        var preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var authored = original.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<PressureButtonController>(true)).Single();
+        var plate = UnityEngine.Object.Instantiate(authored.gameObject);
+        plate.name = "Pressure Validation";
+        plate.transform.SetParent(null, true);
+        plate.transform.position = new Vector3(2000, 2000, 2000);
+        var controller = plate.GetComponent<PressureButtonController>();
+        var validationPuzzle = new GameObject("Validation Puzzle").AddComponent<StatuePuzzleController>();
+        var instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(FlamethrowerTrapAuthoringUtility.PrefabPath));
+        instance.name = "Validation Flame";
+        instance.transform.position = new Vector3(2010, 2000, 2000);
+        var flame = instance.GetComponent<FlamethrowerTrapController>();
+        Set(flame, "localOnly", true); Set(flame, "damagePerSecond", 0f);
+        Set(flame, "activationDelay", 0.3f); Set(flame, "firingDuration", 1.2f); Set(flame, "cooldown", 1.5f);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(validationPuzzle.OnPuzzleFailed, flame.TriggerTrap);
+        Set(controller, "puzzle", validationPuzzle); Set(controller, "cooldownSources", new[] { flame }); Set(controller, "localOnly", true);
+        var camera = new GameObject("Validation Camera").AddComponent<Camera>();
+        camera.gameObject.AddComponent<AudioListener>(); camera.cullingMask = 0;
+        EditorSceneManager.SaveScene(preview, Preview);
+        SessionState.SetBool("Pressure.Play", true);
+        EditorApplication.isPlaying = true;
+    }
+    static void Tick()
+    {
+        if (button == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i) != preview)
+                    foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview);
+            button = GameObject.Find("Pressure Validation").GetComponent<PressureButtonController>();
+            puzzle = GameObject.Find("Validation Puzzle").GetComponent<StatuePuzzleController>();
+            trap = GameObject.Find("Validation Flame").GetComponent<FlamethrowerTrapController>();
+            source = button.GetComponent<AudioSource>(); source.mute = true; sourceId = source.GetInstanceID();
+            rest = button.transform.position;
+            var clip = AudioClip.Create("Pressure validation tone", 44100, 1, 44100, false);
+            var cue = ScriptableObject.CreateInstance<AudioCue>(); Set(cue, "clips", new[] { clip }); Set(button, "pressAudioCue", cue);
+            puzzle.OnPuzzleFailed.AddListener(() => failed++);
+            var actor = new GameObject("Stepping Player"); actor.SetActive(false);
+            player = actor.AddComponent<PlayerHealth>();
+            var collider = actor.AddComponent<CapsuleCollider>(); collider.height = 2f; collider.radius = 0.25f;
+            float top = button.GetComponent<BoxCollider>().bounds.max.y;
+            actor.transform.position = new Vector3(rest.x, top + 1.08f, rest.z);
+            actor.SetActive(true);
+            var body = actor.GetComponent<Rigidbody>(); body.isKinematic = false; body.useGravity = true; body.constraints = RigidbodyConstraints.FreezeRotation;
+            deadline = EditorApplication.timeSinceStartup + 45;
+            stage = failed = 0;
+        }
+        Check(EditorApplication.timeSinceStartup < deadline, "Play validation timed out at stage " + stage);
+        if (stage == 0 && button.IsPressed)
+        {
+            Check(failed == 1 && trap.IsCycleActive, "Step did not check plates and fire.");
+            Check(source.isPlaying && source.GetInstanceID() == sourceId && button.GetComponents<AudioSource>().Length == 1, "Press sound not using prepared source.");
+            Check(puzzle.SubmittingPlayer == player, "Wrong submitting player.");
+            enteredAt = Time.time; stage = 1; Log("Play: physical step checks puzzle, starts trap and plays authored source once.");
+        }
+        else if (stage == 1 && Time.time - enteredAt > 0.4f)
+        {
+            Check(Mathf.Abs(button.transform.position.y - (rest.y - 0.04f)) < 0.002f, "Plate did not travel four centimeters.");
+            Check(failed == 1 && button.OccupantCount == 1, "Movement caused repeated checks or lost feet.");
+            player.GetComponent<Rigidbody>().position += Vector3.right * 5;
+            enteredAt = Time.time; stage = 2; Log("Play: plate lowers 4cm; standing player stays detected without retrigger.");
+        }
+        else if (stage == 2 && Time.time - enteredAt > 0.2f)
+        {
+            Check(button.OccupantCount == 0 && trap.IsCycleActive && button.IsPressed, "Plate rose before trap cycle ended.");
+            stage = 3; Log("Play: stepping away during active trap leaves plate depressed.");
+        }
+        else if (stage == 3 && !trap.IsCycleActive && !button.IsPressed && Vector3.Distance(button.transform.position, rest) < 0.002f)
+        {
+            Check(!source.isPlaying && failed == 1, "Sound/check repeated while held.");
+            Log("Play: after cooldown and empty plate, original pose restored; no repeated sound/check.");
+            var body = player.GetComponent<Rigidbody>(); body.linearVelocity = Vector3.zero;
+            body.position = new Vector3(rest.x, button.GetComponent<BoxCollider>().bounds.max.y + 1.05f, rest.z);
+            stage = 4;
+        }
+        else if (stage == 4 && button.IsPressed)
+        {
+            Check(failed == 2 && source.isPlaying && source.GetInstanceID() == sourceId, "Second step did not rearm correctly.");
+            Log("Play: second step rearms puzzle and reuses sound source.");
+            button.enabled = false;
+            Check(!button.IsPressed && Vector3.Distance(button.transform.position, rest) < 0.002f && !source.isPlaying, "Disable did not restore plate/audio.");
+            Log("Play: disabling restores original pose and stops sound.");
+            EndPlay();
+        }
+    }
+    static void EndPlay()
+    {
+        SessionState.SetBool("Pressure.Play", false);
+        SessionState.SetBool("Pressure.Restore", true);
+        EditorApplication.isPlaying = false;
+    }
+}

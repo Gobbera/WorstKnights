@@ -1,0 +1,24 @@
+EDITMODE original=Assets/Scenes/Map3.unity dirty=True
+PASS LookingDownDamagesTheLowerAimedTargetInsteadOfTheHorizontalTarget
+PASS LookingUpDamagesTheUpperAimedTargetInsteadOfTheHorizontalTarget
+PASS TiltedArcPreservesItsLateralOpeningAtDifferentPitchAndYawAngles
+PASS HalfHeightIsMeasuredRelativeToTheAimedPlane
+PASS ZeroHalfHeightDisablesOnlyTheAdditionalPlaneThicknessLimit
+PASS DisablingVerticalAimKeepsTheArcHorizontal
+PASS NearAndExactlyVerticalDirectionsRemainFiniteAndCanHit
+PASS TargetsBehindTheAimedArcAndBeyondRangeAreRejected
+PASS ImpactPointUsesTheAimedColliderAndDirection
+PASS MultipleCollidersReceiveOneHitPerAttackWindow
+PASS BallAndBoxContinueFollowingVerticalAim
+PASS UnlimitedArcHeightReproducesHorizontalFloorImpactReactions
+PASS AuthoredHorizontalComboHitsForwardTargetsWithoutTriggeringFloorReactions
+PASS AuthoredDownwardComboStillTriggersTheRealFloorImpactReaction
+PASS AuthoredUpwardComboDoesNotTriggerFloorImpactReactions
+PASS EveryAuthoredPrefabComboStepCanReachStandingGroundWhenAimedDown
+PASS EditMode passed=16 failed=0 originalDirty=True
+PASS Actual Player prefab camera height=1,758057; combo ranges=1,8,1,8,1,8
+PASS Play: actual prefab horizontal combo hits the forward target three times; large floor receives zero damage and zero real Hit reactions.
+PASS Play: all three downward combo steps invoke the real floor Hit bridge/receiver once; forward target is not hit again.
+PASS Play: upward combo hits the upper target; floor damage and reaction counts remain unchanged.
+PASS Play: disabling Use Vertical Camera Aim restores horizontal attack direction.
+PASS RESTORED Assets/Scenes/Map3.unity dirty=True

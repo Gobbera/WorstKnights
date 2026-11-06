@@ -1,0 +1,233 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Photon.Pun;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
+
+internal static partial class InteractionTriggerValidationSession
+{
+    const string Preview = "Assets/Tests/InteractionTriggerValidation.unity";
+    const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    static InteractionTriggerSystem lever, pressure, button;
+    static StatuePuzzleController puzzle;
+    static FlamethrowerTrapController[] traps;
+    static PlayerHealth player;
+    static PlayerPickupInteractor interactor;
+    static InteractionTriggerTestTarget pressureTarget;
+    static AudioSource leverAudio, pressureAudio, buttonAudio;
+    static GameObject crate;
+    static Quaternion leverRest;
+    static Vector3 pressureRest, buttonRest;
+    static int stage, failures, successes, pressureUses;
+    static float enteredAt;
+    static double deadline;
+
+    static void SetupPlayCallbacks()
+    {
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("InteractionTrigger.Restore", false)) return;
+            SessionState.SetBool("InteractionTrigger.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("InteractionTrigger.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview);
+            Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+    static void Set(object target, string field, object value) => target.GetType().GetField(field, Private).SetValue(target, value);
+    static void Check(bool valid, string message) { if (!valid) throw new InvalidOperationException(message); }
+    static void BeginPlay()
+    {
+        var original = SceneManager.GetActiveScene();
+        SessionState.SetString("InteractionTrigger.Original", original.path);
+        var preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var system = CreateSystem("Validation Lever System", InteractionTriggerType.Lever, InteractionTriggerAuthoringUtility.LeverPath, new Vector3(2000, 2000, 2000));
+        var validationPuzzle = new GameObject("Validation Puzzle").AddComponent<StatuePuzzleController>();
+        Set(system, "linkedSystem", validationPuzzle);
+        var sources = new FlamethrowerTrapController[3];
+        for (int i = 0; i < sources.Length; i++)
+        {
+            var instance = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(FlamethrowerTrapAuthoringUtility.PrefabPath));
+            instance.name = "Validation Flame " + i; instance.transform.position = new Vector3(2020 + 3 * i, 2000, 2000);
+            sources[i] = instance.GetComponent<FlamethrowerTrapController>();
+            Set(sources[i], "localOnly", true); Set(sources[i], "damagePerSecond", 0f);
+            Set(sources[i], "activationDelay", 0.25f); Set(sources[i], "firingDuration", 1f); Set(sources[i], "cooldown", 0.5f + 0.5f * i);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(validationPuzzle.OnPuzzleFailed, sources[i].TriggerTrap);
+        }
+        Set(validationPuzzle, "activationCooldownSources", sources);
+        CreateSystem("Validation Pressure System", InteractionTriggerType.PressureButton, InteractionTriggerAuthoringUtility.PressurePath, new Vector3(2004, 2000, 2000));
+        var once = CreateSystem("Validation Button System", InteractionTriggerType.Button, InteractionTriggerAuthoringUtility.ButtonPath, new Vector3(2008, 2000, 2000));
+        Set(once, "activationMode", InteractionTriggerMode.Once);
+        var camera = new GameObject("Validation Camera").AddComponent<Camera>(); camera.gameObject.AddComponent<AudioListener>();
+        camera.transform.position = new Vector3(2002, 2002, 1997); camera.transform.LookAt(new Vector3(2000, 2000.7f, 2000));
+        camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(0.08f, 0.09f, 0.1f);
+        var light = new GameObject("Validation Light").AddComponent<Light>(); light.type = LightType.Directional; light.intensity = 3; light.transform.rotation = Quaternion.Euler(35, -30, 0);
+        EditorSceneManager.SaveScene(preview, Preview);
+        SessionState.SetBool("InteractionTrigger.Play", true);
+        EditorApplication.isPlaying = true;
+    }
+    static InteractionTriggerSystem CreateSystem(string name, InteractionTriggerType type, string path, Vector3 position)
+    {
+        var root = new GameObject(name); root.transform.position = position;
+        var system = root.AddComponent<InteractionTriggerSystem>();
+        Set(system, "triggerType", type); Set(system, "localOnly", true);
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path); Set(system, "mechanismPrefab", prefab);
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root.transform);
+        instance.transform.localPosition = Vector3.zero; instance.transform.localRotation = Quaternion.identity;
+        Set(system, "mechanism", instance.GetComponent<InteractionTriggerMechanism>());
+        return system;
+    }
+    static AudioSource PrepareSound(InteractionTriggerSystem system, AudioCue cue)
+    {
+        Set(system.Mechanism, "activationAudioCue", cue); Set(system.Mechanism, "deactivationAudioCue", cue);
+        var source = system.Mechanism.GetComponent<AudioSource>(); source.mute = true;
+        system.Mechanism.MovePresentation(0);
+        return source;
+    }
+    static void TickPlay()
+    {
+        if (lever == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i) != preview)
+                    foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview);
+            lever = GameObject.Find("Validation Lever System").GetComponent<InteractionTriggerSystem>();
+            pressure = GameObject.Find("Validation Pressure System").GetComponent<InteractionTriggerSystem>();
+            button = GameObject.Find("Validation Button System").GetComponent<InteractionTriggerSystem>();
+            puzzle = GameObject.Find("Validation Puzzle").GetComponent<StatuePuzzleController>();
+            traps = Enumerable.Range(0, 3).Select(i => GameObject.Find("Validation Flame " + i).GetComponent<FlamethrowerTrapController>()).ToArray();
+            var clip = AudioClip.Create("Trigger test tone", 44100, 1, 44100, false);
+            var cue = ScriptableObject.CreateInstance<AudioCue>(); Set(cue, "clips", new[] { clip }); Set(cue, "loop", true);
+            leverAudio = PrepareSound(lever, cue); pressureAudio = PrepareSound(pressure, cue); buttonAudio = PrepareSound(button, cue);
+            leverRest = lever.Mechanism.MovingPart.localRotation;
+            pressureRest = pressure.Mechanism.MovingPart.position; buttonRest = button.Mechanism.MovingPart.position;
+            puzzle.OnPuzzleFailed.AddListener(() => failures++); puzzle.OnPuzzleSolved.AddListener(() => successes++);
+            pressure.OnActivated.AddListener(() => pressureUses++);
+            pressureTarget = new GameObject("Pressure target").AddComponent<InteractionTriggerTestTarget>(); Set(pressure, "linkedSystem", pressureTarget);
+            var actor = new GameObject("Validation Player"); actor.SetActive(false);
+            actor.transform.position = lever.transform.position + new Vector3(0, 2, 2);
+            player = actor.AddComponent<PlayerHealth>();
+            var capsule = actor.AddComponent<CapsuleCollider>(); capsule.height = 2; capsule.radius = 0.25f;
+            interactor = actor.AddComponent<PlayerPickupInteractor>(); interactor.enabled = false;
+            actor.SetActive(true); player.GetComponent<Rigidbody>().isKinematic = false; player.GetComponent<Rigidbody>().useGravity = false;
+            deadline = EditorApplication.timeSinceStartup + 50;
+            stage = failures = successes = pressureUses = 0;
+            Check(!PhotonNetwork.InRoom, "Expected isolated offline gameplay validation.");
+        }
+        Check(EditorApplication.timeSinceStartup < deadline, "Play validation timed out stage=" + stage);
+        if (stage == 0)
+        {
+            Check(lever.Mechanism.GetComponent<InteractionTriggerInteractable>().TryInteract(interactor), "Lever interaction rejected.");
+            Check(failures == 1 && traps.All(t => t.IsCycleActive), "Incorrect puzzle did not activate its three traps.");
+            Check(leverAudio.isPlaying && !leverAudio.loop, "Lever sound did not use authored source or did not force one shot.");
+            Check(!lever.TryUse(player.gameObject), "Repeated interaction bypassed target cooldown.");
+            enteredAt = Time.time; stage = 1; Log("Play: existing lever interaction checks puzzle once, fires three heads only on failure, and uses prepared audio.");
+        }
+        else if (stage == 1 && Time.time - enteredAt > 0.4f)
+        {
+            Check(Mathf.Abs(Quaternion.Angle(leverRest, lever.Mechanism.MovingPart.localRotation) - Mathf.Abs(lever.Mechanism.ActivationAngle)) < 0.5f, "Lever arm did not rotate to configured pose.");
+            Check(lever.IsActive && failures == 1, "Lever did not remain latched during trap cooldown.");
+            CaptureLever(); stage = 2; Log("Play: real Lever_Arm rotates 50 degrees and stays down while puzzle/traps are busy.");
+        }
+        else if (stage == 2 && traps.All(t => !t.IsCycleActive) && !lever.IsActive && Quaternion.Angle(leverRest, lever.Mechanism.MovingPart.localRotation) < 0.5f)
+        {
+            BuildCorrectArrangement();
+            Check(lever.TryUse(player.gameObject), "Lever did not rearm after all trap cooldowns.");
+            Check(successes == 1 && puzzle.IsSolved && failures == 1 && traps.All(t => !t.IsCycleActive), "Correct plates fired traps or did not solve.");
+            Check(leverAudio.isPlaying && lever.Mechanism.GetComponents<AudioSource>().Length == 1, "Next lever interaction replaced/duplicated audio.");
+            Set(pressure, "pressureFilter", PressureTriggerFilter.Objects);
+            PlacePlayerOnPressure(); enteredAt = Time.time; stage = 3;
+            Log("Play: lever returns after all cooldowns; correct plates solve without fire and reuse its AudioSource.");
+        }
+        else if (stage == 3 && Time.time - enteredAt > 0.2f)
+        {
+            Check(!pressure.IsActive && pressureUses == 0, "Objects filter accepted the player.");
+            MovePlayerAway();
+            crate = new GameObject("Validation Crate"); crate.AddComponent<BoxCollider>();
+            float top = pressure.Mechanism.PressureSurface.bounds.max.y;
+            crate.transform.position = new Vector3(pressureRest.x, top + 0.56f, pressureRest.z); crate.AddComponent<Rigidbody>();
+            stage = 4;
+        }
+        else if (stage == 4 && pressure.IsActive)
+        {
+            Check(pressureUses == 1 && pressureAudio.isPlaying && !pressureAudio.loop, "Physical crate did not trigger one press/sound.");
+            enteredAt = Time.time; stage = 5;
+        }
+        else if (stage == 5 && Time.time - enteredAt > 0.4f)
+        {
+            Check(Mathf.Abs(pressure.Mechanism.MovingPart.position.y - (pressureRest.y - 0.04f)) < 0.002f && pressureUses == 1 && pressure.OccupantCount == 1, "Pressure lost physical crate or repeated activation during travel.");
+            pressureTarget.Busy = true; crate.GetComponent<Rigidbody>().position += Vector3.right * 5; enteredAt = Time.time; stage = 6;
+            Log("Play: Objects filter rejects player, accepts physical crate; plate travels 4cm with one sound/check.");
+        }
+        else if (stage == 6 && Time.time - enteredAt > 0.3f)
+        {
+            Check(pressure.OccupantCount == 0 && pressure.IsActive, "Pressure rose before linked system finished.");
+            pressureTarget.Busy = false; stage = 7;
+        }
+        else if (stage == 7 && !pressure.IsActive && Vector3.Distance(pressure.Mechanism.MovingPart.position, pressureRest) < 0.002f)
+        {
+            Set(pressure, "pressureFilter", PressureTriggerFilter.Players); PlacePlayerOnPressure(); enteredAt = Time.time; stage = 8;
+            Log("Play: empty plate stays held by target, then returns only after target becomes ready.");
+        }
+        else if (stage == 8 && pressure.IsActive && Time.time - enteredAt > 0.4f)
+        {
+            Check(pressureUses == 2 && pressure.OccupantCount == 1 && pressureAudio.isPlaying, "Players filter did not detect player/reuse sound.");
+            Check(button.TryUse(player.gameObject) && !button.TryUse(player.gameObject), "Once button did not enforce single use.");
+            Check(buttonAudio.isPlaying && !buttonAudio.loop, "Button sound did not play once.");
+            enteredAt = Time.time; stage = 9; Log("Play: Players filter activates on player; Button Once accepts one use and plays prepared source.");
+        }
+        else if (stage == 9 && Time.time - enteredAt > 0.3f)
+        {
+            Check(button.IsActive && Mathf.Abs(button.Mechanism.MovingPart.position.y - (buttonRest.y - 0.04f)) < 0.002f, "Button cap did not travel four centimeters/latch.");
+            pressure.enabled = false;
+            Check(Vector3.Distance(pressure.Mechanism.MovingPart.position, pressureRest) < 0.002f && !pressureAudio.isPlaying,
+                "Disabling pressure did not restore its pose and audio. current=" + pressure.Mechanism.MovingPart.position.ToString("F4") + " rest=" + pressureRest.ToString("F4") + " sound=" + pressureAudio.isPlaying);
+            Log("Play: Button cap moves 4cm and latches; disable restores pressure pose and stops audio."); EndPlay();
+        }
+    }
+    static void PlacePlayerOnPressure()
+    {
+        var body = player.GetComponent<Rigidbody>(); body.linearVelocity = Vector3.zero;
+        body.position = new Vector3(pressureRest.x, pressure.Mechanism.PressureSurface.bounds.max.y + 1.04f, pressureRest.z);
+    }
+    static void MovePlayerAway()
+    {
+        var body = player.GetComponent<Rigidbody>(); body.linearVelocity = Vector3.zero; body.position += Vector3.forward * 5;
+    }
+    static void BuildCorrectArrangement()
+    {
+        string[] names = { "Plate Mothen Hedar", "Plate Balthor Sabrath", "Plate Angrad Veyr", "Plate Eldric Ferden" };
+        var slots = new StatuePuzzleSlot[4];
+        for (int i = 0; i < 4; i++)
+        {
+            var root = new GameObject("Validation Slot " + i); root.transform.position = new Vector3(2040 + i * 2, 2000, 2000);
+            var pivot = new GameObject("Plate_Pivot").transform; pivot.SetParent(root.transform, false);
+            slots[i] = root.AddComponent<StatuePuzzleSlot>(); Set(slots[i], "puzzle", puzzle); Set(slots[i], "expectedIdentity", (StatueIdentity)i); Set(slots[i], "platePivot", pivot);
+            var plate = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Items/" + names[i] + ".prefab"));
+            Check(slots[i].TryPlacePlate(plate.GetComponent<StatuePuzzlePlate>()), "Could not place correct plate " + i);
+        }
+        Set(puzzle, "slots", slots);
+    }
+    static void CaptureLever()
+    {
+        var camera = GameObject.Find("Validation Camera").GetComponent<Camera>();
+        var target = new RenderTexture(960, 720, 24); camera.targetTexture = target; camera.Render();
+        var previous = RenderTexture.active; RenderTexture.active = target;
+        var image = new Texture2D(960, 720, TextureFormat.RGB24, false); image.ReadPixels(new Rect(0, 0, 960, 720), 0, 0); image.Apply();
+        File.WriteAllBytes(Root + ".codex/diagnostics/trigger-prefab-movement-lever-20261105.png", image.EncodeToPNG());
+        camera.targetTexture = null; RenderTexture.active = previous; Object.Destroy(image); Object.Destroy(target);
+    }
+    static void EndPlay()
+    {
+        SessionState.SetBool("InteractionTrigger.Play", false); SessionState.SetBool("InteractionTrigger.Restore", true); EditorApplication.isPlaying = false;
+    }
+}

@@ -1,0 +1,20 @@
+CAPTURE systems=1
+{
+    "entries": [
+        {
+            "systemId": "GlobalObjectId_V1-2-fbf69cfd8d17fac4695427a1d77b09ac-2040459107-0",
+            "scenePath": "Assets/Scenes/Map3.unity",
+            "prefabPath": "Assets/Prefabs/Mechanisms/Triggers/Levers/Lever_01.prefab",
+            "prompt": "[{key}] Acionar",
+            "pressDistance": 0.03999999910593033,
+            "leverAngle": -50.0,
+            "movementSpeed": 0.25,
+            "rotationSpeed": 180.0
+        }
+    ]
+}
+PASS prefab owns serialized movement: Assets/Prefabs/Mechanisms/Triggers/Buttons/Button_01.prefab
+PASS prefab owns serialized movement: Assets/Prefabs/Mechanisms/Triggers/Levers/Lever_01.prefab
+PASS prefab owns serialized movement: Assets/Prefabs/Mechanisms/Triggers/Pressure Buttons/Pressure_Button_01.prefab
+PASS scene values preserved: Interaction Trigger System prompt=[{key}] Activate
+PASS migration complete; scenes saved with existing edits preserved.

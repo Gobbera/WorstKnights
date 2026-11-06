@@ -1,0 +1,202 @@
+using System.Collections.Generic;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+public sealed class PressureButtonTests
+{
+    const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    readonly List<Object> objects = new List<Object>();
+    readonly Vector3 origin = new Vector3(2000, 2000, 2000);
+    PressureButtonController button;
+    StatuePuzzleController puzzle;
+    PlayerHealth player;
+    int failed;
+
+    [SetUp]
+    public void SetUp()
+    {
+        failed = 0;
+        puzzle = Create("Puzzle").AddComponent<StatuePuzzleController>();
+        puzzle.OnPuzzleFailed.AddListener(() => failed++);
+        var plate = Create("Pressure_Button");
+        plate.SetActive(false);
+        button = plate.AddComponent<PressureButtonController>();
+        plate.GetComponent<BoxCollider>().size = new Vector3(2, 0.2f, 2);
+        Set(button, "puzzle", puzzle);
+        Set(button, "localOnly", true);
+        plate.SetActive(true);
+        player = Player(Vector3.up * 1.1f);
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        for (int i = objects.Count - 1; i >= 0; i--)
+            if (objects[i] != null) Object.DestroyImmediate(objects[i]);
+        objects.Clear();
+    }
+
+    [Test]
+    public void StepChecksOnceAttributesPlayerAndMovesFourCentimeters()
+    {
+        Tick(); Tick();
+        Assert.That(button.IsPressed, Is.True);
+        Assert.That(failed, Is.EqualTo(1));
+        Assert.That(puzzle.SubmittingPlayer, Is.SameAs(player));
+        Assert.That(button.transform.position.y, Is.EqualTo(origin.y - 0.04f).Within(0.0003f));
+        Leave(player); Tick();
+        Assert.That(button.IsPressed, Is.False);
+        Assert.That(button.transform.position.y, Is.EqualTo(origin.y).Within(0.0003f));
+        player.transform.position = origin + Vector3.up * 1.1f; Tick();
+        Assert.That(failed, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void MultipleCollidersAndPlayersHoldUntilLastPlayerLeaves()
+    {
+        var extra = new GameObject("Extra collider");
+        extra.transform.SetParent(player.transform, false);
+        extra.AddComponent<BoxCollider>().size = new Vector3(0.4f, 2f, 0.4f);
+        Tick();
+        Assert.That(button.OccupantCount, Is.EqualTo(1));
+        var second = Player(new Vector3(0.4f, 1.1f, 0));
+        Tick();
+        Assert.That(button.OccupantCount, Is.EqualTo(2));
+        Leave(player); Tick();
+        Assert.That(button.IsPressed, Is.True);
+        Assert.That(failed, Is.EqualTo(1));
+        second.gameObject.SetActive(false); Tick();
+        Assert.That(button.IsPressed, Is.False);
+    }
+
+    [Test]
+    public void EmptyPlateWaitsForEveryTrapCycleAndStillWaitsForOccupantsAfterCooldown()
+    {
+        var first = Trap(); var second = Trap();
+        Set(button, "cooldownSources", new[] { first, second });
+        puzzle.OnPuzzleFailed.AddListener(first.TriggerTrap);
+        puzzle.OnPuzzleFailed.AddListener(second.TriggerTrap);
+        Tick();
+        Assert.That(first.IsCycleActive && second.IsCycleActive, Is.True);
+        Leave(player); Tick();
+        Assert.That(button.IsPressed, Is.True);
+        Set(first, "activationTime", -100000d); Tick();
+        Assert.That(button.IsPressed, Is.True, "Second trap still has cooldown.");
+        player.transform.position = origin + Vector3.up * 1.1f;
+        Set(second, "activationTime", -100000d); Tick();
+        Assert.That(button.IsPressed, Is.True, "Player still occupies the finished button.");
+        Leave(player); Tick();
+        Assert.That(button.IsPressed, Is.False);
+    }
+
+    [Test]
+    public void PropsAndPlayersBelowOrHighAboveTheSurfaceDoNotPress()
+    {
+        Leave(player);
+        Create("Prop").AddComponent<BoxCollider>();
+        Tick(); Assert.That(button.IsPressed, Is.False);
+        player.transform.position = origin + Vector3.up * 0.5f;
+        Tick(); Assert.That(button.IsPressed, Is.False);
+        player.transform.position = origin + Vector3.up * 1.6f;
+        Tick(); Assert.That(button.IsPressed, Is.False);
+        Assert.That(failed, Is.Zero);
+    }
+
+    [Test]
+    public void CorrectPlatesSolveWithoutStartingFlames()
+    {
+        var slots = new StatuePuzzleSlot[4];
+        for (int i = 0; i < 4; i++)
+        {
+            slots[i] = Create("Slot").AddComponent<StatuePuzzleSlot>();
+            Set(slots[i], "platePivot", slots[i].transform);
+            Set(slots[i], "puzzle", puzzle);
+            Set(slots[i], "expectedIdentity", (StatueIdentity)i);
+            var plate = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Items/" + new[] {
+                "Plate Mothen Hedar", "Plate Balthor Sabrath", "Plate Angrad Veyr", "Plate Eldric Ferden" }[i] + ".prefab"));
+            objects.Add(plate);
+            Assert.That(slots[i].TryPlacePlate(plate.GetComponent<StatuePuzzlePlate>()), Is.True);
+        }
+        Set(puzzle, "slots", slots);
+        var trap = Trap();
+        puzzle.OnPuzzleFailed.AddListener(trap.TriggerTrap);
+        Tick();
+        Assert.That(puzzle.IsSolved, Is.True);
+        Assert.That(failed, Is.Zero);
+        Assert.That(trap.IsCycleActive, Is.False);
+        Leave(player); Tick();
+        Assert.That(button.IsPressed, Is.False);
+    }
+
+    [Test]
+    public void WorldTravelRemainsFourCentimetersWithScaledParent()
+    {
+        var parent = Create("Scaled parent");
+        parent.transform.localScale = new Vector3(2, 3, 2);
+        button.transform.SetParent(parent.transform, true);
+        Set(button, "poseCaptured", false);
+        Tick();
+        Assert.That(button.transform.position.y, Is.EqualTo(origin.y - 0.04f).Within(0.0003f));
+    }
+
+    [Test]
+    public void DisabledButtonRestoresItsOriginalPose()
+    {
+        Tick(); button.enabled = false;
+        // EditMode does not dispatch runtime MonoBehaviour lifecycle callbacks.
+        button.OnDisable();
+        Assert.That(button.IsPressed, Is.False);
+        Assert.That(button.transform.position.y, Is.EqualTo(origin.y).Within(0.0003f));
+    }
+
+    [Test]
+    public void StaleOrMalformedNetworkStatesCannotOverwriteNewerState()
+    {
+        var apply = typeof(PressureButtonController).GetMethod("ApplyNetworkState", Private);
+        apply.Invoke(button, new object[] { new object[] { 3, true, 2, 5 }, true });
+        Assert.That(button.IsPressed, Is.True);
+        apply.Invoke(button, new object[] { new object[] { 2, false, 1, 5 }, false });
+        apply.Invoke(button, new object[] { new object[] { "invalid" }, false });
+        Assert.That(button.IsPressed, Is.True);
+        Assert.That(typeof(PressureButtonController).GetField("lastRequestedPress", Private).GetValue(button), Is.EqualTo(2));
+        apply.Invoke(button, new object[] { new object[] { 4, false, 2, 5 }, false });
+        Assert.That(button.IsPressed, Is.False);
+    }
+
+    void Tick()
+    {
+        Physics.SyncTransforms();
+        typeof(PressureButtonController).GetMethod("RefreshButton", Private).Invoke(button, new object[] { 1f });
+    }
+    void Leave(PlayerHealth actor) => actor.transform.position = origin + Vector3.right * 5f;
+    PlayerHealth Player(Vector3 offset)
+    {
+        var actor = Create("Player").AddComponent<PlayerHealth>();
+        actor.transform.position += offset;
+        actor.gameObject.AddComponent<BoxCollider>().size = new Vector3(0.4f, 2, 0.4f);
+        typeof(PlayerHealth).GetMethod("Awake", Private).Invoke(actor, null);
+        return actor;
+    }
+    FlamethrowerTrapController Trap()
+    {
+        var root = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(FlamethrowerTrapAuthoringUtility.PrefabPath));
+        objects.Add(root);
+        root.transform.position = origin + Vector3.forward * 100;
+        var trap = root.GetComponent<FlamethrowerTrapController>();
+        Set(trap, "localOnly", true);
+        Set(trap, "damagePerSecond", 0f);
+        Set(trap, "cooldown", 100f);
+        return trap;
+    }
+    GameObject Create(string name)
+    {
+        var result = new GameObject(name);
+        result.transform.position = origin;
+        objects.Add(result);
+        return result;
+    }
+    static void Set(object target, string field, object value) => target.GetType().GetField(field, Private).SetValue(target, value);
+}

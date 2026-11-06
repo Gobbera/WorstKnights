@@ -1,0 +1,82 @@
+Compared the live scene before configuration with saved Map3.
+Added objects: ['587833332', '587833333', '587833334']
+Removed objects: []
+Changed object 2040459109
+--- before
+
++++ after
+
+@@ -14,10 +14,10 @@
+
+   - name: Check Statues
+     target: {fileID: 970922657}
+-    overrideActivationMode: 0
++    overrideActivationMode: 1
+     activationMode: 0
+   - name: Control Platform
+     target: {fileID: 6586617693389580384}
+-    overrideActivationMode: 0
+-    activationMode: 0
++    overrideActivationMode: 1
++    activationMode: 2
+   initialRoute: 0
+   localOnly: 0
+Changed object 6586617693389580380
+--- before
+
++++ after
+
+@@ -78,4 +78,7 @@
+
+       insertIndex: -1
+       addedObject: {fileID: 2040459108}
++    - targetCorrespondingSourceObject: {fileID: 5586006746894669088, guid: d498db9bfe0acf14d9e32614eb0f664a, type: 3}
++      insertIndex: -1
++      addedObject: {fileID: 587833334}
+     m_AddedComponents:
+     - targetCorrespondingSourceObject: {fileID: 5102203611029950362, guid: d498db9bfe0acf14d9e32614eb0f664a, type: 3}
+Changed object 6586617693389580383
+--- before
+
++++ after
+
+@@ -15,5 +15,5 @@
+
+   networkSceneId: 'Map3:Stair_Circle (1)[355]'
+   prototypeLocalOnly: 0
+-  motionMode: 2
++  motionMode: 3
+   movementPoints:
+   - directionMode: 0
+@@ -29,5 +29,5 @@
+
+   signalRequirement: 0
+   movementAudioCue: {fileID: 0}
+-  movementAudioSource: {fileID: 0}
++  movementAudioSource: {fileID: 587833333}
+   movementAxis: 0
+   movementDirection: 0
+Changed object 6586617693389580384
+--- before
+
++++ after
+
+@@ -12,3 +12,3 @@
+
+   m_EditorClassIdentifier: Assembly-CSharp::SignalInteractionTriggerTarget
+   signalSource: {fileID: 6586617693389580385}
+-  action: 2
++  action: 0
+Changed object 970922657
+--- before
+
++++ after
+
+@@ -27,5 +27,5 @@
+
+       - m_Target: {fileID: 2040459109}
+         m_TargetAssemblyTypeName: InteractionTriggerRouter, Assembly-CSharp
+-        m_MethodName: SelectRoute
++        m_MethodName: SelectRouteAndActivate
+         m_Mode: 3
+         m_Arguments:

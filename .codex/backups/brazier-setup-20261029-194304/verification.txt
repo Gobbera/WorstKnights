@@ -1,0 +1,3 @@
+PASS Brazier reuses 6 existing components; authored hierarchy, VFX, audio source, light settings, prompt and colliders preserved. Light intensity is zero in unlit state; base intensity retains authored 0.4.
+PASS Chandelier prefab regression plus native Play Mode held-torch gating, Lit once, rendered fire/light, audio loop, extinguish, relight and disabling.
+PASS live Map3 unchanged; prefab GUID unchanged; temporary validation assets removed.

@@ -635,6 +635,7 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 
 - origem: impacto melee do fluxo atual de combate
 - sinais comuns: `Hit`
+- Player melee contact is filtered before this bridge receives the impact. The Player prefab uses a positive arc half height of 0.18 m around the aimed plane, preventing horizontal swings from invoking floor Hit reactions. Looking down still permits real floor impacts. `Half Height = 0` disables the height bound and can reintroduce those horizontal floor reactions; do not hide that geometry issue by disabling the floor's receiver. See [PlayerMeleeFloorContact.md](PlayerMeleeFloorContact.md).
 
 ### DestructibleReactionSignalBridge
 
@@ -664,6 +665,22 @@ Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
 - sinais comuns: `Interacted`, ou um signal de dominio como `Lit` quando usado como proxy de um interactable existente
 - para tochas, use o sinal `Lit` para feedback discreto de acendimento, como `Torch_Woosh`; a bridge encaminha a acao da tocha equipada para `WallTorchInteractable`, e o loop continuo da chama fica em `TorchFlameController.litLoopAudioCue`, ligado ao estado `IsLit`
 - `Candlestick_01` e `Candlestick_02` reutilizam a mesma bridge, interactable e estado da tocha. Em cada prefab, um unico `VFX` agrupa tres pares de chama/fumaca e uma luz; uma interacao acende o conjunto, enquanto `WallTorchStateController` sincroniza o estado em multiplayer.
+- `Brazier` reutiliza `TorchFlameController`, `WallTorchStateController`, `WallTorchInteractable` e a mesma bridge com o sinal `Lit`. Inicia apagado e exige uma tocha acesa na mao usada na interacao. O `VFX`, a luz, o `Audio Source`, o `Prompt_Pivot` e os colliders ja preparados no prefab sao mantidos. O sinal `Lit` toca o som de acendimento; o loop `Burning_Torch` acompanha o estado da chama e para ao apagar ou desativar o objeto. O estado usa a sincronizacao existente das tochas, sem exigir PhotonView manual no braseiro.
+- A integracao do `Brazier` foi validada em Play Mode: mao vazia e tocha apagada nao acendem; a tocha acesa mostra o prompt e dispara `Lit` uma vez; fogo e luz aparecem, o AudioSource existente toca o loop, e apagar/desativar interrompe o som. A validacao inclui reacendimento e captura renderizada do prefab. Nao exige scripts exclusivos para o braseiro.
+
+## Interaction Trigger System
+
+`InteractionTriggerSystem` selects Lever, Pressure Button or Button from a category under `Assets/Prefabs/Mechanisms/Triggers/`. The controller owns activation modes, filters, timing, target and outputs. The prefab's `InteractionTriggerMechanism` owns all movement settings (angle, speed, travel distance, axis/direction), moving-part references and AudioCues. Lever/Button use `InteractionTriggerInteractable` through the existing `PlayerPickupInteractor`; Pressure Button uses filtered occupancy without click interaction.
+
+The Master invokes `IInteractionTriggerTarget` and UnityEvents once per accepted transition/use. The target owns its gameplay and replication. Mechanism audio uses `Activation Audio Cue`/`Deactivation Audio Cue` and the prefab's prepared source. Each client presents movement/audio from room-synchronized mechanism state; late join restores pose without replaying feedback or gameplay. Avoid adding a second interaction/audio bridge unless it serves a distinct signal, to prevent duplicate activation.
+
+In Map3, Lever activates `StatuePuzzleController`, which checks plates and triggers the three traps only through `OnPuzzleFailed`; success does not emit fire. `Activation Cooldown Sources` belongs to the puzzle. Continuous flame audio remains tied to trap state. `DoorInteractionTriggerTarget` supports open/close, toggle and unlock/lock through the existing door controller and feedback. Other systems may implement the same target contract or receive UnityEvents.
+
+`InteractionTriggerRouter` sits between the Map3 lever and its gameplay destinations. Route 0 checks the statues in Momentary mode; `On Puzzle Solved` calls `SelectRouteAndActivate(1)` to immediately start the elevator and change control to Alternate AB. The next lever use selects A and returns the platform; later uses continue alternating. Plain `SelectRoute` remains deferred, and replicated restoration never replays activation. The signal adapter uses Follow State on the existing `DoorSignalSource`; the platform uses TwoPosition motion with its authored path/speed. Its dedicated Movement Audio Cue loops only during travel and stops at endpoints, break or disable, using prepared audio and existing motion replication. No additional interaction/reaction bridge is needed. See [PlatformTwoPosition.md](PlatformTwoPosition.md).
+
+The lower `Elevator_02` uses `InteractionTriggerStateTarget` (Set B) to command the main Elevator_01 trigger, including its pose, state outputs and replication. Its own Momentary press/release drives only the call lever's existing prefab feedback; release does not undo the command. It cannot activate the main trigger during the Momentary puzzle stage. This uses the existing mechanism/audio path without a second reaction bridge. See [ElevatorCallControl.md](ElevatorCallControl.md).
+
+Create with **GameObject > Mechanisms > Interaction Trigger System**. Use **Apply Prefab** to build the selected category, and **Edit Prefab (Movement and Audio)** to edit its own motion/feedback. Prepare initial assets with **Tools > Mechanisms > Prepare Interaction Trigger Prefabs**; reconnect Map3 with **Tools > Mechanisms > Connect Statue Puzzle To Lever**. The older Pressure Button menu uses the same modular system. All authoring labels/prompts for this workflow are English. See [InteractionTriggerSystem.md](InteractionTriggerSystem.md).
 
 ## Regra para novas integracoes
 

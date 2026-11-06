@@ -1,0 +1,3 @@
+PASS 19 Editor tests; native Play Mode wall illumination, fade and off; Runtime/Editor builds: zero errors. Runtime dependency warnings are in Photon demos.
+PASS saved and live Map3 unchanged; existing prefab settings preserved; only dedicated light and controller fields added.
+PASS temporary validation assets removed; new partial script meta exists.

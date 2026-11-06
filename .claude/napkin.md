@@ -123,6 +123,9 @@
 7. **[2026-08-12] Crouch kick must stand before firing**
    Do instead: when kick starts from `MovementState.crouching`, validate kick availability, stand/queue the kick briefly, suppress crouch while queued or active, then let held crouch re-enter after `kickActionDuration`.
 
+8. **[2026-11-05] Player melee arc damage and previews must share the aimed frame**
+   Do instead: use attack-local coordinates for lateral angle and half height, and the same rotation for contact samples and gizmos; preserve camera pitch when vertical aim is enabled. Keep a positive half height for bounded contact: zero removes the limit and can trigger floor reactions during horizontal swings. Compare arc range with FP_Camera ground clearance before expecting ground hits.
+
 ## UI & Emotes
 1. **[2026-10-14] In-game settings UI is gameplay-root bootstrapped**
    Do instead: keep the reusable Settings overlay at `Assets/Resources/UI/InGameSettingsMenu.prefab`, let `GameplaySceneRoot` instantiate it through `InGameSettingsMenuController`, and guard local gameplay input with `InGameSettingsMenuController.IsAnyMenuOpen` instead of pausing multiplayer time.
@@ -148,6 +151,7 @@
 
 6. **[2026-09-10] Torch flame loops belong to flame state, not reactions**
    Do instead: configure continuous fire audio through `TorchFlameController.litLoopAudioCue`; keep `Lit` reaction audio for one-shot ignition like `Torch_Woosh`, and let `SetLit`/`SetPresentationVisible` start or stop the loop for wall and hand torches.
+   For stationary fire props, reuse `WallTorchStateController`, `WallTorchInteractable` and `PlayerInteractionReactionSignalBridge` with `Lit`; rebind the authored VFX/light/audio/prompt instead of cloning runtime scripts. Keep the prefab's `networkSceneId` empty so each placed instance resolves its own identity.
 
 7. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
    Do instead: drive jump, land, attack, pickup, emote, torch-lit loops, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
@@ -292,8 +296,8 @@
 5. **[2026-08-07] Wall-only first-person bypass is now a fallback mode**
    Do instead: use `PlayerSetup.firstPersonOverlayDepthMode=WallLayerStencilBypass` only when hands should preserve scene depth except against objects on the `Wall` layer; otherwise keep `AlwaysOnTop`.
 
-6. **[2026-08-20] Player low-light assist should stay owner-local and compact**
-   Do instead: keep `PlayerVisibilityAssistLight` owner-local, tune its short-range `Point`/`Spot` mode on `FP_Camera`, use WK toon shader fill (`_WK_ToonFillIntensity`/`_WK_ToonFillColor`) only when a global darkness floor is desired, and suppress the assist light from `HandEquipmentController.HasActiveEquippedLightSource()`.
+6. **[2026-11-03] Player low-light assist uses prefab tuning and real distance attenuation**
+   Do instead: keep `PlayerVisibilityAssistLight` owner-local and inspect its serialized values in `Assets/Resources/Player.prefab` before trusting script defaults. Range is a cutoff, not constant brightness; compare rendered assist on/off and higher intensity when larger rooms look black. Use WK toon shader fill (`_WK_ToonFillIntensity`/`_WK_ToonFillColor`) only when a global darkness floor is desired, and use `Disable When Equipped Light Source` for optional equipment suppression.
 
 7. **[2026-08-07] Layer temporary attack FOV over live movement FOV**
    Do instead: let locomotion FOV update first and have attack feedback resolve the current locomotion FOV each frame as its base, otherwise sprint-to-attack can snap back to a stale sprint FOV when the attack relaxes.
@@ -386,9 +390,18 @@
 9. **[2026-10-28] Removing VFX graph models can leave pending validation entries detached**
    Do instead: when batching graph edits through the VFX 17 internal API, unlink removed models and prune only pending error/compile reporter entries whose GetGraph returns null before recompiling; otherwise validation can throw inside CustomHLSL after a successful removal. Surface effects also need a shorter soft-particle fade distance than free jets to remain visible near geometry.
 
+10. **[2026-11-03] Audio/VFX hitches need separate first-use and repeated measurements**
+   Do instead: inspect AudioClip preload/background flags and compare first/repeated triggers; a stopwatch around Play/Reinit excludes deferred graphics work. Enable Editor `ProfilerDriver.enabled` for raw frame history, then inspect Render Thread PSO creation on DX12. Use only known compiled VFX task indices: querying native GPU marker names with an invalid index can crash the Editor. Capture matching `GraphicsStateCollection` states for targeted warmup instead of blindly warming every shader.
+
 ## User Directives
-1. **[2026-05-26] Large gameplay systems should start from a saved checkpoint plus a staged implementation doc**
+1. **[2026-11-05] Mechanism triggers separate prefab feedback, activation policy, and gameplay targets**
+   Do instead: keep policy on `InteractionTriggerSystem`, prefab feedback on `InteractionTriggerMechanism`, and gameplay in targets. Router `SelectRoute` defers; `SelectRouteAndActivate` immediately hands off to B with route mode overrides. Use Follow State signals with `PlatformController.TwoPosition` for repeatable A/B travel and prepared platform movement audio. Remote call controls should use `InteractionTriggerStateTarget` (Set A/B/Toggle) to synchronize the main trigger instead of changing its signal alone; Momentary puzzle stages reject these state commands. Keep categorized prefabs under `Assets/Prefabs/Mechanisms/Triggers/` and trap cooldowns on the puzzle.
+
+2. **[2026-11-05] All new authoring text must be English**
+   Do instead: converse with the user in Brazilian Portuguese; write code, comments, Inspector labels, tooltips, prompts, menus, messages and documentation in English. Preserve this preference on later changes; translate touched authoring text that was previously Portuguese.
+
+3. **[2026-05-26] Large gameplay systems should start from a saved checkpoint plus a staged implementation doc**
    Do instead: before sizable Unity feature work, create a project snapshot from saved-on-disk files, record the requested scope in `Docs/`, and align editor-side setup steps before writing runtime code.
 
-2. **[2026-07-22] Reaction setup and bridge changes must update the central workflow doc**
+4. **[2026-07-22] Reaction setup and bridge changes must update the central workflow doc**
    Do instead: whenever a reaction setup, emitter, or bridge is added or changed, update `Docs/ReactionEmitterWorkflow.md` in the same pass with the new flow, parameters, and tool behavior.

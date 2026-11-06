@@ -1,0 +1,190 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class FlamethrowerEndLightSession
+{
+    const string Request = "Temp/FlamethrowerEndLight.request";
+    const string Result = "Temp/FlamethrowerEndLight.result.txt";
+    const string PreviewPath = "Assets/Tests/FlamethrowerEndLightValidation.unity";
+    const string PreviewKey = "FlameEndLight.Preview";
+    const string RestoreKey = "FlameEndLight.Restore";
+    static FlamethrowerTrapController previewTrap;
+    static Camera previewCamera;
+    static RenderTexture target;
+    static float started;
+    static int stage, lastFrame;
+    static readonly int[] pixels = new int[4];
+
+    static FlamethrowerEndLightSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(RestoreKey, false)) return;
+            SessionState.SetBool(RestoreKey, false);
+            Scene original = SceneManager.GetSceneByPath(SessionState.GetString("FlameEndLight.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            Scene preview = SceneManager.GetSceneByPath(PreviewPath);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(PreviewPath);
+            AssetDatabase.DeleteAsset("Assets/Tests/FlamethrowerEndLightValidation.mat");
+            string backup = File.ReadAllText("Temp/FlamethrowerEndLight.backup.txt").Trim();
+            EditorSceneManager.SaveScene(original, Path.Combine(backup, "Map3.live-after-light.unity"), true);
+            File.AppendAllText(Result, "\nRESTORED original scene; dirty=" + original.isDirty);
+        };
+    }
+    static void Update()
+    {
+        if (SessionState.GetBool(PreviewKey, false) && EditorApplication.isPlaying)
+        {
+            try { PreviewTick(); }
+            catch (Exception error) { File.WriteAllText(Result, error.ToString()); EndPreview(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Play Mode active.");
+            if (command == "configure") Configure();
+            else if (command == "tests") Tests();
+            else if (command == "preview") BeginPreview();
+            else if (command == "snapshot")
+            {
+                Scene original = SceneManager.GetActiveScene();
+                string backup = File.ReadAllText("Temp/FlamethrowerEndLight.backup.txt").Trim();
+                EditorSceneManager.SaveScene(original, Path.Combine(backup, "Map3.live-after-light.unity"), true);
+                File.WriteAllText(Result, "SNAPSHOT original scene=" + original.path + "; dirty=" + original.isDirty);
+            }
+        }
+        catch (Exception error) { File.WriteAllText(Result, error.ToString()); }
+    }
+    static void Configure()
+    {
+        Scene original = SceneManager.GetActiveScene();
+        string backup = File.ReadAllText("Temp/FlamethrowerEndLight.backup.txt").Trim();
+        string snapshot = Path.Combine(backup, "Map3.live-before-light.unity");
+        if (!File.Exists(snapshot)) EditorSceneManager.SaveScene(original, snapshot, true);
+        typeof(FlamethrowerTrapAuthoringUtility).GetMethod("PreparePrefab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
+        File.WriteAllText(Result, "CONFIGURED end point light in prefab; original scene dirty=" + original.isDirty);
+    }
+    static void Tests()
+    {
+        Scene original = SceneManager.GetActiveScene();
+        Scene temporary = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var report = new List<string>();
+        try
+        {
+            Type type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("FlamethrowerTrapTests")).First(t => t != null);
+            foreach (var test in type.GetMethods().Where(m => m.GetCustomAttributes(false).Any(a => a.GetType().Name == "TestAttribute")))
+            {
+                object fixture = Activator.CreateInstance(type);
+                try { type.GetMethod("SetUp").Invoke(fixture, null); test.Invoke(fixture, null); report.Add("PASS " + test.Name); }
+                catch (Exception error) { report.Add("FAIL " + test.Name + "\n" + (error.InnerException ?? error)); }
+                finally { type.GetMethod("TearDown").Invoke(fixture, null); }
+            }
+            File.WriteAllText(Result, string.Join("\n", report));
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(temporary, true); }
+    }
+    static void BeginPreview()
+    {
+        Scene original = SceneManager.GetActiveScene();
+        SessionState.SetString("FlameEndLight.Original", original.path);
+        // Keep the unsaved authoring scene loaded. Other roots are disabled only in Play Mode.
+        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var root = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(FlamethrowerTrapAuthoringUtility.PrefabPath));
+        root.name = "Smooth Validation Trap";
+        Vector3 origin = new Vector3(2000f, 1000f, 1000f);
+        root.transform.SetPositionAndRotation(origin, Quaternion.identity);
+        foreach (Transform t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 31;
+        var data = new SerializedObject(root.GetComponent<FlamethrowerTrapController>());
+        data.FindProperty("activationDelay").floatValue = 0.5f;
+        data.FindProperty("firingDuration").floatValue = 3f;
+        data.FindProperty("cooldown").floatValue = 0f;
+        data.FindProperty("range").floatValue = 8f;
+        data.FindProperty("damagePerSecond").floatValue = 0f;
+        data.FindProperty("flameAudioCue").objectReferenceValue = null;
+        data.FindProperty("localOnly").boolValue = true;
+        data.ApplyModifiedPropertiesWithoutUndo();
+        root.GetComponent<FlamethrowerTrapController>().FlameEffect.gameObject.layer = 30;
+        var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        wall.name = "Light Validation Wall"; wall.layer = 31;
+        wall.transform.position = origin + new Vector3(0f, 0.28f, -5f);
+        wall.transform.localScale = new Vector3(8f, 6f, 0.3f);
+        var material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        material.color = new Color(0.4f, 0.4f, 0.4f);
+        material.SetFloat("_Smoothness", 0f);
+        AssetDatabase.CreateAsset(material, "Assets/Tests/FlamethrowerEndLightValidation.mat");
+        wall.GetComponent<Renderer>().sharedMaterial = material;
+        var camera = new GameObject("Smooth Validation Camera").AddComponent<Camera>();
+        Vector3 aim = origin + new Vector3(0f, 0.28f, -4f);
+        camera.transform.position = aim + new Vector3(7f, 2f, 7f);
+        camera.transform.LookAt(aim);
+        camera.cullingMask = 1 << 31; camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black;
+        camera.orthographic = true; camera.orthographicSize = 3.5f;
+        camera.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+        camera.GetUniversalAdditionalCameraData().volumeLayerMask = 0;
+        EditorSceneManager.SaveScene(scene, PreviewPath);
+        SessionState.SetBool(PreviewKey, true);
+        EditorApplication.isPlaying = true;
+    }
+    static void PreviewTick()
+    {
+        if (previewTrap == null)
+        {
+            Scene preview = SceneManager.GetSceneByPath(PreviewPath);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene == preview) continue;
+                foreach (var root in scene.GetRootGameObjects()) root.SetActive(false);
+            }
+            previewTrap = GameObject.Find("Smooth Validation Trap").GetComponent<FlamethrowerTrapController>();
+            previewCamera = GameObject.Find("Smooth Validation Camera").GetComponent<Camera>();
+            target = new RenderTexture(1400, 900, 24);
+            previewCamera.targetTexture = target;
+            if (!previewTrap.TryTriggerTrap()) throw new InvalidOperationException("Cannot trigger preview trap.");
+            started = Time.time; stage = 0; lastFrame = -1;
+        }
+        if (lastFrame == Time.frameCount) return; lastFrame = Time.frameCount;
+        float[] times = { 0.3f, 2.3f, 3.85f, 4.4f };
+        string[] names = { "before", "active", "fading", "off" };
+        if (Time.time - started < times[stage]) return;
+        pixels[stage] = Capture("Temp/Flamethrower-light-" + names[stage] + ".png");
+        stage++;
+        if (stage < 4) return;
+        string report = "RENDER warm wall pixels before/active/fading/off: " + string.Join("/", pixels);
+        if (pixels[1] < pixels[0] + 1000 || pixels[2] >= pixels[1] || Math.Abs(pixels[3] - pixels[0]) > 50 || previewTrap.EndLight.enabled)
+            throw new InvalidOperationException(report);
+        File.WriteAllText(Result, report + "\nPASS end light illuminates wall, fades with fire, and switches off; VFX excluded from camera to isolate illumination.");
+        EndPreview();
+    }
+    static int Capture(string path)
+    {
+        previewCamera.Render();
+        RenderTexture previous = RenderTexture.active; RenderTexture.active = target;
+        var picture = new Texture2D(1400, 900, TextureFormat.RGB24, false);
+        try
+        {
+            picture.ReadPixels(new Rect(0f, 0f, 1400f, 900f), 0, 0); picture.Apply();
+            File.WriteAllBytes(path, picture.EncodeToPNG());
+            return picture.GetPixels32().Count(p => p.r > 80 && p.r > p.b * 1.4f && p.r + p.g > 150);
+        }
+        finally { RenderTexture.active = previous; UnityEngine.Object.DestroyImmediate(picture); }
+    }
+    static void EndPreview()
+    {
+        if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); }
+        SessionState.SetBool(PreviewKey, false); SessionState.SetBool(RestoreKey, true);
+        EditorApplication.isPlaying = false;
+    }
+}

@@ -1,0 +1,37 @@
+CONFIGURE original=Assets/Scenes/Map3.unity dirty=True
+PASS scene instance inherits AudioSource: Dragon_Head_Flamethrower_Trap (3)
+PASS scene instance inherits AudioSource: Dragon_Head_Flamethrower_Trap (2)
+PASS scene instance inherits AudioSource: Dragon_Head_Flamethrower_Trap (1)
+PASS EditMode DamagesOnlyActorsInsideTheFlameAndWithinRange
+PASS EditMode WallShortensVisualJetAndPreventsDamageBehindIt
+PASS EditMode OffAxisCoverBlocksDamageEvenIfCenterRayIsClear
+PASS EditMode MultipleCollidersReceiveOneTickAndIntervalIsRespected
+PASS EditMode PlayersAndEnemiesCanBothBeDamagedWithoutKnockback
+PASS EditMode DamageDoesNotReachTheEndBeforeTheFlameFront
+PASS EditMode SweepChangesBothVisualDirectionAndDamageDirection
+PASS EditMode WarningAndExpiredDurationDoNotCauseDamage
+PASS EditMode RepeatedTriggersDoNotStackAndStopCancelsDamage
+PASS EditMode TargetTypeFiltersAreIndependent
+PASS EditMode MovingDispenserReturnsToItsAuthoredPoseWhenStopped
+PASS EditMode DisablingTrapCancelsEmissionAndDamage
+PASS EditMode NaturalEndFadesExistingParticlesWithoutExtendingDamage
+PASS EditMode ManualStopFadesOnceAndPreservesTheLastJetPose
+PASS EditMode ZeroFadeDurationPreservesImmediateStop
+PASS EditMode NewTriggerReplacesTheFadeAndRestoresFullOpacity
+PASS EditMode EndLightFollowsTheFlameFrontAndStaysOutsideObliqueWalls
+PASS EditMode EndLightFadesAtTheLastEndpointAndTurnsOffWithTheFire
+PASS EditMode DispenserPrefabUsesTheExistingPivotAndDoesNotAutoPlay
+PASS EditMode AudioAuthoringReusesDedicatedSourceWithoutChangingOtherAudio
+PASS EditMode EditorPreviewDoesNotCreateRuntimeAudio
+PASS EditMode FlamethrowerClipIsPreparedBeforePlayback
+PASS EditMode total=22; originalDirty=True
+PASS PlayMode authored source exists and starts silent before activation.
+PASS PlayMode all cue clips are loaded before first activation.
+PASS PlayMode first activation uses the authored source, starts with fire and follows its origin.
+PASS PlayMode natural fire end stops audio.
+PASS PlayMode second activation reuses source and manual stop silences it.
+PASS PlayMode disable/re-enable stops audio and retains its source.
+PASS PlayMode legacy trap prepares its fallback at startup before any trigger.
+PASS PlayMode completed one-shot does not restart while fire continues.
+PASS PlayMode loop continues across clip end; disabling GameObject stops it; source count stays one.
+RESTORED Assets/Scenes/Map3.unity dirty=True

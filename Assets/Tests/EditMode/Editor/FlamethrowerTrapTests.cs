@@ -29,6 +29,11 @@ public sealed class FlamethrowerTrapTests
         trap = root.AddComponent<FlamethrowerTrapController>();
         Set("flamethrowerPivot", pivot.transform);
         Set("flameEffect", effect);
+        var lightObject = new GameObject(FlamethrowerTrapController.EndLightObjectName);
+        lightObject.transform.SetParent(root.transform, false);
+        var light = lightObject.AddComponent<Light>();
+        light.enabled = false;
+        Set("endLight", light);
         Set("localEulerAngles", Vector3.zero);
         Set("activationDelay", 0f);
         Set("firingDuration", 2f);
@@ -280,6 +285,44 @@ public sealed class FlamethrowerTrapTests
     }
 
     [Test]
+    public void EndLightFollowsTheFlameFrontAndStaysOutsideObliqueWalls()
+    {
+        Set("fillTime", 1f);
+        var wall = Create("Angled Wall", Vector3.forward * 3f).AddComponent<BoxCollider>();
+        wall.size = new Vector3(8f, 8f, 0.5f);
+        wall.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
+        HitAt(0.2f);
+        Assert.That(trap.EndLight.enabled, Is.True);
+        Assert.That(Vector3.Distance(trap.JetOrigin, trap.EndLight.transform.position), Is.LessThan(trap.ResolvedLength * 0.3f));
+        HitAt(1.1f);
+        Assert.That(wall.Raycast(new Ray(trap.JetOrigin, trap.JetDirection), out RaycastHit hit, trap.Range), Is.True);
+        Assert.That(Vector3.Dot(trap.EndLight.transform.position - hit.point, hit.normal), Is.GreaterThan(0.19f));
+        Vector3 impactLight = trap.EndLight.transform.position;
+        Set("angularAmplitude", Vector3.up * 90f);
+        Set("movementPeriod", 4f);
+        HitAt(1f);
+        Assert.That(Vector3.Distance(trap.EndLight.transform.position, impactLight), Is.GreaterThan(1f));
+    }
+
+    [Test]
+    public void EndLightFadesAtTheLastEndpointAndTurnsOffWithTheFire()
+    {
+        Set("fadeOutDuration", 1f);
+        HitAt(1.9f);
+        float fullIntensity = trap.EndLight.intensity;
+        Vector3 endpoint = trap.EndLight.transform.position;
+        Assert.That(fullIntensity, Is.GreaterThan(0f));
+        HitAt(2.5f);
+        Assert.That(trap.IsEmitting, Is.False);
+        Assert.That(trap.EndLight.enabled, Is.True);
+        Assert.That(trap.EndLight.intensity, Is.EqualTo(fullIntensity * 0.5f).Within(0.001f));
+        Assert.That(Vector3.Distance(trap.EndLight.transform.position, endpoint), Is.LessThan(0.001f));
+        HitAt(3.01f);
+        Assert.That(trap.EndLight.enabled, Is.False);
+        Assert.That(trap.EndLight.intensity, Is.Zero);
+    }
+
+    [Test]
     public void DispenserPrefabUsesTheExistingPivotAndDoesNotAutoPlay()
     {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(FlamethrowerTrapAuthoringUtility.PrefabPath);
@@ -291,6 +334,67 @@ public sealed class FlamethrowerTrapTests
         var effect = prefab.GetComponentInChildren<VisualEffect>(true);
         Assert.That(effect.initialEventName, Is.EqualTo("OnStop"));
         Assert.That(effect.visualEffectAsset, Is.SameAs(AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(FlamethrowerTrapAuthoringUtility.GraphPath)));
+        var audio = (AudioSource)data.FindProperty("flameAudioSource").objectReferenceValue;
+        Assert.That(audio, Is.Not.Null, "AudioSource must exist in the saved prefab before activation.");
+        Assert.That(audio.transform.parent, Is.EqualTo(prefab.transform));
+        Assert.That(audio.name, Is.EqualTo(FlamethrowerTrapController.FlameAudioObjectName));
+        Assert.That(audio.playOnAwake, Is.False);
+        Assert.That(audio.dopplerLevel, Is.Zero);
+        Assert.That(prefab.GetComponentsInChildren<AudioSource>(true).Length, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void AudioAuthoringReusesDedicatedSourceWithoutChangingOtherAudio()
+    {
+        var unrelated = new GameObject("Other Audio");
+        unrelated.transform.SetParent(trap.transform, false);
+        AudioSource other = unrelated.AddComponent<AudioSource>();
+        other.volume = 0.37f;
+        var dedicated = new GameObject(FlamethrowerTrapController.FlameAudioObjectName);
+        dedicated.transform.SetParent(trap.transform, false);
+        AudioSource source = dedicated.AddComponent<AudioSource>();
+
+        FlamethrowerTrapAuthoringUtility.PrepareAudioSource(trap.gameObject);
+        FlamethrowerTrapAuthoringUtility.PrepareAudioSource(trap.gameObject);
+
+        var data = new SerializedObject(trap);
+        Assert.That(data.FindProperty("flameAudioSource").objectReferenceValue, Is.SameAs(source));
+        Assert.That(trap.GetComponentsInChildren<AudioSource>(true).Length, Is.EqualTo(2));
+        Assert.That(other.volume, Is.EqualTo(0.37f).Within(0.001f));
+        Assert.That(source.playOnAwake, Is.False);
+    }
+
+    [Test]
+    public void EditorPreviewDoesNotCreateRuntimeAudio()
+    {
+        typeof(FlamethrowerTrapController).GetMethod("PrepareFlameAudio", Private).Invoke(trap, null);
+        Assert.That(trap.GetComponentsInChildren<AudioSource>(true), Is.Empty);
+    }
+
+    [Test]
+    public void FlamethrowerClipIsPreparedBeforePlayback()
+    {
+        var importer = (AudioImporter)AssetImporter.GetAtPath("Assets/SFX/Flamethrower.mp3");
+        Assert.That(importer.defaultSampleSettings.preloadAudioData, Is.True);
+        Assert.That(importer.loadInBackground, Is.True);
+    }
+
+    [Test]
+    public void ShaderWarmupContainsOnlyCapturedFlamethrowerRenderStates()
+    {
+        var states = Resources.Load<UnityEngine.Experimental.Rendering.GraphicsStateCollection>(FlamethrowerTrapController.ShaderWarmupResourceName);
+        Assert.That(states, Is.Not.Null, "DX12 warmup must ship with the captured VFX states.");
+        Assert.That(states.graphicsDeviceType, Is.EqualTo(UnityEngine.Rendering.GraphicsDeviceType.Direct3D12));
+        Assert.That(states.qualityLevelName, Is.EqualTo("PC"));
+        Assert.That(states.totalGraphicsStateCount, Is.GreaterThan(0));
+        var variants = new List<UnityEngine.Experimental.Rendering.GraphicsStateCollection.ShaderVariant>();
+        states.GetVariants(variants);
+        Assert.That(variants, Is.Not.Empty);
+        foreach (var variant in variants)
+        {
+            Assert.That(variant.shader, Is.Not.Null);
+            Assert.That(variant.shader.name, Does.Contain("Flamethrower"), "World/UI shader states must not be included in the targeted warmup.");
+        }
     }
 
     private void HitAt(float elapsed)

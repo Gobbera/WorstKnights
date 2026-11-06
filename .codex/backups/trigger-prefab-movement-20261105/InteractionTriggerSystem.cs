@@ -1,0 +1,148 @@
+using Photon.Pun;
+using UnityEngine;
+using UnityEngine.Events;
+
+[DisallowMultipleComponent]
+[AddComponentMenu("World/Mechanisms/Interaction Trigger System")]
+public sealed partial class InteractionTriggerSystem : MonoBehaviourPunCallbacks
+{
+    [SerializeField] private InteractionTriggerType triggerType;
+    [SerializeField] private GameObject mechanismPrefab;
+    [SerializeField, HideInInspector] private InteractionTriggerMechanism mechanism;
+    [SerializeField] private MonoBehaviour linkedSystem;
+    [SerializeField] private InteractionTriggerMode activationMode = InteractionTriggerMode.Momentary;
+    [SerializeField] private bool startsActive;
+    [SerializeField, Min(0f)] private float interactionCooldown = 0.25f;
+    [SerializeField, Min(0.02f)] private float momentaryDuration = 0.3f;
+    [SerializeField] private bool waitForLinkedSystem = true;
+    [SerializeField] private string interactionPrompt = "[{key}] Acionar";
+    [SerializeField, Min(0f)] private float pressDistance = 0.04f;
+    [SerializeField] private float leverAngle = -50f;
+    [SerializeField, Min(0.01f)] private float movementSpeed = 0.25f;
+    [SerializeField, Min(1f)] private float rotationSpeed = 180f;
+    [SerializeField] private PressureTriggerFilter pressureFilter = PressureTriggerFilter.Players;
+    [SerializeField] private GameObject specificObject;
+    [SerializeField] private LayerMask occupancyMask = Physics.DefaultRaycastLayers;
+    [SerializeField, Min(0.02f)] private float detectionHeight = 0.2f;
+    [SerializeField, Min(0f)] private float footTolerance = 0.08f;
+    [SerializeField] private bool localOnly;
+    [SerializeField] private UnityEvent onUsed = new UnityEvent();
+    [SerializeField] private UnityEvent onActivated = new UnityEvent();
+    [SerializeField] private UnityEvent onDeactivated = new UnityEvent();
+    [SerializeField] private UnityEvent onStateA = new UnityEvent();
+    [SerializeField] private UnityEvent onStateB = new UnityEvent();
+
+    private bool initialized;
+    private double changedAt, readyAt;
+    public bool IsActive { get; private set; }
+    public bool HasBeenUsed { get; private set; }
+    public InteractionTriggerType TriggerType => triggerType;
+    public InteractionTriggerMode Mode => triggerType == InteractionTriggerType.PressureButton ? InteractionTriggerMode.Momentary : activationMode;
+    public InteractionTriggerMechanism Mechanism => mechanism;
+    public MonoBehaviour LinkedSystem => linkedSystem;
+    public UnityEvent OnUsed => onUsed;
+    public UnityEvent OnActivated => onActivated;
+    public UnityEvent OnDeactivated => onDeactivated;
+    public UnityEvent OnStateA => onStateA;
+    public UnityEvent OnStateB => onStateB;
+    public string InteractionPrompt => interactionPrompt;
+    public bool IsBusy => Clock < readyAt || TargetBusy;
+    public bool CanInteract => isActiveAndEnabled && triggerType != InteractionTriggerType.PressureButton
+        && (Mode != InteractionTriggerMode.Momentary || !IsActive) && CanChangeState(!IsActive);
+    private IInteractionTriggerTarget Target => linkedSystem != null ? linkedSystem as IInteractionTriggerTarget : null;
+    private bool TargetBusy => waitForLinkedSystem && linkedSystem != null && Target != null && Target.IsTriggerBusy;
+    private bool Online => Application.IsPlaying(gameObject) && !localOnly && PhotonNetwork.InRoom && !PhotonNetwork.OfflineMode;
+    private bool HasAuthority => !Online || PhotonNetwork.IsMasterClient;
+    private double Clock => Online ? PhotonNetwork.Time : Application.IsPlaying(gameObject) ? Time.timeAsDouble : Time.realtimeSinceStartupAsDouble;
+
+    private void Awake() => Initialize();
+    public override void OnEnable()
+    {
+        base.OnEnable();
+        Initialize();
+        RestoreNetworkState();
+        mechanism?.SetState(IsActive, false, true, pressDistance, leverAngle);
+    }
+    private void Initialize()
+    {
+        if (initialized) return;
+        if (mechanism == null) mechanism = GetComponentInChildren<InteractionTriggerMechanism>(true);
+        if (mechanism == null && Application.IsPlaying(gameObject) && mechanismPrefab != null)
+            mechanism = Instantiate(mechanismPrefab, transform, false).GetComponent<InteractionTriggerMechanism>();
+        IsActive = (Mode == InteractionTriggerMode.Toggle || Mode == InteractionTriggerMode.AlternateAB) && startsActive;
+        initialized = true;
+        mechanism?.CapturePose();
+        mechanism?.SetState(IsActive, false, true, pressDistance, leverAngle);
+        EnsureNetworkKey();
+    }
+    private void OnValidate()
+    {
+        interactionCooldown = Mathf.Max(0f, interactionCooldown);
+        momentaryDuration = Mathf.Max(0.02f, momentaryDuration);
+        pressDistance = Mathf.Max(0f, pressDistance);
+        movementSpeed = Mathf.Max(0.01f, movementSpeed);
+        rotationSpeed = Mathf.Max(1f, rotationSpeed);
+        detectionHeight = Mathf.Max(0.02f, detectionHeight);
+        footTolerance = Mathf.Max(0f, footTolerance);
+    }
+    private void FixedUpdate() => RefreshTrigger(Time.fixedDeltaTime);
+    private void RefreshTrigger(float deltaTime)
+    {
+        Initialize();
+        if (HasAuthority)
+        {
+            if (triggerType == InteractionTriggerType.PressureButton)
+            {
+                FindOccupants();
+                if (!IsActive && occupants.Count > 0 && CanChangeState(true)) ChangeState(true, occupants[0], true);
+                if (IsActive && occupants.Count == 0 && Clock >= readyAt && !TargetBusy) ChangeState(false, null, false);
+            }
+            else if (Mode == InteractionTriggerMode.Momentary && IsActive && Clock >= changedAt + momentaryDuration && !TargetBusy)
+                ChangeState(false, null, false);
+        }
+        if (mechanism != null && mechanism.isActiveAndEnabled) mechanism.MovePresentation(deltaTime, movementSpeed, rotationSpeed);
+    }
+    public bool TryUse(GameObject activator)
+    {
+        Initialize();
+        if (!CanInteract) return false;
+        if (Online && !PhotonNetwork.IsMasterClient) return RequestMasterUse(activator);
+        var player = activator != null ? activator.GetComponentInParent<PlayerHealth>() : null;
+        if (player != null && !player.IsAlive) return false;
+        ChangeState(Mode == InteractionTriggerMode.Momentary || Mode == InteractionTriggerMode.Once || !IsActive, activator, true);
+        return true;
+    }
+    [ContextMenu("Use Trigger")]
+    public void UseTrigger() => TryUse(null);
+
+    private bool CanChangeState(bool active)
+    {
+        if (mechanism == null || !mechanism.isActiveAndEnabled || mechanism.Type != triggerType || !mechanism.gameObject.activeInHierarchy || IsBusy) return false;
+        if (Mode == InteractionTriggerMode.Once && HasBeenUsed) return false;
+        if (linkedSystem != null && Target == null) return false;
+        return !(active || Mode == InteractionTriggerMode.AlternateAB) || Target == null || (linkedSystem.isActiveAndEnabled && Target.CanTrigger);
+    }
+    private void ChangeState(bool active, GameObject activator, bool used)
+    {
+        IsActive = active;
+        HasBeenUsed |= used;
+        changedAt = Clock;
+        readyAt = Clock + interactionCooldown;
+        stateSequence++;
+        mechanism?.SetState(active, true, false, pressDistance, leverAngle);
+        PublishNetworkState(used);
+        Target?.ReceiveTrigger(new InteractionTriggerContext(this, activator));
+        if (used) onUsed.Invoke();
+        if (active) onActivated.Invoke(); else onDeactivated.Invoke();
+        if (Mode == InteractionTriggerMode.AlternateAB)
+        {
+            if (active) onStateB.Invoke(); else onStateA.Invoke();
+        }
+    }
+    public override void OnDisable()
+    {
+        occupants.Clear();
+        mechanism?.RestorePose();
+        base.OnDisable();
+    }
+}

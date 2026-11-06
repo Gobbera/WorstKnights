@@ -2,24 +2,50 @@ using UnityEngine;
 
 public sealed partial class FlamethrowerTrapController
 {
-    private AudioSource flameAudioSource;
+    public const string FlameAudioObjectName = "Flamethrower Audio";
+    private AudioSource preparedFlameAudioSource;
+    private AudioCue preparedFlameAudioCue;
     private AudioCue activeFlameAudioCue;
     private AudioCue missingClipWarningCue;
 
+    private void PrepareFlameAudio()
+    {
+        if (!Application.IsPlaying(gameObject)) return;
+
+        if (flameAudioSource == null)
+        {
+            // Compatibility for older dispensers: create their dedicated source at startup.
+            Transform existing = transform.Find(FlameAudioObjectName);
+            if (existing == null)
+            {
+                existing = new GameObject(FlameAudioObjectName).transform;
+                existing.SetParent(transform, false);
+            }
+            flameAudioSource = existing.GetComponent<AudioSource>();
+            if (flameAudioSource == null) flameAudioSource = existing.gameObject.AddComponent<AudioSource>();
+        }
+
+        if (preparedFlameAudioSource == flameAudioSource && preparedFlameAudioCue == flameAudioCue) return;
+        flameAudioSource.playOnAwake = false;
+        flameAudioSource.dopplerLevel = 0f;
+        if (flameAudioCue != null && flameAudioCue.Clips != null)
+            foreach (AudioClip clip in flameAudioCue.Clips)
+                if (clip != null && clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
+        preparedFlameAudioSource = flameAudioSource;
+        preparedFlameAudioCue = flameAudioCue;
+    }
+
     private void SyncFlameAudio()
     {
-        if (!Application.IsPlaying(gameObject) || !isActiveAndEnabled || flameAudioCue == null)
+        if (!Application.IsPlaying(gameObject) || !isActiveAndEnabled || flameAudioCue == null || flameAudioSource == null)
         {
             StopFlameAudio();
             return;
         }
 
-        if (flameAudioSource != null)
-        {
-            flameAudioSource.transform.position = JetOrigin;
-            // A non-looping cue plays once per emission, even after its clip finishes.
-            if (activeFlameAudioCue == flameAudioCue) return;
-        }
+        flameAudioSource.transform.position = JetOrigin;
+        // A non-looping cue plays once per emission, even after its clip finishes.
+        if (activeFlameAudioCue == flameAudioCue) return;
 
         StopFlameAudio();
         AudioClip clip = flameAudioCue.GetRandomClip();
@@ -33,14 +59,6 @@ public sealed partial class FlamethrowerTrapController
             return;
         }
 
-        if (flameAudioSource == null)
-        {
-            var audioObject = new GameObject("Flamethrower Audio");
-            audioObject.transform.SetParent(transform, false);
-            flameAudioSource = audioObject.AddComponent<AudioSource>();
-            flameAudioSource.playOnAwake = false;
-            flameAudioSource.dopplerLevel = 0f;
-        }
         flameAudioSource.transform.position = JetOrigin;
         flameAudioCue.ConfigureAudioSource(flameAudioSource, clip);
         flameAudioSource.Play();

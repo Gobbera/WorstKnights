@@ -8,7 +8,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [AddComponentMenu("World/Platforms/Platform Controller")]
-public class PlatformController : MonoBehaviourPunCallbacks
+public partial class PlatformController : MonoBehaviourPunCallbacks
 {
     private const string RoomPropertyKeyPrefix = "platform:";
     private const double TimeEpsilon = 0.0001d;
@@ -17,7 +17,8 @@ public class PlatformController : MonoBehaviourPunCallbacks
     {
         Static = 0,
         PingPong = 1,
-        OneWay = 2
+        OneWay = 2,
+        TwoPosition = 3
     }
 
     public enum PlatformAxis
@@ -73,7 +74,8 @@ public class PlatformController : MonoBehaviourPunCallbacks
             bool breakTriggered,
             bool isBroken,
             double breakExecuteTime,
-            double respawnExecuteTime)
+            double respawnExecuteTime,
+            bool movingTowardEnd = true)
         {
             StateSequence = stateSequence;
             MovementElapsedTime = movementElapsedTime;
@@ -83,6 +85,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
             IsBroken = isBroken;
             BreakExecuteTime = breakExecuteTime;
             RespawnExecuteTime = respawnExecuteTime;
+            MovingTowardEnd = movingTowardEnd;
         }
 
         public int StateSequence { get; }
@@ -93,6 +96,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
         public bool IsBroken { get; }
         public double BreakExecuteTime { get; }
         public double RespawnExecuteTime { get; }
+        public bool MovingTowardEnd { get; }
     }
 
     [Header("Identity")]
@@ -108,6 +112,11 @@ public class PlatformController : MonoBehaviourPunCallbacks
     [SerializeField] private PlatformActivationMode activationMode = PlatformActivationMode.AlwaysActive;
     [SerializeField] private DoorSignalSource[] activationSignals = Array.Empty<DoorSignalSource>();
     [SerializeField] private PlatformSignalRequirementMode signalRequirement = PlatformSignalRequirementMode.Any;
+    [Header("Movement Audio")]
+    [Tooltip("Loops while the platform moves and stops at rest, on break or disable.")]
+    [SerializeField] private AudioCue movementAudioCue;
+    [Tooltip("Dedicated source prepared before movement starts. Do not share it with other audio.")]
+    [SerializeField] private AudioSource movementAudioSource;
     [SerializeField] [HideInInspector] private PlatformAxis movementAxis = PlatformAxis.X;
     [SerializeField] [HideInInspector] private PlatformDirection movementDirection = PlatformDirection.Positive;
     [SerializeField] [HideInInspector] [Min(0f)] private float movementDistance = 2f;
@@ -141,6 +150,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
     private double movementElapsedTime;
     private double movementReferenceTime;
     private bool movementActive;
+    private bool movingTowardEnd = true;
     private double totalForwardDuration;
     private int lastAppliedStateSequence;
     private Collider[] cachedColliders = Array.Empty<Collider>();
@@ -152,6 +162,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
     public string DisplayName => string.IsNullOrWhiteSpace(platformName) ? gameObject.name : platformName;
     public bool IsBreakable => breakable;
     public bool IsBroken => isBroken;
+    public bool IsMoving => IsMovingAtTime(GetCurrentSimulationTime());
 
     private string NetworkSceneId
     {
@@ -177,6 +188,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
         EnsureMovementPointListInitialized();
         CacheRuntimeState();
         ResetPlatformStateForRuntime(GetCurrentSimulationTime());
+        PrepareMovementAudio();
     }
 
     private void Start()
@@ -243,10 +255,12 @@ public class PlatformController : MonoBehaviourPunCallbacks
         }
 
         UpdateMotionAndCarry(now);
+        SyncMovementAudio(now);
     }
 
     public override void OnDisable()
     {
+        StopMovementAudio();
         carriedPassengerBodies.Clear();
         base.OnDisable();
     }
@@ -372,9 +386,25 @@ public class PlatformController : MonoBehaviourPunCallbacks
             return SetMovementActive(false, now);
 
         double currentElapsedTime = GetCurrentMovementElapsedTime(now);
+        if (motionMode == PlatformMotionMode.TwoPosition)
+        {
+            bool towardEnd = IsMovementActivationSatisfied();
+            bool changed = false;
+            if (movingTowardEnd != towardEnd)
+            {
+                SetMovementElapsed(now, currentElapsedTime);
+                movingTowardEnd = towardEnd;
+                changed = true;
+            }
+            bool atDestination = towardEnd ? currentElapsedTime + TimeEpsilon >= totalForwardDuration : currentElapsedTime <= TimeEpsilon;
+            double destination = towardEnd ? totalForwardDuration : 0d;
+            if (atDestination && (movementActive || Math.Abs(movementElapsedTime - destination) > TimeEpsilon))
+                changed |= SetMovementElapsed(now, destination);
+            return SetMovementActive(!atDestination, now) || changed;
+        }
         if (motionMode == PlatformMotionMode.OneWay && currentElapsedTime + TimeEpsilon >= totalForwardDuration)
         {
-            bool clampedElapsed = SetMovementElapsed(now, totalForwardDuration);
+            bool clampedElapsed = Math.Abs(movementElapsedTime - totalForwardDuration) > TimeEpsilon && SetMovementElapsed(now, totalForwardDuration);
             bool stoppedMovement = SetMovementActive(false, now);
             return clampedElapsed || stoppedMovement;
         }
@@ -427,6 +457,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
 
         SetMovementActive(false, now);
         isBroken = true;
+        StopMovementAudio();
         breakTriggered = false;
         breakExecuteTime = double.PositiveInfinity;
         DisableVisualAndCollisionState();
@@ -481,7 +512,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
         if (movementPathPoints.Count == 1 || totalForwardDuration <= TimeEpsilon)
             return movementPathPoints[0];
 
-        if (motionMode == PlatformMotionMode.OneWay)
+        if (motionMode == PlatformMotionMode.OneWay || motionMode == PlatformMotionMode.TwoPosition)
             return EvaluateForwardPathPosition(ClampOneWayElapsedTime(elapsedTime));
 
         double cycleDuration = totalForwardDuration * 2d;
@@ -534,9 +565,10 @@ public class PlatformController : MonoBehaviourPunCallbacks
     {
         double effectiveElapsedTime = movementElapsedTime;
         if (movementActive)
-            effectiveElapsedTime += Math.Max(0d, now - movementReferenceTime);
+            effectiveElapsedTime += Math.Max(0d, now - movementReferenceTime)
+                * (motionMode == PlatformMotionMode.TwoPosition && !movingTowardEnd ? -1d : 1d);
 
-        return motionMode == PlatformMotionMode.OneWay
+        return motionMode == PlatformMotionMode.OneWay || motionMode == PlatformMotionMode.TwoPosition
             ? ClampOneWayElapsedTime(effectiveElapsedTime)
             : Math.Max(0d, effectiveElapsedTime);
     }
@@ -554,7 +586,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
 
     private bool SetMovementElapsed(double now, double targetElapsedTime)
     {
-        double clampedElapsedTime = motionMode == PlatformMotionMode.OneWay
+        double clampedElapsedTime = motionMode == PlatformMotionMode.OneWay || motionMode == PlatformMotionMode.TwoPosition
             ? ClampOneWayElapsedTime(targetElapsedTime)
             : Math.Max(0d, targetElapsedTime);
 
@@ -572,6 +604,15 @@ public class PlatformController : MonoBehaviourPunCallbacks
             return 0d;
 
         return Math.Max(0d, Math.Min(totalForwardDuration, elapsedTime));
+    }
+
+    private bool IsMovingAtTime(double now)
+    {
+        if (!isActiveAndEnabled || isBroken || !movementActive || !HasValidMovementPath()) return false;
+        double elapsed = GetCurrentMovementElapsedTime(now);
+        if (motionMode == PlatformMotionMode.TwoPosition)
+            return movingTowardEnd ? elapsed < totalForwardDuration - TimeEpsilon : elapsed > TimeEpsilon;
+        return motionMode != PlatformMotionMode.OneWay || elapsed < totalForwardDuration - TimeEpsilon;
     }
 
     private bool IsMovementActivationSatisfied()
@@ -685,6 +726,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
         movementElapsedTime = 0d;
         movementReferenceTime = now;
         movementActive = false;
+        movingTowardEnd = true;
     }
 
     private void BuildMovementPath(
@@ -1033,7 +1075,8 @@ public class PlatformController : MonoBehaviourPunCallbacks
             breakTriggered,
             isBroken,
             breakExecuteTime,
-            respawnExecuteTime);
+            respawnExecuteTime,
+            movingTowardEnd);
 
         Hashtable roomState = new Hashtable
         {
@@ -1051,11 +1094,12 @@ public class PlatformController : MonoBehaviourPunCallbacks
         bool wasBroken = isBroken;
 
         lastAppliedStateSequence = snapshot.StateSequence;
-        movementElapsedTime = motionMode == PlatformMotionMode.OneWay
+        movementElapsedTime = motionMode == PlatformMotionMode.OneWay || motionMode == PlatformMotionMode.TwoPosition
             ? ClampOneWayElapsedTime(snapshot.MovementElapsedTime)
             : Math.Max(0d, snapshot.MovementElapsedTime);
         movementReferenceTime = snapshot.MovementReferenceTime;
         movementActive = snapshot.MovementActive && !snapshot.IsBroken;
+        movingTowardEnd = snapshot.MovingTowardEnd;
         breakTriggered = snapshot.BreakTriggered;
         isBroken = snapshot.IsBroken;
         breakExecuteTime = snapshot.BreakExecuteTime;
@@ -1074,6 +1118,7 @@ public class PlatformController : MonoBehaviourPunCallbacks
 
         ApplyMotionPoseForCurrentState(GetCurrentSimulationTime());
         ResetWorldPositionTracking();
+        SyncMovementAudio(GetCurrentSimulationTime());
     }
 
     private string BuildRoomPropertyKey()
@@ -1100,7 +1145,8 @@ public class PlatformController : MonoBehaviourPunCallbacks
             snapshot.BreakTriggered ? "1" : "0",
             snapshot.IsBroken ? "1" : "0",
             EncodeDouble(snapshot.BreakExecuteTime),
-            EncodeDouble(snapshot.RespawnExecuteTime));
+            EncodeDouble(snapshot.RespawnExecuteTime),
+            snapshot.MovingTowardEnd ? "1" : "0");
     }
 
     private bool TryDecodeStateSnapshot(object propertyValue, out PlatformStateSnapshot snapshot)
@@ -1111,8 +1157,11 @@ public class PlatformController : MonoBehaviourPunCallbacks
             return false;
 
         string[] tokens = encodedState.Split('|');
-        if (tokens.Length != 8)
+        if (tokens.Length != 8 && tokens.Length != 9)
             return false;
+
+        bool snapshotMovingTowardEnd = true;
+        if (tokens.Length == 9 && !TryDecodeBool(tokens[8], out snapshotMovingTowardEnd)) return false;
 
         if (!int.TryParse(tokens[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int stateSequence)
             || !double.TryParse(tokens[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double movementElapsed)
@@ -1134,7 +1183,8 @@ public class PlatformController : MonoBehaviourPunCallbacks
             snapshotBreakTriggered,
             snapshotIsBroken,
             snapshotBreakExecuteTime,
-            snapshotRespawnExecuteTime);
+            snapshotRespawnExecuteTime,
+            snapshotMovingTowardEnd);
         return true;
     }
 

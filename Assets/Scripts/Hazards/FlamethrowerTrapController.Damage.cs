@@ -23,9 +23,17 @@ public sealed partial class FlamethrowerTrapController
     {
         int count = CastObstructions(origin, direction, distance);
         float nearest = distance;
+        terminalSurfaceNormal = Vector3.zero;
         for (int i = 0; i < count; i++)
             if (IsObstruction(obstructionHits[i].collider))
-                nearest = Mathf.Min(nearest, Mathf.Max(0f, obstructionHits[i].distance - 0.01f));
+            {
+                float clipped = Mathf.Max(0f, obstructionHits[i].distance - 0.01f);
+                if (clipped <= nearest)
+                {
+                    nearest = clipped;
+                    terminalSurfaceNormal = obstructionHits[i].normal;
+                }
+            }
         return nearest;
     }
 

@@ -1,0 +1,19 @@
+EDITMODE original=Assets/Scenes/Map3.unity dirty=False
+PASS LookingDownDamagesTheLowerAimedTargetInsteadOfTheHorizontalTarget
+PASS LookingUpDamagesTheUpperAimedTargetInsteadOfTheHorizontalTarget
+PASS TiltedArcPreservesItsLateralOpeningAtDifferentPitchAndYawAngles
+PASS HalfHeightIsMeasuredRelativeToTheAimedPlane
+PASS ZeroHalfHeightDisablesOnlyTheAdditionalPlaneThicknessLimit
+PASS DisablingVerticalAimKeepsTheArcHorizontal
+PASS NearAndExactlyVerticalDirectionsRemainFiniteAndCanHit
+PASS TargetsBehindTheAimedArcAndBeyondRangeAreRejected
+PASS ImpactPointUsesTheAimedColliderAndDirection
+PASS MultipleCollidersReceiveOneHitPerAttackWindow
+PASS BallAndBoxContinueFollowingVerticalAim
+PASS EveryAuthoredPrefabComboStepCanReachStandingGroundWhenAimedDown
+PASS EditMode passed=12 failed=0 originalDirty=False
+PASS Actual Player prefab camera height=1,758057; combo ranges=1,8,1,8,1,8
+PASS Play: all three actual prefab combo steps hit the ground when looking down; hit point/direction follow the aimed arc.
+PASS Play: all three combo steps hit the upper target when looking up and do not hit the ground again.
+PASS Play: disabling Use Vertical Camera Aim restores horizontal attack direction.
+PASS RESTORED Assets/Scenes/Map3.unity dirty=False

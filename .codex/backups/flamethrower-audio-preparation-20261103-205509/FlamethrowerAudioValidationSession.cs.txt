@@ -1,0 +1,254 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class FlamethrowerAudioValidationSession
+{
+    const string Root = "C:/Git/Unity/WorstKnights/";
+    const string Request = Root + "Temp/FlamethrowerAudioValidation.request";
+    const string Result = Root + ".codex/diagnostics/flamethrower-audio-preparation-20261103.txt";
+    const string Preview = "Assets/Tests/FlamethrowerAudioValidation.unity";
+    const string Backup = Root + ".codex/backups/flamethrower-audio-preparation-20261103-205509/";
+    const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    static FlamethrowerTrapController trap;
+    static AudioSource source;
+    static AudioCue shortCue;
+    static AudioClip shortClip;
+    static int stage, sourceId;
+    static float changedAt;
+    static double deadline;
+
+    static FlamethrowerAudioValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("FlameAudio.Restore",false)) return;
+            SessionState.SetBool("FlameAudio.Restore",false);
+            Scene original = SceneManager.GetSceneByPath(SessionState.GetString("FlameAudio.Original","Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            Scene preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview,true);
+            AssetDatabase.DeleteAsset(Preview);
+            File.AppendAllText(Result,"\nRESTORED " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+
+    static void Update()
+    {
+        if (SessionState.GetBool("FlameAudio.Play",false) && EditorApplication.isPlaying)
+        {
+            try { Tick(); }
+            catch (Exception error) { File.AppendAllText(Result,"\nPLAY FAILED " + error); EndPlay(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Editor is already in Play Mode.");
+            if (command == "configure") Configure();
+            else if (command == "play") BeginPlay();
+        }
+        catch (Exception error) { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Result)); File.AppendAllText(Result,"\nFAILED " + error); }
+    }
+
+    static void Check(bool condition,string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+    }
+    static void Set(object component,string field,object value) => component.GetType().GetField(field,Private).SetValue(component,value);
+    static void Log(string message) => File.AppendAllText(Result,"\nPASS " + message);
+
+    static void Configure()
+    {
+        Directory.CreateDirectory(Backup);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Result));
+        Scene original = SceneManager.GetActiveScene();
+        EditorSceneManager.SaveScene(original,Backup + "Map3.live-before-audio-preparation.unity",true);
+        File.WriteAllText(Result,"CONFIGURE original=" + original.path + " dirty=" + original.isDirty);
+        GameObject root = PrefabUtility.LoadPrefabContents(FlamethrowerTrapAuthoringUtility.PrefabPath);
+        try
+        {
+            FlamethrowerTrapAuthoringUtility.PrepareAudioSource(root);
+            PrefabUtility.SaveAsPrefabAsset(root,FlamethrowerTrapAuthoringUtility.PrefabPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+        foreach (var instance in Resources.FindObjectsOfTypeAll<FlamethrowerTrapController>().Where(t=>t.gameObject.scene==original))
+        {
+            var data = new SerializedObject(instance);
+            Check(data.FindProperty("flameAudioSource").objectReferenceValue != null, "Scene instance did not inherit authored AudioSource: " + instance.name);
+            Log("scene instance inherits AudioSource: " + instance.name);
+        }
+        var testScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Additive);
+        int passed=0;
+        try
+        {
+            foreach (var method in typeof(FlamethrowerTrapTests).GetMethods().Where(m=>m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute),false).Length>0))
+            {
+                var fixture = new FlamethrowerTrapTests();
+                try { fixture.SetUp(); method.Invoke(fixture,null); passed++; Log("EditMode " + method.Name); }
+                finally { fixture.TearDown(); }
+            }
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(testScene,true); }
+        Log("EditMode total=" + passed + "; originalDirty=" + original.isDirty);
+    }
+
+    static void BeginPlay()
+    {
+        Scene original = SceneManager.GetActiveScene();
+        SessionState.SetString("FlameAudio.Original",original.path);
+        Scene preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Additive);
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(FlamethrowerTrapAuthoringUtility.PrefabPath));
+        instance.name = "Flamethrower Audio Validation";
+        instance.transform.position = new Vector3(1000,1000,1000);
+        var controller = instance.GetComponent<FlamethrowerTrapController>();
+        var data = new SerializedObject(controller);
+        data.FindProperty("localOnly").boolValue = true;
+        data.FindProperty("damagePerSecond").floatValue = 0;
+        data.FindProperty("activationDelay").floatValue = 0.15f;
+        data.FindProperty("firingDuration").floatValue = 2f;
+        data.FindProperty("cooldown").floatValue = 0.05f;
+        data.ApplyModifiedPropertiesWithoutUndo();
+        var audio = (AudioSource)data.FindProperty("flameAudioSource").objectReferenceValue;
+        audio.mute = true;
+        var camera = new GameObject("Flamethrower Audio Validation Camera").AddComponent<Camera>();
+        camera.gameObject.AddComponent<AudioListener>();
+        camera.cullingMask = 0;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.black;
+        EditorSceneManager.SaveScene(preview,Preview);
+        SessionState.SetBool("FlameAudio.Play",true);
+        EditorApplication.isPlaying = true;
+    }
+
+    static void SameSource()
+    {
+        Check(source.GetInstanceID()==sourceId && trap.GetComponentsInChildren<AudioSource>(true).Length==1,"A firing created/replaced an AudioSource.");
+    }
+
+    static void Tick()
+    {
+        if (trap == null)
+        {
+            Scene preview = SceneManager.GetSceneByPath(Preview);
+            for (int i=0;i<SceneManager.sceneCount;i++)
+                if (SceneManager.GetSceneAt(i)!=preview)
+                    foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            trap = GameObject.Find("Flamethrower Audio Validation").GetComponent<FlamethrowerTrapController>();
+            source = (AudioSource)new SerializedObject(trap).FindProperty("flameAudioSource").objectReferenceValue;
+            sourceId = source.GetInstanceID();
+            deadline = EditorApplication.timeSinceStartup + 30;
+            Check(!source.playOnAwake && !source.isPlaying && !trap.IsEmitting,"Armored trap did not start silent.");
+            SameSource();
+            Log("PlayMode authored source exists and starts silent before activation.");
+        }
+        Check(EditorApplication.timeSinceStartup < deadline,"Timed out waiting for audio validation.");
+        if (stage==0)
+        {
+            var cue = (AudioCue)new SerializedObject(trap).FindProperty("flameAudioCue").objectReferenceValue;
+            if (cue.Clips.Any(c=>c!=null && c.loadState!=AudioDataLoadState.Loaded)) return;
+            Log("PlayMode all cue clips are loaded before first activation.");
+            Check(trap.TryTriggerTrap(),"First trigger rejected.");
+            Check(!source.isPlaying,"Sound played during warning.");
+            stage=1;
+        }
+        else if (stage==1 && trap.IsEmitting && source.isPlaying)
+        {
+            SameSource();
+            trap.transform.position += Vector3.right;
+            trap.RefreshTrap();
+            Check(Vector3.Distance(source.transform.position,trap.JetOrigin)<0.001f,"Audio source did not follow the flame origin.");
+            Log("PlayMode first activation uses the authored source, starts with fire and follows its origin.");
+            stage=2;
+        }
+        else if (stage==2 && !trap.IsEmitting)
+        {
+            Check(!source.isPlaying && source.clip==null,"Natural fire end did not stop/clear audio.");
+            SameSource();
+            Log("PlayMode natural fire end stops audio.");
+            trap.StopTrap();
+            Check(trap.TryTriggerTrap(),"Second trigger rejected.");
+            stage=3;
+        }
+        else if (stage==3 && trap.IsEmitting && source.isPlaying)
+        {
+            SameSource();
+            trap.StopTrap();
+            Check(!source.isPlaying,"Manual stop did not stop audio.");
+            Log("PlayMode second activation reuses source and manual stop silences it.");
+            Check(trap.TryTriggerTrap(),"Third trigger rejected.");
+            stage=4;
+        }
+        else if (stage==4 && trap.IsEmitting && source.isPlaying)
+        {
+            trap.enabled=false;
+            Check(!source.isPlaying,"Disabled trap kept playing audio.");
+            trap.enabled=true;
+            SameSource();
+            Log("PlayMode disable/re-enable stops audio and retains its source.");
+            var legacy = new GameObject("Legacy trap validation");
+            legacy.SetActive(false);
+            var controller = legacy.AddComponent<FlamethrowerTrapController>();
+            Check(legacy.GetComponentsInChildren<AudioSource>(true).Length==0,"Legacy test already had a source.");
+            legacy.SetActive(true);
+            Check(legacy.GetComponentsInChildren<AudioSource>(true).Length==1,"Legacy trap did not prepare its source at startup.");
+            Check(!legacy.GetComponentInChildren<AudioSource>().isPlaying,"Legacy fallback auto-played.");
+            Object.Destroy(legacy);
+            Log("PlayMode legacy trap prepares its fallback at startup before any trigger.");
+            shortClip = AudioClip.Create("Short non-looping flame validation",48000/3,1,48000,false);
+            shortCue = ScriptableObject.CreateInstance<AudioCue>();
+            Set(shortCue,"clips",new[]{shortClip});
+            Set(shortCue,"loop",false);
+            Set(trap,"flameAudioCue",shortCue);
+            Check(trap.TryTriggerTrap(),"Short audio trigger rejected.");
+            stage=5;
+        }
+        else if (stage==5 && trap.IsEmitting && source.isPlaying)
+        {
+            SameSource(); changedAt=Time.time; stage=6;
+        }
+        else if (stage==6 && Time.time-changedAt>0.6f)
+        {
+            trap.RefreshTrap();
+            Check(trap.IsEmitting && !source.isPlaying,"One-shot audio restarted during the same emission.");
+            Log("PlayMode completed one-shot does not restart while fire continues.");
+            trap.StopTrap();
+            Set(shortCue,"loop",true);
+            Check(trap.TryTriggerTrap(),"Loop audio trigger rejected.");
+            stage=7;
+        }
+        else if (stage==7 && trap.IsEmitting && source.isPlaying)
+        {
+            Check(source.loop,"Loop cue was not applied.");
+            changedAt=Time.time; stage=8;
+        }
+        else if (stage==8 && Time.time-changedAt>0.6f)
+        {
+            Check(trap.IsEmitting && source.isPlaying,"Loop audio ended before fire.");
+            SameSource();
+            trap.gameObject.SetActive(false);
+            Check(!source.isPlaying,"Disabled GameObject kept playing audio.");
+            Log("PlayMode loop continues across clip end; disabling GameObject stops it; source count stays one.");
+            EndPlay();
+        }
+    }
+
+    static void EndPlay()
+    {
+        if (shortCue!=null) Object.Destroy(shortCue);
+        if (shortClip!=null) Object.Destroy(shortClip);
+        SessionState.SetBool("FlameAudio.Play",false);
+        SessionState.SetBool("FlameAudio.Restore",true);
+        EditorApplication.isPlaying=false;
+    }
+}

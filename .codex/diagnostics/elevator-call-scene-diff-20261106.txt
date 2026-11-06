@@ -1,0 +1,37 @@
+Compared live Map3 before call configuration with saved scene.
+Added objects: ['1271078388']
+Removed objects: ['1271078385']
+Changed object 1271078384
+--- before
+
++++ after
+
+@@ -9,5 +9,5 @@
+
+   - component: {fileID: 1271078387}
+   - component: {fileID: 1271078386}
+-  - component: {fileID: 1271078385}
++  - component: {fileID: 1271078388}
+   m_Layer: 0
+   m_Name: Interaction Trigger System_Elevator_02
+Changed object 1271078386
+--- before
+
++++ after
+
+@@ -14,5 +14,5 @@
+
+   mechanismPrefab: {fileID: 4592825159569229274, guid: 2ed0890f0a695d4499428307419526bc, type: 3}
+   mechanism: {fileID: 237218912}
+-  linkedSystem: {fileID: 1271078385}
++  linkedSystem: {fileID: 1271078388}
+   activationMode: 0
+   startsActive: 0
+@@ -20,5 +20,5 @@
+
+   momentaryDuration: 1
+   waitForLinkedSystem: 1
+-  interactionPrompt: '[{key}] Activate'
++  interactionPrompt: '[{key}] Call Elevator'
+   pressureFilter: 0
+   specificObject: {fileID: 0}

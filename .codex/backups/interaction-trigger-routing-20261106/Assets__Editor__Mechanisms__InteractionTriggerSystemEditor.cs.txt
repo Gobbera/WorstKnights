@@ -1,0 +1,84 @@
+using System;
+using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
+[CustomEditor(typeof(InteractionTriggerSystem))]
+public sealed class InteractionTriggerSystemEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update();
+        using (new EditorGUI.DisabledScope(true)) EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Script"));
+        var system = (InteractionTriggerSystem)target;
+        Field("triggerType", "Type");
+        var type = (InteractionTriggerType)serializedObject.FindProperty("triggerType").enumValueIndex;
+        var prefabProperty = serializedObject.FindProperty("mechanismPrefab");
+        var prefabs = InteractionTriggerAuthoringUtility.FindPrefabs(type);
+        string[] names = new[] { "Select a prefab..." }.Concat(prefabs.Select(p => p.name)).ToArray();
+        int selected = Array.IndexOf(prefabs, prefabProperty.objectReferenceValue) + 1;
+        int choice = EditorGUILayout.Popup("Prefab", Mathf.Max(0, selected), names);
+        if (choice != selected) prefabProperty.objectReferenceValue = choice == 0 ? null : prefabs[choice - 1];
+        var selectedPrefab = prefabProperty.objectReferenceValue as GameObject;
+        if (selectedPrefab != null && !prefabs.Contains(selectedPrefab))
+            EditorGUILayout.HelpBox("Select a prefab from the chosen category.", MessageType.Warning);
+        using (new EditorGUI.DisabledScope(Application.isPlaying || selectedPrefab == null || !prefabs.Contains(selectedPrefab)))
+        {
+            if (GUILayout.Button("Apply Prefab"))
+            {
+                serializedObject.ApplyModifiedProperties();
+                InteractionTriggerAuthoringUtility.BuildMechanism(system);
+                serializedObject.Update();
+            }
+        }
+        using (new EditorGUI.DisabledScope(selectedPrefab == null))
+            if (GUILayout.Button("Edit Prefab (Movement and Audio)")) AssetDatabase.OpenAsset(selectedPrefab);
+        if (system.Mechanism == null || system.Mechanism.Type != type)
+            EditorGUILayout.HelpBox("Apply a prefab to build a mechanism matching the selected Type.", MessageType.Info);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Linked System", EditorStyles.boldLabel);
+        Field("linkedSystem", "Linked System");
+        var linked = serializedObject.FindProperty("linkedSystem").objectReferenceValue as MonoBehaviour;
+        if (linked != null && linked is not IInteractionTriggerTarget)
+            EditorGUILayout.HelpBox("This component does not accept Interaction Triggers. Use StatuePuzzleController, DoorInteractionTriggerTarget, or leave it empty and configure Outputs.", MessageType.Error);
+        Field("waitForLinkedSystem", "Wait for Linked System");
+        Field("interactionCooldown", "Interaction Cooldown");
+
+        EditorGUILayout.Space();
+        if (type == InteractionTriggerType.PressureButton)
+        {
+            EditorGUILayout.LabelField("Pressure Button Occupancy", EditorStyles.boldLabel);
+            Field("pressureFilter", "Occupant Filter");
+            if (serializedObject.FindProperty("pressureFilter").enumValueIndex == (int)PressureTriggerFilter.SpecificObject) Field("specificObject", "Specific Object");
+            Field("occupancyMask", "Occupancy Mask");
+            Field("detectionHeight", "Detection Height");
+            Field("footTolerance", "Contact Tolerance");
+            EditorGUILayout.HelpBox("Objects accepts dynamic physics bodies without PlayerHealth or EnemyHealth. Anything combines living players, living enemies and those objects; static floors and walls do not press the plate. Specific Object accepts the selected object's colliders and its children.", MessageType.None);
+        }
+        else
+        {
+            EditorGUILayout.LabelField("Activation", EditorStyles.boldLabel);
+            Field("activationMode", "Mode");
+            var mode = (InteractionTriggerMode)serializedObject.FindProperty("activationMode").enumValueIndex;
+            if (mode == InteractionTriggerMode.Toggle || mode == InteractionTriggerMode.AlternateAB) Field("startsActive", mode == InteractionTriggerMode.AlternateAB ? "Start in B" : "Start Active");
+            if (mode == InteractionTriggerMode.Momentary) Field("momentaryDuration", "Momentary Hold Time");
+            Field("interactionPrompt", "Prompt");
+        }
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Outputs (Authority)", EditorStyles.boldLabel);
+        Field("onUsed"); Field("onActivated"); Field("onDeactivated");
+        if (type != InteractionTriggerType.PressureButton && serializedObject.FindProperty("activationMode").enumValueIndex == (int)InteractionTriggerMode.AlternateAB)
+        { Field("onStateA"); Field("onStateB"); }
+        Field("localOnly");
+        serializedObject.ApplyModifiedProperties();
+        if (Application.isPlaying)
+            EditorGUILayout.HelpBox("State: " + (system.IsActive ? "Active / B" : "Inactive / A") + "; Busy: " + system.IsBusy + "; Occupants: " + system.OccupantCount, MessageType.Info);
+    }
+    private void Field(string name, string label = null)
+    {
+        var property = serializedObject.FindProperty(name);
+        if (label == null) EditorGUILayout.PropertyField(property, true);
+        else EditorGUILayout.PropertyField(property, new GUIContent(label), true);
+    }
+}

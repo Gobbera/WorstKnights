@@ -39,9 +39,9 @@ public class PlayerMeleeAttack : MonoBehaviour
         [SerializeField] [Min(0.1f)] private float targetDistance = 1.2f;
         [SerializeField] [Min(0.05f)] private float hitRadius = 1f;
         [Header("Arc Shape")]
-        [SerializeField] [Min(0.1f)] private float arcRange = 1.6f;
-        [SerializeField] [Range(1f, 180f)] private float arcAngle = 120f;
-        [SerializeField] [Min(0f)] private float arcHalfHeight = 1.2f;
+        [SerializeField] [Min(0.1f)] [Tooltip("Maximum candidate radius in meters, measured from Attack Origin.")] private float arcRange = 1.6f;
+        [SerializeField] [Range(1f, 180f)] [Tooltip("Lateral opening in degrees around the aimed attack direction.")] private float arcAngle = 120f;
+        [SerializeField] [Min(0f)] [Tooltip("Maximum distance above or below the aimed arc plane. Use a positive value to bound the hit region. Zero removes this limit and can hit nearby floors even while aiming horizontally; Range still applies.")] private float arcHalfHeight = 0.18f;
         [Header("Box Shape")]
         [SerializeField] [Min(0f)] private float boxCenterDistance = 1.2f;
         [SerializeField] private Vector3 boxSize = new Vector3(0.8f, 0.8f, 0.8f);
@@ -137,7 +137,7 @@ public class PlayerMeleeAttack : MonoBehaviour
     [SerializeField] [HideInInspector] [Min(0.1f)] private float hitRadius = 1f;
     [SerializeField] [HideInInspector] [Min(0.1f)] private float hitDistance = 1.2f;
     [SerializeField] [Min(0f)] private float attackOriginHeight = 1.2f;
-    [SerializeField] private bool useVerticalCameraAim = true;
+    [SerializeField] [Tooltip("Aim melee hit shapes and their previews vertically with the camera. Disable for horizontal attacks.")] private bool useVerticalCameraAim = true;
     [SerializeField] private LayerMask hitMask = Physics.DefaultRaycastLayers;
 
     [Header("Hitbox Preview")]
@@ -715,7 +715,7 @@ public class PlayerMeleeAttack : MonoBehaviour
                     ResolveBoxCenter(attackConfig, origin, attackForward),
                     attackConfig.BoxHalfExtents,
                     hitBuffer,
-                    ResolveBoxRotation(attackForward),
+                    ResolveAttackRotation(attackForward),
                     DestructibleDebrisCollision.ExcludeDebrisLayer(hitMask.value),
                     QueryTriggerInteraction.Ignore);
 
@@ -739,17 +739,18 @@ public class PlayerMeleeAttack : MonoBehaviour
         if (attackConfig.HitShape != PlayerMeleeAttackShape.Arc)
             return true;
 
-        Vector3 forward = ResolvePlanarAttackForward(attackForward);
-        Vector3 referencePoint = ResolveArcReferencePoint(attackConfig, origin, forward, hitCollider);
+        Quaternion arcRotation = ResolveAttackRotation(attackForward);
+        Vector3 referencePoint = ResolveArcReferencePoint(attackConfig, origin, arcRotation, hitCollider);
+        Vector3 localOffset = Quaternion.Inverse(arcRotation) * (referencePoint - origin);
         if (attackConfig.ArcHalfHeight > 0f
-            && Mathf.Abs(referencePoint.y - origin.y) > attackConfig.ArcHalfHeight)
+            && Mathf.Abs(localOffset.y) > attackConfig.ArcHalfHeight)
         {
             return false;
         }
 
-        Vector3 planarOffset = Vector3.ProjectOnPlane(referencePoint - origin, Vector3.up);
+        Vector3 planarOffset = new Vector3(localOffset.x, 0f, localOffset.z);
         float minForwardDot = Mathf.Cos(attackConfig.ArcAngle * 0.5f * Mathf.Deg2Rad);
-        return IsInsideForwardArc(planarOffset, forward, attackConfig.ArcRange, minForwardDot);
+        return IsInsideForwardArc(planarOffset, Vector3.forward, attackConfig.ArcRange, minForwardDot);
     }
 
     private Vector3 ResolveHitPoint(AttackConfig attackConfig, Vector3 origin, Vector3 attackForward, Collider hitCollider)
@@ -757,10 +758,10 @@ public class PlayerMeleeAttack : MonoBehaviour
         switch (attackConfig.HitShape)
         {
             case PlayerMeleeAttackShape.Arc:
-                return ResolveForwardArcHitPoint(
+                return ResolveArcReferencePoint(
                     attackConfig,
                     origin,
-                    ResolvePlanarAttackForward(attackForward),
+                    ResolveAttackRotation(attackForward),
                     hitCollider);
 
             case PlayerMeleeAttackShape.Box:
@@ -808,7 +809,7 @@ public class PlayerMeleeAttack : MonoBehaviour
         return origin + attackForward * attackConfig.BoxCenterDistance;
     }
 
-    private Quaternion ResolveBoxRotation(Vector3 attackForward)
+    private Quaternion ResolveAttackRotation(Vector3 attackForward)
     {
         Vector3 forward = attackForward.sqrMagnitude > 0.0001f ? attackForward.normalized : transform.forward;
         if (forward.sqrMagnitude <= 0.0001f)
@@ -825,26 +826,13 @@ public class PlayerMeleeAttack : MonoBehaviour
         return Quaternion.LookRotation(forward.normalized, up.normalized);
     }
 
-    private Vector3 ResolvePlanarAttackForward(Vector3 attackForward)
-    {
-        Vector3 forward = Vector3.ProjectOnPlane(attackForward, Vector3.up);
-        if (forward.sqrMagnitude > 0.0001f)
-            return forward.normalized;
-
-        forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-        if (forward.sqrMagnitude > 0.0001f)
-            return forward.normalized;
-
-        return Vector3.forward;
-    }
-
     private static Vector3 ResolveArcReferencePoint(
         AttackConfig attackConfig,
         Vector3 origin,
-        Vector3 forward,
+        Quaternion arcRotation,
         Collider hitCollider)
     {
-        Vector3 sampleCenter = origin + forward * (attackConfig.ArcRange * 0.5f);
+        Vector3 sampleCenter = origin + arcRotation * Vector3.forward * (attackConfig.ArcRange * 0.5f);
         if (hitCollider == null)
             return sampleCenter;
 
@@ -865,20 +853,6 @@ public class PlayerMeleeAttack : MonoBehaviour
             return false;
 
         return Vector3.Dot(attackForward, planarOffset.normalized) >= minForwardDot;
-    }
-
-    private static Vector3 ResolveForwardArcHitPoint(
-        AttackConfig attackConfig,
-        Vector3 origin,
-        Vector3 attackForward,
-        Collider hitCollider)
-    {
-        if (hitCollider == null)
-            return origin + attackForward * attackConfig.ArcRange;
-
-        Vector3 sampleCenter = origin + attackForward * (attackConfig.ArcRange * 0.5f);
-        Vector3 closestPoint = hitCollider.ClosestPoint(sampleCenter);
-        return IsFiniteVector(closestPoint) ? closestPoint : sampleCenter;
     }
 
     private static Vector3 ResolveHitPoint(
@@ -1070,7 +1044,7 @@ public class PlayerMeleeAttack : MonoBehaviour
             case PlayerMeleeAttackShape.Arc:
                 DrawForwardArcGizmo(
                     origin,
-                    ResolvePlanarAttackForward(attackForward),
+                    ResolveAttackRotation(attackForward),
                     attackConfig.ArcRange,
                     attackConfig.ArcAngle,
                     attackConfig.ArcHalfHeight);
@@ -1079,7 +1053,7 @@ public class PlayerMeleeAttack : MonoBehaviour
             case PlayerMeleeAttackShape.Box:
                 DrawBoxGizmo(
                     ResolveBoxCenter(attackConfig, origin, attackForward),
-                    ResolveBoxRotation(attackForward),
+                    ResolveAttackRotation(attackForward),
                     attackConfig.BoxSize);
                 break;
 
@@ -1111,19 +1085,21 @@ public class PlayerMeleeAttack : MonoBehaviour
         Gizmos.matrix = previousMatrix;
     }
 
-    private void DrawForwardArcGizmo(Vector3 origin, Vector3 forward, float range, float angle, float halfHeight)
+    private void DrawForwardArcGizmo(Vector3 origin, Quaternion arcRotation, float range, float angle, float halfHeight)
     {
+        Vector3 forward = arcRotation * Vector3.forward;
+        Vector3 up = arcRotation * Vector3.up;
         float safeRange = Mathf.Max(0.1f, range);
         float safeAngle = Mathf.Clamp(angle, 1f, 180f);
         float halfAngle = safeAngle * 0.5f;
-        Vector3 leftDirection = Quaternion.AngleAxis(-halfAngle, Vector3.up) * forward;
-        Vector3 rightDirection = Quaternion.AngleAxis(halfAngle, Vector3.up) * forward;
+        Vector3 leftDirection = Quaternion.AngleAxis(-halfAngle, up) * forward;
+        Vector3 rightDirection = Quaternion.AngleAxis(halfAngle, up) * forward;
 
 #if UNITY_EDITOR
         Handles.color = hitboxGizmoColor;
-        Handles.DrawSolidArc(origin, Vector3.up, leftDirection, safeAngle, safeRange);
+        Handles.DrawSolidArc(origin, up, leftDirection, safeAngle, safeRange);
         Handles.color = new Color(hitboxGizmoColor.r, hitboxGizmoColor.g, hitboxGizmoColor.b, 1f);
-        Handles.DrawWireArc(origin, Vector3.up, leftDirection, safeAngle, safeRange);
+        Handles.DrawWireArc(origin, up, leftDirection, safeAngle, safeRange);
 #endif
 
         Gizmos.color = new Color(hitboxGizmoColor.r, hitboxGizmoColor.g, hitboxGizmoColor.b, 1f);
@@ -1135,7 +1111,7 @@ public class PlayerMeleeAttack : MonoBehaviour
         for (int i = 1; i <= ArcGizmoSegments; i++)
         {
             float t = i / (float)ArcGizmoSegments;
-            Vector3 direction = Quaternion.AngleAxis(Mathf.Lerp(-halfAngle, halfAngle, t), Vector3.up) * forward;
+            Vector3 direction = Quaternion.AngleAxis(Mathf.Lerp(-halfAngle, halfAngle, t), up) * forward;
             Vector3 currentPoint = origin + direction * safeRange;
             Gizmos.DrawLine(previousPoint, currentPoint);
             previousPoint = currentPoint;
@@ -1144,7 +1120,7 @@ public class PlayerMeleeAttack : MonoBehaviour
         if (halfHeight <= 0f)
             return;
 
-        Vector3 verticalOffset = Vector3.up * halfHeight;
+        Vector3 verticalOffset = up * halfHeight;
         Gizmos.DrawLine(origin - verticalOffset, origin + verticalOffset);
     }
 }

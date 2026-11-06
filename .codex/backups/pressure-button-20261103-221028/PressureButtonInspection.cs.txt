@@ -1,0 +1,45 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class PressureButtonInspection
+{
+    const string Output="C:/Git/Unity/WorstKnights/.codex/diagnostics/pressure-button-inspection-20261103.txt";
+    static PressureButtonInspection(){EditorApplication.update+=Inspect;}
+    static string PathOf(Transform t)=>t.parent==null?t.name:PathOf(t.parent)+"/"+t.name;
+    [MenuItem("Tools/Diagnostics/Inspect Pressure Button")]
+    static void Inspect()
+    {
+        if(File.Exists(Output))return;
+        var report=new StringBuilder();
+        try
+        {
+            report.AppendLine("play="+EditorApplication.isPlaying+" selected="+Selection.activeGameObject);
+            foreach(var scene in Enumerable.Range(0,SceneManager.sceneCount).Select(SceneManager.GetSceneAt))report.AppendLine("SCENE "+scene.path+" dirty="+scene.isDirty);
+            var transforms=Resources.FindObjectsOfTypeAll<Transform>().Where(t=>t.gameObject.scene.IsValid()).ToArray();
+            foreach(var root in transforms.Where(t=>t.name.IndexOf("pressure",StringComparison.OrdinalIgnoreCase)>=0||t.name=="Statue Puzzle Button"))
+            {
+                report.AppendLine("CANDIDATE "+PathOf(root)+" prefab="+PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(root.gameObject));
+                foreach(var child in root.GetComponentsInChildren<Transform>(true))
+                {
+                    report.AppendLine("OBJECT "+PathOf(child)+" position="+child.position.ToString("F4")+" local="+child.localPosition.ToString("F4")+" rotation="+child.eulerAngles.ToString("F2")+" scale="+child.lossyScale.ToString("F4")+" layer="+child.gameObject.layer);
+                    report.AppendLine("COMPONENTS "+string.Join(",",child.GetComponents<Component>().Where(c=>c!=null).Select(c=>c.GetType().Name)));
+                    foreach(var renderer in child.GetComponents<Renderer>())report.AppendLine("RENDERER "+renderer.bounds+" materials="+string.Join(",",renderer.sharedMaterials.Where(m=>m!=null).Select(AssetDatabase.GetAssetPath)));
+                    foreach(var collider in child.GetComponents<Collider>())report.AppendLine("COLLIDER "+collider.GetType().Name+" trigger="+collider.isTrigger+" enabled="+collider.enabled+" bounds="+collider.bounds+" body="+collider.attachedRigidbody);
+                }
+            }
+            foreach(var puzzle in Resources.FindObjectsOfTypeAll<StatuePuzzleController>().Where(p=>p.gameObject.scene.IsValid()))
+            {
+                report.AppendLine("PUZZLE "+PathOf(puzzle.transform));
+                for(int i=0;i<puzzle.OnPuzzleFailed.GetPersistentEventCount();i++)report.AppendLine("FAILED EVENT "+puzzle.OnPuzzleFailed.GetPersistentTarget(i)+"."+puzzle.OnPuzzleFailed.GetPersistentMethodName(i));
+            }
+        }
+        catch(Exception error){report.AppendLine(error.ToString());}
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Output));File.WriteAllText(Output,report.ToString());
+    }
+}

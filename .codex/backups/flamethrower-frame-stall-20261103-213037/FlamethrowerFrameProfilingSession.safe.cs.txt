@@ -1,0 +1,191 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEditorInternal;
+using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
+using Object=UnityEngine.Object;
+using GraphicsStateCollection=UnityEngine.Experimental.Rendering.GraphicsStateCollection;
+
+[InitializeOnLoad]
+internal static class FlamethrowerFrameProfilingSession
+{
+    const string Root="C:/Git/Unity/WorstKnights/";
+    const string Folder=Root+".codex/diagnostics/flamethrower-frame-stall-20261103/capture/";
+    const string Backup=Root+".codex/backups/flamethrower-frame-stall-20261103-213037/";
+    const string Request=Root+"Temp/FlamethrowerFrameProfiling.request";
+    const string Preview="Assets/Tests/FlamethrowerFrameProfiling.unity";
+    const BindingFlags Flags=BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic;
+    static GraphicsStateCollection states;
+    static FlamethrowerTrapController[] traps;
+    static int phase;
+    static float started;
+    static double deadline;
+    static bool captured;
+    static FlamethrowerFrameProfilingSession()
+    {
+        EditorApplication.update+=Update;
+        EditorApplication.delayCall+=Recover;
+        EditorApplication.playModeStateChanged+=change=>
+        {
+            if(change!=PlayModeStateChange.EnteredEditMode||!SessionState.GetBool("FlameSafe.Restore",false))return;
+            SessionState.SetBool("FlameSafe.Restore",false);
+            ProfilerDriver.enabled=SessionState.GetBool("FlameSafe.OldProfiler",false);
+            ProfilerDriver.profileGPU=SessionState.GetBool("FlameSafe.OldGpu",false);
+            Scene original=SceneManager.GetSceneByPath("Assets/Scenes/Map3.unity");
+            if(original.IsValid())SceneManager.SetActiveScene(original);
+            Scene preview=SceneManager.GetSceneByPath(Preview);
+            if(preview.IsValid())EditorSceneManager.CloseScene(preview,true);
+            AssetDatabase.DeleteAsset(Preview);
+            Log("RESTORED original scene dirty="+original.isDirty);
+        };
+    }
+    static void Log(string value){Directory.CreateDirectory(Folder);File.AppendAllText(Folder+"result.txt",value+"\n");}
+    static void Set(object target,string name,object value)=>target.GetType().GetField(name,Flags).SetValue(target,value);
+    static void Recover()
+    {
+        if(!File.Exists(Root+"Temp/FlamethrowerRecover.request"))return;
+        File.Delete(Root+"Temp/FlamethrowerRecover.request");
+        SessionState.SetBool("FlameFrame.Play",false);SessionState.SetBool("FlameFrame.Restore",false);
+        ProfilerDriver.enabled=false;
+        if(SceneManager.GetActiveScene().path!="Assets/Scenes/Map3.unity")EditorSceneManager.OpenScene("Assets/Scenes/Map3.unity",OpenSceneMode.Single);
+        Scene preview=SceneManager.GetSceneByPath(Preview);
+        if(preview.IsValid())EditorSceneManager.CloseScene(preview,true);
+        AssetDatabase.DeleteAsset(Preview);
+        Log("RECOVERED "+SceneManager.GetActiveScene().path+" dirty="+SceneManager.GetActiveScene().isDirty);
+    }
+    static void Update()
+    {
+        if(SessionState.GetBool("FlameSafe.Play",false)&&EditorApplication.isPlaying)
+        {
+            try{Tick();}catch(Exception error){Log("FAILED "+error);EndPlay();}
+            return;
+        }
+        if(!File.Exists(Request)||EditorApplication.isCompiling||EditorApplication.isUpdating)return;
+        string command=File.ReadAllText(Request).Trim();File.Delete(Request);
+        try
+        {
+            if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Already playing.");
+            if(command=="capture")BeginPlay();
+            else if(command=="verify")Verify();
+        }
+        catch(Exception error){Log("FAILED "+error);}
+    }
+    static void BeginPlay()
+    {
+        Scene original=SceneManager.GetActiveScene();
+        EditorSceneManager.SaveScene(original,Backup+"Map3.live-before-state-capture.unity",true);
+        var originals=original.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<FlamethrowerTrapController>(true)).Where(t=>t.isActiveAndEnabled).ToArray();
+        Vector3 center=Vector3.zero;
+        foreach(var trap in originals)
+        {
+            var so=new SerializedObject(trap);var pivot=(Transform)so.FindProperty("flamethrowerPivot").objectReferenceValue;
+            center+=pivot.TransformPoint(so.FindProperty("localPositionOffset").vector3Value);
+        }
+        center/=originals.Length;
+        var preview=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Additive);
+        var camera=new GameObject("Flame State Capture Camera").AddComponent<Camera>();
+        camera.gameObject.AddComponent<AudioListener>();camera.transform.position=center+new Vector3(0,2,-10);camera.transform.LookAt(center+Vector3.forward*3);
+        camera.fieldOfView=75;camera.farClipPlane=180;camera.nearClipPlane=0.05f;camera.GetUniversalAdditionalCameraData().renderPostProcessing=false;
+        EditorSceneManager.SaveScene(preview,Preview);
+        SessionState.SetBool("FlameSafe.OldProfiler",ProfilerDriver.enabled);SessionState.SetBool("FlameSafe.OldGpu",ProfilerDriver.profileGPU);
+        ProfilerDriver.enabled=true;ProfilerDriver.SetAreaEnabled(UnityEngine.Profiling.ProfilerArea.CPU,true);ProfilerDriver.profileGPU=false;
+        SessionState.SetBool("FlameSafe.Play",true);EditorApplication.isPlaying=true;
+    }
+    static void Tick()
+    {
+        if(traps==null)
+        {
+            var camera=GameObject.Find("Flame State Capture Camera").GetComponent<Camera>();
+            foreach(var other in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))if(other!=camera)other.enabled=false;
+            foreach(var actor in Object.FindObjectsByType<PlayerHealth>(FindObjectsInactive.Include))actor.transform.root.gameObject.SetActive(false);
+            foreach(var actor in Object.FindObjectsByType<EnemyHealth>(FindObjectsInactive.Include))actor.transform.root.gameObject.SetActive(false);
+            traps=Object.FindObjectsByType<FlamethrowerTrapController>(FindObjectsInactive.Exclude);
+            var warmed=Resources.Load<GraphicsStateCollection>(FlamethrowerTrapController.ShaderWarmupResourceName);
+            Log("BEFORE FIRST TRIGGER warmed="+(warmed!=null&&warmed.isWarmedUp)+" count="+(warmed==null?0:warmed.completedWarmupCount));
+            foreach(var trap in traps){Set(trap,"localOnly",true);Set(trap,"damagePerSecond",0f);Set(trap,"activationDelay",0.1f);Set(trap,"firingDuration",4f);trap.GetComponentInChildren<AudioSource>(true).mute=true;}
+            states=new GraphicsStateCollection();states.BeginTrace();
+            deadline=EditorApplication.timeSinceStartup+40;started=Time.unscaledTime;
+            return;
+        }
+        if(EditorApplication.timeSinceStartup>deadline)throw new TimeoutException("Capture timeout.");
+        if(phase==0&&Time.unscaledTime-started>0.8f)
+        {
+            foreach(var trap in traps)trap.TryTriggerTrap();started=Time.unscaledTime;phase=1;
+        }
+        else if(phase==1&&Time.unscaledTime-started>2.8f)
+        {
+            InspectFrames("first");
+            if(!captured){ScreenCapture.CaptureScreenshot(Folder+"fire.png");captured=true;}
+            foreach(var trap in traps)trap.StopTrap();started=Time.unscaledTime;phase=2;
+        }
+        else if(phase==2&&Time.unscaledTime-started>1f)
+        {
+            foreach(var trap in traps)trap.TryTriggerTrap();started=Time.unscaledTime;phase=3;
+        }
+        else if(phase==3&&Time.unscaledTime-started>2.8f){InspectFrames("repeat");EndPlay();}
+    }
+    static void InspectFrames(string label)
+    {
+        int creations=0;double worst=0;
+        for(int frame=ProfilerDriver.firstFrameIndex;frame<=ProfilerDriver.lastFrameIndex;frame++)
+            using(var view=ProfilerDriver.GetRawFrameDataView(frame,1))
+            {
+                if(!view.valid)continue;
+                for(int i=0;i<view.sampleCount;i++)
+                    if(view.GetSampleName(i)=="CreateGraphicsPipelineImpl")
+                    {
+                        creations++;worst=Math.Max(worst,view.GetSampleTimeMs(i));
+                    }
+            }
+        Log("FRAME CHECK "+label+" PSO creations="+creations+" worstMs="+worst);
+    }
+    static void EndPlay()
+    {
+        try
+        {
+            if(states!=null)
+            {
+                states.EndTrace();var variants=new List<GraphicsStateCollection.ShaderVariant>();states.GetVariants(variants);
+                foreach(var variant in variants)
+                {
+                    Log("TRACED "+variant.shader.name+" path="+AssetDatabase.GetAssetPath(variant.shader));
+                    if(variant.shader.name.IndexOf("Flamethrower",StringComparison.OrdinalIgnoreCase)<0)states.RemoveVariant(variant.shader,variant.passId,variant.keywords);
+                }
+                states.runtimePlatform=RuntimePlatform.WindowsPlayer;states.graphicsDeviceType=SystemInfo.graphicsDeviceType;states.qualityLevelName=QualitySettings.names[QualitySettings.GetQualityLevel()];
+                Log("FILTERED variants="+states.variantCount+" states="+states.totalGraphicsStateCount);
+                if(states.variantCount==0)throw new InvalidOperationException("Capture did not record VFX shaders.");
+                string path="Assets/Resources/"+FlamethrowerTrapController.ShaderWarmupResourceName+".graphicsstate";
+                if(!states.SaveToFile(Root+path))throw new IOException("SaveToFile failed.");
+                AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport);
+                Log("IMPORTED "+AssetDatabase.LoadMainAssetAtPath(path)?.GetType());
+                Object.DestroyImmediate(states);states=null;
+            }
+        }
+        catch(Exception error){Log("SAVE FAILED "+error);}
+        finally{SessionState.SetBool("FlameSafe.Play",false);SessionState.SetBool("FlameSafe.Restore",true);EditorApplication.isPlaying=false;}
+    }
+    static void Verify()
+    {
+        var states=Resources.Load<GraphicsStateCollection>(FlamethrowerTrapController.ShaderWarmupResourceName);
+        if(states==null)throw new InvalidOperationException("Warmup asset did not load as a GraphicsStateCollection.");
+        var watch=System.Diagnostics.Stopwatch.StartNew();
+        typeof(FlamethrowerTrapController).GetMethod("WarmupFlameShaders",Flags).Invoke(null,null);watch.Stop();
+        Log("WARMUP completed="+states.completedWarmupCount+"/"+states.totalGraphicsStateCount+" warmed="+states.isWarmedUp+" elapsedMs="+watch.Elapsed.TotalMilliseconds);
+        Scene original=SceneManager.GetActiveScene();Scene temp=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Additive);int passed=0;
+        try
+        {
+            foreach(var method in typeof(FlamethrowerTrapTests).GetMethods().Where(m=>m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute),false).Length>0))
+            {
+                var fixture=new FlamethrowerTrapTests();try{fixture.SetUp();method.Invoke(fixture,null);passed++;}finally{fixture.TearDown();}
+            }
+        }
+        finally{SceneManager.SetActiveScene(original);EditorSceneManager.CloseScene(temp,true);}
+        Log("REGRESSION passed="+passed+" scene="+original.path+" dirty="+original.isDirty);
+    }
+}

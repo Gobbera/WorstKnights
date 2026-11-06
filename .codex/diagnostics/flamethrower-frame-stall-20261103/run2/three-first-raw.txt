@@ -1,0 +1,518 @@
+FRAME 378 THREAD Main Thread frameMs=8,9523
+8.9523 Main Thread
+5.7886 PlayerLoop
+5.7883 UpdateScene
+4.8654 TimeUpdate.WaitForLastPresentationAndUpdateTime
+4.8599 GfxDeviceD3D12.WaitForLastPresentation
+4.8592 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.6194 PlayerLoop
+1.6191 RenderPlayModeViewCameras
+1.5853 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.5588 Inl_UniversalRenderTotal
+1.5429 Inl_RenderCameraStack
+0.8280 Inl_ScriptableRenderContext.Submit
+0.7010 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6895 ExecuteRenderGraph
+0.6305 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6089 EditorLoop
+0.5168 Draw Additional Lights Shadowmap
+0.5152 AdditionalLightsShadow
+0.4065 Profiler.FlushCounters
+0.3527 EditorLoop
+0.3358 Profiler.FlushMemoryCounters
+0.3321 Update.ScriptRunBehaviourUpdate
+0.3313 BehaviourUpdate
+0.1759 Inl_ExecuteRenderGraph
+0.1644 CullScriptable
+0.1390 Inl_RecordRenderGraph
+0.1342 Inl_On Record Render Graph
+FRAME 378 THREAD Render Thread frameMs=8,3016
+8.3016 
+8.2530 RenderLoop
+6.9214 GfxDeviceD3D12.WaitForGPU
+0.5595 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5594 ExecuteRenderGraph
+0.1951 Draw Additional Lights Shadowmap
+0.1949 AdditionalLightsShadow
+FRAME 378 THREAD #32476 frameMs=8,9525
+8.9525 
+FRAME 378 THREAD #33968 frameMs=8,9525
+8.9525 
+FRAME 379 THREAD Main Thread frameMs=8,3386
+8.3386 Main Thread
+5.3365 PlayerLoop
+5.3364 UpdateScene
+4.2137 TimeUpdate.WaitForLastPresentationAndUpdateTime
+4.2080 GfxDeviceD3D12.WaitForLastPresentation
+4.2071 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.6254 PlayerLoop
+1.6251 RenderPlayModeViewCameras
+1.5893 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.5607 Inl_UniversalRenderTotal
+1.5422 Inl_RenderCameraStack
+0.7794 Inl_ScriptableRenderContext.Submit
+0.6936 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6527 EditorLoop
+0.6508 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6392 ExecuteRenderGraph
+0.4698 Draw Additional Lights Shadowmap
+0.4690 AdditionalLightsShadow
+0.3441 Profiler.FlushCounters
+0.2882 Profiler.FlushMemoryCounters
+0.2500 Update.ScriptRunBehaviourUpdate
+0.2495 BehaviourUpdate
+0.1989 FixedUpdate.PhysicsFixedUpdate
+0.1911 CullScriptable
+0.1865 EditorLoop
+0.1753 Inl_ExecuteRenderGraph
+0.1532 Inl_RecordRenderGraph
+0.1474 Inl_On Record Render Graph
+FRAME 379 THREAD Render Thread frameMs=8,3584
+8.3584 
+7.3420 RenderLoop
+5.8358 GfxDeviceD3D12.WaitForGPU
+1.0106 RenderLoop
+0.9756 GfxDeviceD3D12.WaitForGPU
+0.5784 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5779 ExecuteRenderGraph
+0.1965 Draw Additional Lights Shadowmap
+0.1963 AdditionalLightsShadow
+FRAME 379 THREAD #32476 frameMs=8,3387
+8.3387 
+FRAME 379 THREAD #33968 frameMs=8,3387
+8.3387 
+FRAME 380 THREAD Main Thread frameMs=13,5288
+13.5288 Main Thread
+6.1205 PlayerLoop
+6.1203 UpdateScene
+5.2327 TimeUpdate.WaitForLastPresentationAndUpdateTime
+5.2269 GfxDeviceD3D12.WaitForLastPresentation
+5.2256 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+3.5750 CollectGPUSamples
+3.5683 Semaphore.WaitForSignal
+1.6901 PlayerLoop
+1.6901 RenderPlayModeViewCameras
+1.6583 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.6273 Inl_UniversalRenderTotal
+1.6116 Inl_RenderCameraStack
+0.8976 EditorLoop
+0.8520 Inl_ScriptableRenderContext.Submit
+0.7286 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.7152 ExecuteRenderGraph
+0.6681 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5937 EditorLoop
+0.5417 Draw Additional Lights Shadowmap
+0.5403 AdditionalLightsShadow
+0.3932 Profiler.FlushCounters
+0.3439 Profiler.FlushMemoryCounters
+0.2612 Update.ScriptRunBehaviourUpdate
+0.2606 BehaviourUpdate
+0.1853 CullScriptable
+0.1776 Inl_ExecuteRenderGraph
+0.1754 EditorLoop
+FRAME 380 THREAD Render Thread frameMs=8,2519
+8.2519 
+7.1764 RenderLoop
+6.8965 GfxDeviceD3D12.WaitForGPU
+1.0273 RenderLoop
+0.5577 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5574 ExecuteRenderGraph
+0.1950 Draw Additional Lights Shadowmap
+0.1949 AdditionalLightsShadow
+FRAME 380 THREAD #32476 frameMs=13,529
+13.5290 
+FRAME 380 THREAD #33968 frameMs=13,529
+13.5290 
+FRAME 381 THREAD Main Thread frameMs=4,6171
+4.6171 Main Thread
+1.8363 PlayerLoop
+1.8360 RenderPlayModeViewCameras
+1.8009 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.7723 Inl_UniversalRenderTotal
+1.7550 Inl_RenderCameraStack
+1.0281 PlayerLoop
+1.0279 UpdateScene
+1.0214 Inl_ScriptableRenderContext.Submit
+0.9122 EditorLoop
+0.8838 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.8720 ExecuteRenderGraph
+0.6202 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6031 Draw Additional Lights Shadowmap
+0.6014 AdditionalLightsShadow
+0.3587 Profiler.FlushCounters
+0.3114 Profiler.FlushMemoryCounters
+0.2744 Update.ScriptRunBehaviourUpdate
+0.2740 BehaviourUpdate
+0.2692 EditorLoop
+0.1752 Inl_ExecuteRenderGraph
+0.1502 CullScriptable
+0.1407 Inl_RecordRenderGraph
+0.1351 Inl_On Record Render Graph
+0.1243 PostLateUpdate.UpdateAudio
+0.1205 EditorLoop
+0.1044 PreLateUpdate.ScriptRunBehaviourLateUpdate
+0.1039 LateBehaviourUpdate
+FRAME 381 THREAD Render Thread frameMs=8,5679
+8.5679 
+8.5261 RenderLoop
+7.2591 GfxDeviceD3D12.WaitForGPU
+0.5496 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5494 ExecuteRenderGraph
+0.1925 Draw Additional Lights Shadowmap
+0.1922 AdditionalLightsShadow
+FRAME 381 THREAD #32476 frameMs=4,6172
+4.6172 
+FRAME 381 THREAD #33968 frameMs=4,6172
+4.6172 
+FRAME 382 THREAD Main Thread frameMs=6,6853
+6.6853 Main Thread
+3.7086 PlayerLoop
+3.7085 UpdateScene
+2.6294 TimeUpdate.WaitForLastPresentationAndUpdateTime
+2.6240 GfxDeviceD3D12.WaitForLastPresentation
+2.6230 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.6676 PlayerLoop
+1.6674 RenderPlayModeViewCameras
+1.6322 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.6062 Inl_UniversalRenderTotal
+1.5909 Inl_RenderCameraStack
+0.8597 Inl_ScriptableRenderContext.Submit
+0.6974 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6838 ExecuteRenderGraph
+0.6618 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5884 EditorLoop
+0.4869 Draw Additional Lights Shadowmap
+0.4853 AdditionalLightsShadow
+0.3410 Profiler.FlushCounters
+0.2921 Profiler.FlushMemoryCounters
+0.2309 Update.ScriptRunBehaviourUpdate
+0.2305 BehaviourUpdate
+0.1930 EditorLoop
+0.1775 FixedUpdate.PhysicsFixedUpdate
+0.1708 CullScriptable
+0.1671 Inl_ExecuteRenderGraph
+0.1569 Inl_RecordRenderGraph
+0.1512 Inl_On Record Render Graph
+FRAME 382 THREAD Render Thread frameMs=7,9713
+7.9713 
+6.8795 RenderLoop
+5.5262 GfxDeviceD3D12.WaitForGPU
+1.0864 RenderLoop
+1.0627 GfxDeviceD3D12.WaitForGPU
+0.5815 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5812 ExecuteRenderGraph
+0.1956 Draw Additional Lights Shadowmap
+0.1954 AdditionalLightsShadow
+FRAME 382 THREAD #32476 frameMs=6,6854
+6.6854 
+FRAME 382 THREAD #33968 frameMs=6,6854
+6.6854 
+FRAME 383 THREAD Main Thread frameMs=9,2369
+9.2369 Main Thread
+6.4245 PlayerLoop
+6.4243 UpdateScene
+5.5649 TimeUpdate.WaitForLastPresentationAndUpdateTime
+5.5597 GfxDeviceD3D12.WaitForLastPresentation
+5.5589 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.5002 PlayerLoop
+1.5000 RenderPlayModeViewCameras
+1.4684 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.4413 Inl_UniversalRenderTotal
+1.4263 Inl_RenderCameraStack
+0.7573 Inl_ScriptableRenderContext.Submit
+0.6119 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6027 EditorLoop
+0.6026 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6013 ExecuteRenderGraph
+0.4395 Draw Additional Lights Shadowmap
+0.4381 AdditionalLightsShadow
+0.3273 Profiler.FlushCounters
+0.2816 Profiler.FlushMemoryCounters
+0.2699 Update.ScriptRunBehaviourUpdate
+0.2693 BehaviourUpdate
+0.1640 Inl_ExecuteRenderGraph
+0.1639 EditorLoop
+0.1491 CullScriptable
+0.1396 EditorLoop
+0.1347 Inl_RecordRenderGraph
+0.1301 Inl_On Record Render Graph
+FRAME 383 THREAD Render Thread frameMs=7,2784
+7.2784 
+7.0233 RenderLoop
+5.7913 GfxDeviceD3D12.WaitForGPU
+0.5351 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5349 ExecuteRenderGraph
+0.2496 RenderLoop
+0.2162 GfxDeviceD3D12.WaitForGPU
+0.1919 Draw Additional Lights Shadowmap
+0.1916 AdditionalLightsShadow
+FRAME 383 THREAD #32476 frameMs=9,237
+9.2370 
+FRAME 383 THREAD #33968 frameMs=9,237
+9.2370 
+FRAME 384 THREAD Main Thread frameMs=7,6254
+7.6254 Main Thread
+4.6195 PlayerLoop
+4.6193 UpdateScene
+3.4646 TimeUpdate.WaitForLastPresentationAndUpdateTime
+3.4597 GfxDeviceD3D12.WaitForLastPresentation
+3.4591 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.7085 PlayerLoop
+1.7082 RenderPlayModeViewCameras
+1.6736 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.6470 Inl_UniversalRenderTotal
+1.6308 Inl_RenderCameraStack
+0.8644 Inl_ScriptableRenderContext.Submit
+0.7404 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.7293 ExecuteRenderGraph
+0.6994 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5736 EditorLoop
+0.4713 Draw Additional Lights Shadowmap
+0.4700 AdditionalLightsShadow
+0.3558 Profiler.FlushCounters
+0.3066 Profiler.FlushMemoryCounters
+0.2582 Update.ScriptRunBehaviourUpdate
+0.2579 BehaviourUpdate
+0.2174 CullScriptable
+0.2020 FixedUpdate.PhysicsFixedUpdate
+0.1929 EditorLoop
+0.1791 Inl_ExecuteRenderGraph
+0.1462 Inl_RecordRenderGraph
+0.1403 Inl_On Record Render Graph
+FRAME 384 THREAD Render Thread frameMs=7,0929
+7.0929 
+7.0492 RenderLoop
+5.7879 GfxDeviceD3D12.WaitForGPU
+0.5977 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5975 ExecuteRenderGraph
+0.1925 Draw Additional Lights Shadowmap
+0.1922 AdditionalLightsShadow
+FRAME 384 THREAD #32476 frameMs=7,6255
+7.6255 
+FRAME 384 THREAD #33968 frameMs=7,6255
+7.6255 
+FRAME 385 THREAD Main Thread frameMs=6,7949
+6.7949 Main Thread
+3.7268 PlayerLoop
+3.7266 UpdateScene
+2.9010 TimeUpdate.WaitForLastPresentationAndUpdateTime
+2.8958 GfxDeviceD3D12.WaitForLastPresentation
+2.8948 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.6006 PlayerLoop
+1.6005 RenderPlayModeViewCameras
+1.5665 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.5405 Inl_UniversalRenderTotal
+1.5246 Inl_RenderCameraStack
+0.7783 Inl_ScriptableRenderContext.Submit
+0.6811 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6576 EditorLoop
+0.6516 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6405 ExecuteRenderGraph
+0.4792 Draw Additional Lights Shadowmap
+0.4779 AdditionalLightsShadow
+0.3598 Profiler.FlushCounters
+0.3110 Profiler.FlushMemoryCounters
+0.2909 Update.ScriptRunBehaviourUpdate
+0.2904 BehaviourUpdate
+0.2469 EditorLoop
+0.1638 Inl_ExecuteRenderGraph
+0.1492 CullScriptable
+0.1436 Inl_RecordRenderGraph
+0.1391 Inl_On Record Render Graph
+0.1222 EditorLoop
+FRAME 385 THREAD Render Thread frameMs=8,0832
+8.0832 
+8.0459 RenderLoop
+6.8168 GfxDeviceD3D12.WaitForGPU
+0.5400 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5398 ExecuteRenderGraph
+0.1926 Draw Additional Lights Shadowmap
+0.1923 AdditionalLightsShadow
+FRAME 385 THREAD #32476 frameMs=6,795
+6.7950 
+FRAME 385 THREAD #33968 frameMs=6,795
+6.7950 
+FRAME 386 THREAD Main Thread frameMs=6,9192
+6.9192 Main Thread
+4.0847 PlayerLoop
+4.0845 UpdateScene
+3.1860 TimeUpdate.WaitForLastPresentationAndUpdateTime
+3.1811 GfxDeviceD3D12.WaitForLastPresentation
+3.1801 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.5285 PlayerLoop
+1.5283 RenderPlayModeViewCameras
+1.4924 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.4660 Inl_UniversalRenderTotal
+1.4488 Inl_RenderCameraStack
+0.7863 Inl_ScriptableRenderContext.Submit
+0.6369 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.6237 ExecuteRenderGraph
+0.5949 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5650 EditorLoop
+0.4437 Draw Additional Lights Shadowmap
+0.4425 AdditionalLightsShadow
+0.3715 Profiler.FlushCounters
+0.3188 Profiler.FlushMemoryCounters
+0.2843 Update.ScriptRunBehaviourUpdate
+0.2837 BehaviourUpdate
+0.1962 EditorLoop
+0.1732 Inl_ExecuteRenderGraph
+0.1522 PostLateUpdate.UpdateAllRenderers
+0.1408 Inl_RecordRenderGraph
+0.1363 Inl_On Record Render Graph
+0.1310 CullScriptable
+FRAME 386 THREAD Render Thread frameMs=7,0347
+7.0347 
+6.9533 RenderLoop
+4.5266 GfxDeviceD3D12.WaitForGPU
+0.5792 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5789 ExecuteRenderGraph
+0.2085 Draw Additional Lights Shadowmap
+0.2083 AdditionalLightsShadow
+FRAME 386 THREAD #32476 frameMs=6,9194
+6.9194 
+FRAME 386 THREAD #33968 frameMs=6,9194
+6.9194 
+FRAME 518 THREAD Main Thread frameMs=5,752
+5.7520 Main Thread
+1.9397 PlayerLoop
+1.9394 UpdateScene
+1.8857 PlayerLoop
+1.8856 RenderPlayModeViewCameras
+1.8451 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.8129 Inl_UniversalRenderTotal
+1.7930 Inl_RenderCameraStack
+1.0224 EditorLoop
+0.9393 Inl_ScriptableRenderContext.Submit
+0.7930 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.7760 ExecuteRenderGraph
+0.7645 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.4699 Draw Additional Lights Shadowmap
+0.4683 AdditionalLightsShadow
+0.3542 Profiler.FlushCounters
+0.3052 Profiler.FlushMemoryCounters
+0.2893 FixedUpdate.PhysicsFixedUpdate
+0.2492 Update.ScriptRunBehaviourUpdate
+0.2489 BehaviourUpdate
+0.2390 EditorLoop
+0.2184 EditorLoop
+0.2167 Inl_ExecuteRenderGraph
+0.2006 CullScriptable
+0.1835 Physics.RunSimulationStage
+0.1833 Physics.Simulate
+0.1779 PxScene.simulate
+0.1637 Inl_RecordRenderGraph
+FRAME 518 THREAD Render Thread frameMs=160,1746
+160.1746 
+159.7894 RenderLoop
+140.4589 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+140.4584 ExecuteRenderGraph
+139.6567 DrawTransparentObjects
+139.6542 RenderLoop.Draw
+70.6534 Flamethrower-Minimal (2).-29.4
+70.6520 VFX.ParticleSystem.RenderQuadIndirect
+70.3614 CreateGraphicsPipelineImpl
+68.7854 Flamethrower-Minimal.-29.2
+68.7845 VFX.ParticleSystem.RenderQuad
+68.5821 CreateGraphicsPipelineImpl
+18.2107 GfxDeviceD3D12.WaitForGPU
+0.3788 RenderLoop
+0.3425 GfxDeviceD3D12.WaitForGPU
+0.2131 Draw Additional Lights Shadowmap
+0.2127 AdditionalLightsShadow
+0.2103 D3D12PipelineCacheStorePipeline
+0.1677 D3D12PipelineCacheStorePipeline
+FRAME 518 THREAD #32476 frameMs=5,7521
+5.7521 
+FRAME 518 THREAD #33968 frameMs=5,7521
+5.7521 
+FRAME 553 THREAD Main Thread frameMs=9,2294
+9.2294 Main Thread
+5.6712 PlayerLoop
+5.6712 UpdateScene
+4.6002 TimeUpdate.WaitForLastPresentationAndUpdateTime
+4.5796 GfxDeviceD3D12.WaitForLastPresentation
+4.5780 GfxDeviceD3D12.WaitForLastPresentation.WaitForGPU
+1.9729 PlayerLoop
+1.9727 RenderPlayModeViewCameras
+1.9314 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.9032 Inl_UniversalRenderTotal
+1.8839 Inl_RenderCameraStack
+0.9557 Inl_ScriptableRenderContext.Submit
+0.8497 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.8166 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.8011 ExecuteRenderGraph
+0.6645 EditorLoop
+0.4986 Draw Additional Lights Shadowmap
+0.4972 AdditionalLightsShadow
+0.3984 Profiler.FlushCounters
+0.3402 Profiler.FlushMemoryCounters
+0.3022 Update.ScriptRunBehaviourUpdate
+0.3015 BehaviourUpdate
+0.2804 EditorLoop
+0.2470 Inl_ExecuteRenderGraph
+0.2423 CullScriptable
+0.1828 Inl_RecordRenderGraph
+0.1775 Inl_On Record Render Graph
+0.1371 EditorLoop
+FRAME 553 THREAD Render Thread frameMs=30,4693
+30.4693 
+30.1640 RenderLoop
+27.2096 GfxDeviceD3D12.WaitForGPU
+1.0498 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+1.0494 ExecuteRenderGraph
+0.2974 RenderLoop
+0.2472 GfxDeviceD3D12.WaitForGPU
+0.2197 Draw Additional Lights Shadowmap
+0.2189 AdditionalLightsShadow
+0.1878 DrawTransparentObjects
+0.1862 RenderLoop.Draw
+FRAME 553 THREAD #32476 frameMs=9,2296
+9.2296 
+FRAME 553 THREAD #33968 frameMs=9,2296
+9.2296 
+FRAME 519 THREAD Main Thread frameMs=5,279
+5.2790 Main Thread
+1.8671 PlayerLoop
+1.8666 RenderPlayModeViewCameras
+1.8251 UnityEngine.CoreModule.dll!UnityEngine.Rendering::RenderPipelineManager.DoRenderLoop_Internal() [Invoke]
+1.7939 Inl_UniversalRenderTotal
+1.7757 Inl_RenderCameraStack
+1.6150 PlayerLoop
+1.6148 UpdateScene
+0.9799 Inl_ScriptableRenderContext.Submit
+0.9183 EditorLoop
+0.8269 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.8080 ExecuteRenderGraph
+0.7214 Inl_UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.5020 Draw Additional Lights Shadowmap
+0.5004 AdditionalLightsShadow
+0.3576 Profiler.FlushCounters
+0.3186 Update.ScriptRunDelayedDynamicFrameRate
+0.3184 CoroutinesDelayedCalls
+0.3041 Profiler.FlushMemoryCounters
+0.3001 EditorLoop
+0.2865 FixedUpdate.PhysicsFixedUpdate
+0.2801 PhotonRealtime.dll!Photon.Realtime::ConnectionHandler.ResetAppPauseRecent() [Invoke]
+0.2563 Mono.JIT
+0.2546 Update.ScriptRunBehaviourUpdate
+0.2539 BehaviourUpdate
+0.2301 Inl_ExecuteRenderGraph
+0.2114 Physics.RunSimulationStage
+0.2111 Physics.Simulate
+FRAME 519 THREAD Render Thread frameMs=22,3486
+22.3486 
+22.2871 RenderLoop
+17.0311 GfxDeviceD3D12.WaitForGPU
+0.9281 UniversalRenderPipeline.RenderSingleCameraInternal: Flame Frame Profile Camera
+0.9276 ExecuteRenderGraph
+0.2506 Draw Additional Lights Shadowmap
+0.2498 AdditionalLightsShadow
+0.1424 VFX.Update
+0.1422 VFX.ProcessCommandList
+0.1297 DrawTransparentObjects
+0.1285 RenderLoop.Draw
+FRAME 519 THREAD #32476 frameMs=5,2791
+5.2791 
+FRAME 519 THREAD #33968 frameMs=5,2791
+5.2791 

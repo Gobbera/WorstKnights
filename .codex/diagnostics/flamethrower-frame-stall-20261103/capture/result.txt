@@ -1,0 +1,67 @@
+RECOVERED Assets/Scenes/Map3.unity dirty=False
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Hidden/VFX/Flamethrower/Minimal (1)/Flames Add path=Assets/VFX/Flamethrower/Flamethrower.vfx
+TRACED Hidden/Internal-UIRAtlasBlitCopy path=Resources/unity_builtin_extra
+TRACED Hidden/GUITextureBlit2Linear path=Library/unity editor resources
+TRACED Hidden/VFX/Flamethrower/Minimal (2)/Smoke AB path=Assets/VFX/Flamethrower/Flamethrower.vfx
+TRACED Shader Graphs/SG_WK_Base_Toon Shader path=Assets/Shaders/Shaders/WK/SG_WK_Base_Toon Shader.shadergraph
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Hidden/Universal/CoreBlit path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/CoreBlit.shader
+TRACED Hidden/VFX/Flamethrower/Minimal/Beams Add path=Assets/VFX/Flamethrower/Flamethrower.vfx
+TRACED Hidden/Internal-GUITextureBlit path=Resources/unity_builtin_extra
+TRACED Hidden/WorstKnights/Outline Depth Composite path=Assets/Shaders/Shaders/Outlines/OutlineDepthComposite.shader
+TRACED Hidden/Universal/CoreBlit path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/CoreBlit.shader
+TRACED Hidden/Internal-GUITextureClip path=Resources/unity_builtin_extra
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Shader Graphs/SG_WK_Base_Toon Shader path=Assets/Shaders/Shaders/WK/SG_WK_Base_Toon Shader.shadergraph
+TRACED Legacy Shaders/Particles/Alpha Blended path=Resources/unity_builtin_extra
+TRACED Shader Graphs/SG_WK_Base_Toon Shader path=Assets/Shaders/Shaders/WK/SG_WK_Base_Toon Shader.shadergraph
+TRACED Hidden/InternalClear path=Library/unity default resources
+TRACED Legacy Shaders/Particles/Additive path=Resources/unity_builtin_extra
+TRACED Hidden/TextCore/Distance Field SSD path=Resources/unity_builtin_extra
+TRACED Hidden/Internal-GUIRoundedRect path=Resources/unity_builtin_extra
+TRACED Skybox/Procedural path=Resources/unity_builtin_extra
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Hidden/Internal-UIRDefault path=Resources/unity_builtin_extra
+TRACED UI/Default path=Resources/unity_builtin_extra
+TRACED Universal Render Pipeline/Lit path=Packages/com.unity.render-pipelines.universal/Shaders/Lit.shader
+FILTERED variants=3 states=3
+IMPORTED UnityEngine.Experimental.Rendering.GraphicsStateCollection
+RESTORED original scene dirty=False
+WARMUP completed=3/3 warmed=True elapsedMs=0,8041
+REGRESSION passed=23 scene=Assets/Scenes/Map3.unity dirty=False
+BEFORE FIRST TRIGGER warmed=True count=3
+FRAME CHECK first PSO creations=1 worstMs=0,419200003147125
+FRAME CHECK repeat PSO creations=1 worstMs=0,419200003147125
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Hidden/VFX/Flamethrower/Minimal (1)/Flames Add path=Assets/VFX/Flamethrower/Flamethrower.vfx
+TRACED Hidden/Internal-UIRAtlasBlitCopy path=Resources/unity_builtin_extra
+TRACED Hidden/GUITextureBlit2Linear path=Library/unity editor resources
+TRACED Hidden/VFX/Flamethrower/Minimal (2)/Smoke AB path=Assets/VFX/Flamethrower/Flamethrower.vfx
+TRACED Shader Graphs/SG_WK_Base_Toon Shader path=Assets/Shaders/Shaders/WK/SG_WK_Base_Toon Shader.shadergraph
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Hidden/Universal/CoreBlit path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/CoreBlit.shader
+TRACED Hidden/VFX/Flamethrower/Minimal/Beams Add path=Assets/VFX/Flamethrower/Flamethrower.vfx
+TRACED Hidden/Internal-GUITextureBlit path=Resources/unity_builtin_extra
+TRACED Hidden/WorstKnights/Outline Depth Composite path=Assets/Shaders/Shaders/Outlines/OutlineDepthComposite.shader
+TRACED Hidden/Universal/CoreBlit path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/CoreBlit.shader
+TRACED Hidden/Internal-GUITextureClip path=Resources/unity_builtin_extra
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Shader Graphs/SG_WK_Base_Toon Shader path=Assets/Shaders/Shaders/WK/SG_WK_Base_Toon Shader.shadergraph
+TRACED Legacy Shaders/Particles/Alpha Blended path=Resources/unity_builtin_extra
+TRACED Shader Graphs/SG_WK_Base_Toon Shader path=Assets/Shaders/Shaders/WK/SG_WK_Base_Toon Shader.shadergraph
+TRACED Hidden/InternalClear path=Library/unity default resources
+TRACED Legacy Shaders/Particles/Additive path=Resources/unity_builtin_extra
+TRACED Hidden/TextCore/Distance Field SSD path=Resources/unity_builtin_extra
+TRACED Hidden/Internal-GUIRoundedRect path=Resources/unity_builtin_extra
+TRACED Skybox/Procedural path=Resources/unity_builtin_extra
+TRACED Hidden/Universal Render Pipeline/ScreenSpaceAmbientOcclusion path=Packages/com.unity.render-pipelines.universal/Shaders/Utils/ScreenSpaceAmbientOcclusion.shader
+TRACED Hidden/Internal-UIRDefault path=Resources/unity_builtin_extra
+TRACED UI/Default path=Resources/unity_builtin_extra
+TRACED Universal Render Pipeline/Lit path=Packages/com.unity.render-pipelines.universal/Shaders/Lit.shader
+TRACED Hidden/BlitCopy path=Resources/unity_builtin_extra
+FILTERED variants=3 states=3
+IMPORTED UnityEngine.Experimental.Rendering.GraphicsStateCollection
+RESTORED original scene dirty=False
+WARMUP completed=3/3 warmed=True elapsedMs=0,2745
+REGRESSION passed=23 scene=Assets/Scenes/Map3.unity dirty=False

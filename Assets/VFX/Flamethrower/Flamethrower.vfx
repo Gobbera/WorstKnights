@@ -144,13 +144,15 @@ MonoBehaviour:
       id: 0
       isStickyNote: 0
   stickyNoteInfos: []
-  categories: []
+  categories:
+  - name: Trap Controller
+    collapsed: 0
   uiBounds:
     serializedVersion: 2
-    x: 319
+    x: 0
     y: -494
-    width: 2852
-    height: 2113
+    width: 3171
+    height: 2278
 --- !u!114 &114350483966674976
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -207,6 +209,53 @@ MonoBehaviour:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 1
+    min: -Infinity
+    max: Infinity
+    enumValues: []
+    descendantCount: 0
+  - name: Flame Gradient
+    path: Flame Gradient
+    tooltip: 
+    space: -1
+    spaceable: 0
+    sheetType: m_Gradient
+    realType: Gradient
+    defaultValue:
+      m_Type:
+        m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+      m_SerializableObject: '{"colorKeys":[{"color":{"r":0.20754718780517579,"g":2.8301889896392824,"b":4.0,"a":1.0},"time":0.14999619126319886},{"color":{"r":11.867936134338379,"g":9.320503234863282,"b":0.0,"a":1.0},"time":0.27940794825553896},{"color":{"r":1.9056602716445923,"g":0.26443052291870119,"b":0.0,"a":1.0},"time":0.47058823704719546}],"alphaKeys":[{"alpha":0.250980406999588,"time":0.0},{"alpha":1.0,"time":0.1117723360657692},{"alpha":1.0,"time":0.30882734060287478},{"alpha":0.9019607901573181,"time":0.5676508545875549},{"alpha":0.729411780834198,"time":1.0}],"gradientMode":0}'
+    min: -Infinity
+    max: Infinity
+    enumValues: []
+    descendantCount: 0
+  - name: Smoke Gradient
+    path: Smoke Gradient
+    tooltip: 
+    space: -1
+    spaceable: 0
+    sheetType: m_Gradient
+    realType: Gradient
+    defaultValue:
+      m_Type:
+        m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+      m_SerializableObject: '{"colorKeys":[{"color":{"r":0.028301894664764406,"g":0.006274476647377014,"b":0.006274476647377014,"a":1.0},"time":0.0},{"color":{"r":0.028301894664764406,"g":0.003476647427305579,"b":0.0,"a":1.0},"time":0.8382391333580017}],"alphaKeys":[{"alpha":0.03921568766236305,"time":0.0},{"alpha":1.0,"time":0.11470206826925278},{"alpha":0.686274528503418,"time":0.6500037908554077},{"alpha":0.0,"time":1.0}],"gradientMode":0}'
+    min: -Infinity
+    max: Infinity
+    enumValues: []
+    descendantCount: 0
+  - name: Trap Controller
+    path: 
+    tooltip: 
+    space: -1
+    spaceable: 0
+    sheetType: 
+    realType: 
+    defaultValue:
+      m_Type:
+        m_SerializableType: 
+      m_SerializableObject: 
     min: -Infinity
     max: Infinity
     enumValues: []
@@ -287,38 +336,6 @@ MonoBehaviour:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 1
-    min: -Infinity
-    max: Infinity
-    enumValues: []
-    descendantCount: 0
-  - name: Flame Gradient
-    path: Flame Gradient
-    tooltip: 
-    space: -1
-    spaceable: 0
-    sheetType: m_Gradient
-    realType: Gradient
-    defaultValue:
-      m_Type:
-        m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"colorKeys":[{"color":{"r":0.20754718780517579,"g":2.8301889896392824,"b":4.0,"a":1.0},"time":0.14999619126319886},{"color":{"r":11.867936134338379,"g":9.320503234863282,"b":0.0,"a":1.0},"time":0.27940794825553896},{"color":{"r":1.9056602716445923,"g":0.26443052291870119,"b":0.0,"a":1.0},"time":0.47058823704719546}],"alphaKeys":[{"alpha":0.250980406999588,"time":0.0},{"alpha":1.0,"time":0.1117723360657692},{"alpha":1.0,"time":0.30882734060287478},{"alpha":0.9019607901573181,"time":0.5676508545875549},{"alpha":0.729411780834198,"time":1.0}],"gradientMode":0}'
-    min: -Infinity
-    max: Infinity
-    enumValues: []
-    descendantCount: 0
-  - name: Smoke Gradient
-    path: Smoke Gradient
-    tooltip: 
-    space: -1
-    spaceable: 0
-    sheetType: m_Gradient
-    realType: Gradient
-    defaultValue:
-      m_Type:
-        m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"colorKeys":[{"color":{"r":0.028301894664764406,"g":0.006274476647377014,"b":0.006274476647377014,"a":1.0},"time":0.0},{"color":{"r":0.028301894664764406,"g":0.003476647427305579,"b":0.0,"a":1.0},"time":0.8382391333580017}],"alphaKeys":[{"alpha":0.03921568766236305,"time":0.0},{"alpha":1.0,"time":0.11470206826925278},{"alpha":0.686274528503418,"time":0.6500037908554077},{"alpha":0.0,"time":1.0}],"gradientMode":0}'
     min: -Infinity
     max: Infinity
     enumValues: []
@@ -788,7 +805,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
-      m_SerializableObject: 32
+      m_SerializableObject: 8
     m_Space: -1
   m_Property:
     name: Rate
@@ -2785,7 +2802,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
-      m_SerializableObject: 64
+      m_SerializableObject: 24
     m_Space: -1
   m_Property:
     name: Rate
@@ -5538,7 +5555,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
-      m_SerializableObject: 32
+      m_SerializableObject: 12
     m_Space: -1
   m_Property:
     name: Rate
@@ -8490,7 +8507,7 @@ MonoBehaviour:
   - {fileID: 8926484042661614814}
   m_ExposedName: Jet Range
   m_Exposed: 1
-  m_Order: 0
+  m_Order: 3
   m_Category: Trap Controller
   m_Min:
     m_Type:
@@ -8504,7 +8521,19 @@ MonoBehaviour:
   m_EnumValues: []
   m_ValueFilter: 0
   m_Tooltip: 
-  m_Nodes: []
+  m_Nodes:
+  - m_Id: 0
+    linkedSlots:
+    - outputSlot: {fileID: 8926484042661614814}
+      inputSlot: {fileID: 8926484042661614828}
+    - outputSlot: {fileID: 8926484042661614814}
+      inputSlot: {fileID: 8926484042661614832}
+    - outputSlot: {fileID: 8926484042661614814}
+      inputSlot: {fileID: 8926484042661614836}
+    position: {x: 0, y: 0}
+    expandedSlots: []
+    expanded: 1
+    supecollapsed: 0
 --- !u!114 &8926484042661614814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8565,7 +8594,7 @@ MonoBehaviour:
   - {fileID: 8926484042661614816}
   m_ExposedName: Jet Width
   m_Exposed: 1
-  m_Order: 0
+  m_Order: 4
   m_Category: Trap Controller
   m_Min:
     m_Type:
@@ -8579,7 +8608,19 @@ MonoBehaviour:
   m_EnumValues: []
   m_ValueFilter: 0
   m_Tooltip: 
-  m_Nodes: []
+  m_Nodes:
+  - m_Id: 0
+    linkedSlots:
+    - outputSlot: {fileID: 8926484042661614816}
+      inputSlot: {fileID: 8926484042661614829}
+    - outputSlot: {fileID: 8926484042661614816}
+      inputSlot: {fileID: 8926484042661614833}
+    - outputSlot: {fileID: 8926484042661614816}
+      inputSlot: {fileID: 8926484042661614837}
+    position: {x: 0, y: 0}
+    expandedSlots: []
+    expanded: 1
+    supecollapsed: 0
 --- !u!114 &8926484042661614816
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8640,7 +8681,7 @@ MonoBehaviour:
   - {fileID: 8926484042661614818}
   m_ExposedName: Jet Bounds Center
   m_Exposed: 1
-  m_Order: 0
+  m_Order: 5
   m_Category: Trap Controller
   m_Min:
     m_Type:
@@ -8654,7 +8695,19 @@ MonoBehaviour:
   m_EnumValues: []
   m_ValueFilter: 0
   m_Tooltip: 
-  m_Nodes: []
+  m_Nodes:
+  - m_Id: 0
+    linkedSlots:
+    - outputSlot: {fileID: 8926484042661614818}
+      inputSlot: {fileID: 114986932069951040}
+    - outputSlot: {fileID: 8926484042661614818}
+      inputSlot: {fileID: 8926484042661614626}
+    - outputSlot: {fileID: 8926484042661614818}
+      inputSlot: {fileID: 8926484042661614716}
+    position: {x: 0, y: 0}
+    expandedSlots: []
+    expanded: 1
+    supecollapsed: 0
 --- !u!114 &8926484042661614818
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8817,7 +8870,7 @@ MonoBehaviour:
   - {fileID: 8926484042661614823}
   m_ExposedName: Jet Bounds Size
   m_Exposed: 1
-  m_Order: 0
+  m_Order: 6
   m_Category: Trap Controller
   m_Min:
     m_Type:
@@ -8831,7 +8884,19 @@ MonoBehaviour:
   m_EnumValues: []
   m_ValueFilter: 0
   m_Tooltip: 
-  m_Nodes: []
+  m_Nodes:
+  - m_Id: 0
+    linkedSlots:
+    - outputSlot: {fileID: 8926484042661614823}
+      inputSlot: {fileID: 114963171269329408}
+    - outputSlot: {fileID: 8926484042661614823}
+      inputSlot: {fileID: 8926484042661614630}
+    - outputSlot: {fileID: 8926484042661614823}
+      inputSlot: {fileID: 8926484042661614720}
+    position: {x: 0, y: 0}
+    expandedSlots: []
+    expanded: 1
+    supecollapsed: 0
 --- !u!114 &8926484042661614823
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9411,7 +9476,7 @@ MonoBehaviour:
   - {fileID: 8926484042661614840}
   m_ExposedName: Jet Opacity
   m_Exposed: 1
-  m_Order: 0
+  m_Order: 7
   m_Category: Trap Controller
   m_Min:
     m_Type:
@@ -9425,7 +9490,19 @@ MonoBehaviour:
   m_EnumValues: []
   m_ValueFilter: 0
   m_Tooltip: 
-  m_Nodes: []
+  m_Nodes:
+  - m_Id: 0
+    linkedSlots:
+    - outputSlot: {fileID: 8926484042661614840}
+      inputSlot: {fileID: 8926484042661614841}
+    - outputSlot: {fileID: 8926484042661614840}
+      inputSlot: {fileID: 8926484042661614842}
+    - outputSlot: {fileID: 8926484042661614840}
+      inputSlot: {fileID: 8926484042661614843}
+    position: {x: 0, y: 0}
+    expandedSlots: []
+    expanded: 1
+    supecollapsed: 0
 --- !u!114 &8926484042661614840
 MonoBehaviour:
   m_ObjectHideFlags: 0

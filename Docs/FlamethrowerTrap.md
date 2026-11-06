@@ -1,10 +1,14 @@
 # Armadilha de fogo
 
+Estudo de desempenho e propostas de otimização: [FlamethrowerPerformanceStudy.md](FlamethrowerPerformanceStudy.md).
+
 ## Escopo
 
 O jato termina no ponto de contato com o cenário. O dano existe apenas durante a emissão e dentro do volume do jato.
 
 O encerramento visual usa `Fade Out Duration`: ao terminar o disparo, a emissão de novas partículas para e as chamas existentes perdem opacidade suavemente antes da limpeza. A dissipação é visual e não prolonga o tempo de dano.
+
+Uma Point Light acompanha o fim do jato e seu contato com o cenário, permanece do lado exposto da superfície e perde intensidade junto com a dissipação das chamas. Cor, intensidade, alcance e distância da superfície são configurados no controlador.
 
 Usar uma armadilha reutilizável no prefab `Assets/Prefabs/Mechanisms/Dragon_Head_Flamethrower_Trap.prefab` para o erro do puzzle. Manter `On Puzzle Solved` disponível para a recompensa futura, preservar o `Flamethrower_Pivot` existente e a aparência base de `Assets/VFX/Flamethrower/Flamethrower.vfx`.
 
@@ -19,7 +23,7 @@ Etapas:
 
 O prefab recebeu `FlamethrowerTrapController` no root e um filho `Flamethrower VFX` sob o `Flamethrower_Pivot` existente. A posição/orientação do dispenser na cena foi preservada. O modelo aponta a boca para -Z; `Local Euler Angles = (0, 180, 0)` alinha o +Z do VFX com essa saída.
 
-O **On Puzzle Failed** do objeto **Statue Puzzle** chama `FlamethrowerTrapController.TriggerTrap()` na instância do dragão. O dano depende de contato com o fogo; o script provisório de feedback foi removido. O **On Puzzle Solved** está livre para a recompensa futura.
+Interagir com a **Lever**, selecionada no **Interaction Trigger System**, confere as placas. O **On Puzzle Failed** do objeto **Statue Puzzle** chama `FlamethrowerTrapController.TriggerTrap()` nas três cabeças conectadas; o acerto não dispara fogo. O puzzle mantém suas referências de **Activation Cooldown Sources** e informa ao trigger enquanto está ocupado. A alavanca entregue em modo Momentary espera o fim desses ciclos/cooldowns para retornar. O mesmo objeto do sistema permite trocar o acionador por Pressure Button ou Button sem transferir a lógica do fogo para esses prefabs. Veja [InteractionTriggerSystem.md](InteractionTriggerSystem.md). O dano depende de contato com o fogo; o script provisório de feedback foi removido. O **On Puzzle Solved** está livre para a recompensa futura.
 
 Selecione o dragão para editar a armadilha. Os botões **Disparar** e **Parar** do Inspector permitem experimentar o efeito. Fora do Play Mode, essa prévia não aplica dano nem reproduz áudio. Em Play Mode, o dano e o áudio são efetivos.
 
@@ -33,6 +37,13 @@ Selecione o dragão para editar a armadilha. Os botões **Disparar** e **Parar**
 | Fill Time | 1,1 s | Avanço gradual da região de dano, acompanhando a frente inicial das chamas. |
 | Fade Out Duration | 0,75 s | Dissipação suave das chamas após o disparo ou `StopTrap`. Zero mantém o corte imediato. |
 | Flame Audio Cue | vazio | Som da emissão. Arraste um AudioCue; ative Loop no cue para som contínuo enquanto o fogo estiver ligado. |
+| Flame Audio Source | Flamethrower Audio | AudioSource dedicado já incluído no prefab, com Play On Awake desligado. |
+| End Light Enabled | ativo | Habilita a iluminação no fim do jato. |
+| End Light | Flamethrower End Light | Point Light incluída no prefab. É possível atribuir outra luz dedicada. |
+| End Light Color | laranja | Cor da iluminação do fogo. |
+| End Light Intensity | 2,5 | Intensidade máxima durante a emissão. |
+| End Light Range | 4 m | Raio de iluminação. |
+| End Light Surface Offset | 0,2 m | Distância da luz ao contato; evita posicioná-la dentro da parede. |
 | Range | 10 m | Alcance máximo em unidades mundiais. O cenário pode encurtá-lo. |
 | Start Radius / End Radius | 0,2 / 1,1 m | Envelope de contato próximo à boca e no fim do jato. |
 | Local Euler Angles / Local Position Offset | (0,180,0) / zero | Mira e ajuste fino em relação ao pivot. |
@@ -54,7 +65,15 @@ Selecione o dragão para editar a armadilha. Os botões **Disparar** e **Parar**
 
 O campo **Audio > Flame Audio Cue** aceita os AudioCues existentes do projeto. O som começa junto da emissão, depois de `Activation Delay`, sai da posição do jato e acompanha seu movimento. Volume, pitch, mixer, espacialização, alcance audível e reverb vêm do cue. Com `Loop` desligado, o clip toca uma vez por emissão; com `Loop` ligado, continua durante o disparo.
 
+O prefab já contém o filho **Flamethrower Audio**, ligado ao campo **Flame Audio Source**. Seu `Play On Awake` fica desligado. O controlador reutiliza essa fonte a cada disparo. A ferramenta de preparação mantém essa referência sem duplicar fontes nem reaproveitar AudioSources de outras funções.
+
+Em Play Mode, `Awake` e `OnEnable` preparam a fonte e solicitam antecipadamente os dados dos clips do cue. Uma troca de cue é preparada no próximo `Update`. O clip `Assets/SFX/Flamethrower.mp3` está com **Preload Audio Data** e **Load In Background** ligados, para antecipar sua descompactação sem bloquear a thread principal. No disparo, o controlador escolhe o clip, aplica o cue e chama `Play()` na fonte existente.
+
+Instâncias antigas sem a fonte dedicada recebem uma durante sua inicialização, antes do disparo. A prévia no Editor continua silenciosa e não cria fontes de runtime. Para cues personalizados, configure também o carregamento antecipado dos seus clips; um clip ainda sendo carregado em segundo plano pode começar a tocar após terminar essa carga.
+
 O controlador para o som ao terminar o fogo, chamar `StopTrap`, desativar a armadilha ou limpar a emissão. O campo vazio mantém a armadilha silenciosa. Cada cliente reproduz o som a partir da fase já sincronizada da armadilha, sem acrescentar um segundo disparo de áudio por RPC.
+
+Validação da preparação em 2026-11-03: 22 testes passaram no Editor. Em Play Mode, os clips estavam carregados antes da primeira ativação, o som começou após o aviso e acompanhou a saída do jato. Disparos seguintes reutilizaram a mesma fonte; fim natural, parada manual e desativação interromperam a reprodução. Também foram verificados loop, término de um som sem loop e a preparação inicial de uma instância antiga. A Map3 foi restaurada com suas alterações não salvas preservadas.
 
 ## Contato e dano
 
@@ -66,7 +85,17 @@ O dano é neutro e ambiental, com knockback suprimido. O relógio da armadilha c
 
 Essa é uma região física de gameplay alinhada ao efeito, não uma leitura de colisões de cada partícula da GPU. Ajuste os raios se alterar significativamente o tamanho visual das partículas.
 
+## Iluminação
+
+O prefab inclui o filho **Flamethrower End Light**, com uma Point Light Realtime inicialmente desligada. O controlador posiciona a luz na frente do fogo durante `Fill Time`, acompanhando a mira e o alcance bloqueado pelo cenário. Quando a frente chega a uma superfície, a luz recebe o afastamento pela normal do contato para permanecer do lado exposto, inclusive em paredes inclinadas. Sem contato, fica ligeiramente antes do fim do jato.
+
+A intensidade cresce com a chegada do fogo e acompanha `Fade Out Duration` no encerramento. Durante a dissipação, a luz mantém o último ponto do jato e termina desativada. Desabilitar o controlador, seu GameObject ou **End Light Enabled** desliga a iluminação. A seção **End Light** permite ajustar os valores sem alterar o VFX. A luz é criada sem sombras; a opção de sombras permanece no componente Light.
+
 ## VFX
+
+O perfil PC/DX12 inclui uma coleção de estados gráficos do lança-chamas, preparada antes de carregar a primeira cena para antecipar a criação dos pipelines que causou um pico capturado de aproximadamente 139 ms. O disparo reutiliza os sistemas limpos pelo encerramento anterior, sem um segundo `Reinit()` no início. A coleção preserva o visual do gráfico e deve ser recapturada se seus shaders ou estados gráficos forem alterados. Consulte [o estudo de desempenho](FlamethrowerPerformanceStudy.md) para os limites da captura no Editor e a validação em build.
+
+Validação dessa alteração: 23 testes passaram, os três estados foram preparados antes da primeira ativação e os três jatos renderizaram em disparos consecutivos. No ensaio posterior, o maior evento de criação de pipeline observado foi de aproximadamente 0,42 ms, com o cache do driver já usado pelas capturas anteriores.
 
 O gráfico preserva texturas, gradientes, cores, emissão, lifetimes e curvas existentes. Um bloco **Trap Jet Shape** nos três outputs mapeia a idade normalizada de cada partícula ao alcance definido em **Jet Range** e aplica **Jet Width** ao espalhamento lateral e ao tamanho. Assim, o comprimento é controlado sem escalar o dispenser inteiro. Os sistemas simulam no espaço local da saída e acompanham a varredura.
 
@@ -82,6 +111,8 @@ Cada cliente aplica dano apenas ao jogador local. O Master aplica dano aos inimi
 
 ## Validação
 
-`FlamethrowerTrapTests` cobre alcance/direção, alvos fora do fogo, cobertura central e lateral, múltiplos colliders, intervalo de dano, jogadores e inimigos, filtros por tipo, frente inicial, varredura, atraso/duração, parada e configuração do prefab. Os 17 casos também verificam dissipação automática sem prolongar dano, parada manual com pose preservada, duração zero e novo disparo durante a dissipação. A validação visual usa renderização; contadores de partículas isolados não são considerados prova de que o fogo foi desenhado. Dois clientes Photon reais ainda exigem uma sessão de teste de rede.
+`FlamethrowerTrapTests` cobre alcance/direção, alvos fora do fogo, cobertura central e lateral, múltiplos colliders, intervalo de dano, jogadores e inimigos, filtros por tipo, frente inicial, varredura, atraso/duração, parada e configuração do prefab. Os 19 casos também verificam dissipação automática sem prolongar dano, parada manual com pose preservada, duração zero, novo disparo durante a dissipação e a luz acompanhando a frente do fogo, permanecendo fora de paredes inclinadas e apagando junto com as chamas. A validação visual usa renderização; contadores de partículas isolados não são considerados prova de que o fogo foi desenhado. Dois clientes Photon reais ainda exigem uma sessão de teste de rede.
 
 A captura nativa em Play Mode confirmou fogo visível ao terminar `Firing Duration`, perda progressiva de opacidade e desaparecimento completo após `Fade Out Duration`. A validação anterior também confirmou a extensão entre 4 e 8 metros. A cena Map3 foi mantida carregada para preservar suas alterações não salvas. A armadilha não depende da configuração do On Solved.
+
+A iluminação foi renderizada em Play Mode com as partículas fora do layer da câmera para isolar a contribuição real da Point Light: a parede recebeu luz alaranjada, escureceu durante a dissipação e voltou à iluminação anterior depois do encerramento.

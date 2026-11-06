@@ -25,14 +25,14 @@ Os modelos de placa foram importados deitados. `Placement Euler Angles` ajusta s
 
 A frente da base é inclinada. O configurador calcula `Placement Offset` e `Surface Euler Angles` no slot a partir do Collider da própria base, deixando a placa 2 mm à frente da superfície e preservando o `Plate_Pivot`. Esses campos permitem ajustes manuais posteriores.
 
-Há um botão provisório com pedestal, **Statue Puzzle Button**, em frente à fileira de estátuas. Seu `StatuePuzzleSubmitInteractable` já aponta para o controlador. O visual pode ser substituído por uma alavanca ou botão definitivo mantendo o componente e um Collider no objeto ou em seus filhos.
+The **Interaction Trigger System** above the circular stair uses the existing **Lever** to check the puzzle. **Linked System** now points to an **Interaction Trigger Router**. Route 0 checks `StatuePuzzleController`; **On Puzzle Solved** calls `SelectRouteAndActivate(1)`, immediately starting the platform and switching control to Alternate AB. Later uses return to A or select B again. The delivered **Momentary** mode still waits for the three traps and their cooldowns after a failed attempt. Cooldown references remain on the puzzle. Legacy inputs stay inactive. See [InteractionTriggerRouting.md](InteractionTriggerRouting.md) and [InteractionTriggerSystem.md](InteractionTriggerSystem.md).
 
 ## Como jogar e conectar outputs
 
 1. Recolha uma placa com a interação normal do inventário.
 2. Com a placa em uma das mãos ativas, mire na base e pressione **E**. Também funciona a tecla de uso da mão, configurada no inventário. Se ambas as mãos têm placas, E prioriza a direita; a tecla de uso escolhe a mão correspondente.
 3. Para corrigir, recolha a placa encaixada com **E**. A mão precisa ter espaço no inventário.
-4. Interaja com **Statue Puzzle Button** para conferir. Não há validação automática durante a montagem.
+4. Interaja com a **Lever** do **Interaction Trigger System** para conferir. O fogo só dispara se as placas estiverem incorretas ou incompletas. Aguarde a liberação/cooldown para uma nova tentativa. Se o tipo for alterado para Pressure Button, a conferência passa a ocorrer pela ocupação aceita no filtro. Não há validação automática durante a montagem.
 
 Selecione **Statue Puzzle** e configure os UnityEvents na seção **Outputs**:
 
@@ -41,13 +41,13 @@ Selecione **Statue Puzzle** e configure os UnityEvents na seção **Outputs**:
 
 O acerto dispara uma única vez por execução da cena. `Lock Plates When Solved` impede retirar as placas após o acerto; pode ser desmarcado no Inspector. Desmarcar permite retirá-las, mas o puzzle continua resolvido.
 
-Um `Button.onClick` de UI ou um UnityEvent de outra alavanca também pode chamar **StatuePuzzleController.CheckSolution()**. `On Activated`, no componente do botão, serve para feedback local do acionamento. Não coloque dois componentes `IPlayerInteractable` concorrentes no mesmo botão; use um deles e ligue os eventos apropriados.
+Um `Button.onClick` de UI ou um UnityEvent de outra alavanca também pode chamar **StatuePuzzleController.CheckSolution()**. O componente antigo `StatuePuzzleSubmitInteractable` continua disponível para outras cenas. Na Map3, o feedback do mecanismo é configurado em **Activation Audio Cue / Deactivation Audio Cue** no prefab de trigger. Evite ligar `CheckSolution()` também a um output do trigger quando o puzzle já estiver em **Linked System**.
 
 ### Outputs configurados na Map3
 
-**On Puzzle Failed** aciona a instância de `Dragon_Head_Flamethrower_Trap` por `FlamethrowerTrapController.TriggerTrap()`. O fogo causa dano somente nos jogadores e inimigos atingidos, respeitando obstáculos. A chamada provisória que causava 50 de dano diretamente foi removida desse evento. Consulte [FlamethrowerTrap.md](FlamethrowerTrap.md) para configurar alcance, movimento, duração e dano.
+**On Puzzle Failed** aciona as três instâncias ligadas de `Dragon_Head_Flamethrower_Trap` por `FlamethrowerTrapController.TriggerTrap()`. O fogo causa dano somente nos jogadores e inimigos atingidos, respeitando obstáculos. A chamada provisória que causava 50 de dano diretamente foi removida desse evento. Consulte [FlamethrowerTrap.md](FlamethrowerTrap.md) para configurar alcance, movimento, duração e dano.
 
-**On Puzzle Solved** está livre para conectar a recompensa definitiva. O controlador continua registrando o resultado da conferência no Console.
+**On Puzzle Solved** calls `InteractionTriggerRouter.SelectRouteAndActivate(1)`. It immediately activates B through the Follow State signal adapter and switches the lever to Alternate AB. The TwoPosition platform uses the latest authored 15.8 m path at 2.5 m/s. The next use returns to A, and later uses keep alternating. Other rewards may be connected to the same event. Failure outputs and plate locking are unchanged.
 
 O menu **Tools > Puzzles > Setup Statue Puzzle In Active Scene** permite refazer as referências na cena ativa. Ele usa os nomes das quatro estátuas somente durante a configuração e associa cada uma à base mais próxima. Mantém eventos já configurados, requer quatro bases com `Plate_Pivot` e deixa a cena pronta para salvar.
 
@@ -55,6 +55,8 @@ O menu **Tools > Puzzles > Setup Statue Puzzle In Active Scene** permite refazer
 
 O encaixe e a conferência usam os RPCs buffered do `PhotonView` do jogador, com ordenação pelo servidor, seguindo o inventário existente. Os eventos de gameplay são disparados somente no Master Client por padrão (`Events On Authority Only`), para evitar recompensas ou armadilhas duplicadas. Desmarque apenas para efeitos que precisam executar em cada cliente. O histórico segue o ciclo de vida dos RPCs do jogador; não foi adicionado um sistema de persistência de puzzle entre sessões ou após limpeza desse histórico.
 
+No fluxo modular, o trigger executa o alvo na autoridade. O puzzle envia a conferência pelo inventário local do Master, preservando a ordenação dos RPCs e o jogador que acionou como autor. Para caixas/inimigos, o autor pode ser vazio. O sinal de conferência aplicada libera a espera assíncrona; os ciclos das armadilhas continuam mantendo o puzzle ocupado. `CanTrigger` impede novas tentativas depois do acerto.
+
 Os testes `StatuePuzzleTests` cobrem as 24 permutações, tentativa incompleta/incorreta, correção após erro, sucesso único, bloqueio, configuração duplicada, pose/física e retirada/transferência do item original no inventário. A validação de dois clientes conectados deve ser feita em uma sessão multiplayer; os testes locais não simulam o servidor Photon.
 
-Validação realizada: 11 testes passaram no Editor, incluindo os vértices dos quatro modelos de placa contra o plano da superfície da base. A prévia renderizada confirmou o texto legível. Os projetos `Assembly-CSharp` e `Assembly-CSharp-Editor` compilaram sem erros ou avisos novos.
+The TwoPosition integration passed 91 Editor tests, including immediate route handoff, A/B control, repeated trips, reversal and state restoration. See [PlatformTwoPosition.md](PlatformTwoPosition.md) for native Play Mode evidence and multiplayer validation limits.

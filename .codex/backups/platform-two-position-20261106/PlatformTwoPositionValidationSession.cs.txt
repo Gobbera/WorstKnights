@@ -1,0 +1,105 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static partial class PlatformTwoPositionValidationSession
+{
+    private const string Request = "Temp/PlatformTwoPosition.request";
+    private const string Result = ".codex/diagnostics/platform-two-position-20261106.txt";
+    private const string Backup = ".codex/backups/platform-two-position-20261106/";
+    private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+
+    static PlatformTwoPositionValidationSession()
+    {
+        EditorApplication.update += Update;
+        SetupPlayCallbacks();
+    }
+
+    private static void Update()
+    {
+        if (SessionState.GetBool("Routing.Play", false) && EditorApplication.isPlaying)
+        {
+            try { TickPlay(); }
+            catch (Exception error) { File.AppendAllText(Result, "\nPLAY FAILED " + error); EndPlay(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try
+        {
+            if (command == "inspect") Inspect();
+            else if (command == "tests") RunTests();
+            else if (command == "configure") Configure();
+            else if (command == "play") BeginPlay();
+        }
+        catch (Exception error) { File.AppendAllText(Result, "\nFAILED " + error); }
+    }
+
+    private static void Log(string message) => File.AppendAllText(Result, "\nPASS " + message);
+    private static T[] Find<T>(Scene scene) where T : Component => scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<T>(true)).ToArray();
+    private static void Inspect()
+    {
+        var scene = SceneManager.GetActiveScene();
+        bool dirty = scene.isDirty;
+        EditorSceneManager.SaveScene(scene, Backup + "Map3.live-before.unity", true);
+        if (dirty) EditorSceneManager.MarkSceneDirty(scene);
+        Log("Scene " + scene.path + " dirty=" + scene.isDirty);
+        foreach (var platform in Find<PlatformController>(scene))
+            Log("Platform " + platform.name + " " + EditorJsonUtility.ToJson(platform));
+        foreach (var system in Find<InteractionTriggerSystem>(scene))
+            Log("Trigger " + system.name + " at " + system.transform.position + " linked=" + system.LinkedSystem);
+    }
+
+    private static void RunTests()
+    {
+        var original = SceneManager.GetActiveScene();
+        bool dirty = original.isDirty;
+        var validation = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        int passed = 0, failed = 0;
+        try
+        {
+            foreach (var type in new[] { typeof(PlatformControllerTests), typeof(InteractionTriggerRoutingTests), typeof(InteractionTriggerSystemTests), typeof(StatuePuzzleTests), typeof(FlamethrowerTrapTests) })
+                foreach (var method in type.GetMethods().Where(m => m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute), false).Length > 0))
+                {
+                    var fixture = Activator.CreateInstance(type);
+                    try { type.GetMethod("SetUp").Invoke(fixture, null); method.Invoke(fixture, null); passed++; Log(type.Name + "." + method.Name); }
+                    catch (Exception error) { failed++; File.AppendAllText(Result, "\nTEST FAILED " + type.Name + "." + method.Name + " " + error); }
+                    finally { type.GetMethod("TearDown").Invoke(fixture, null); }
+                }
+        }
+        finally
+        {
+            SceneManager.SetActiveScene(original);
+            EditorSceneManager.CloseScene(validation, true);
+            if (dirty) EditorSceneManager.MarkSceneDirty(original);
+        }
+        Log("EditMode passed=" + passed + " failed=" + failed + " originalDirty=" + original.isDirty);
+    }
+
+    private static void Configure()
+    {
+        var scene = SceneManager.GetActiveScene();
+        bool dirty = scene.isDirty;
+        string checkpoint = Backup + "Map3.live-before-configuration.unity";
+        if (File.Exists(checkpoint)) checkpoint = Backup + "Map3.live-before-reconfiguration.unity";
+        EditorSceneManager.SaveScene(scene, checkpoint, true);
+        if (dirty) EditorSceneManager.MarkSceneDirty(scene);
+        InteractionTriggerRoutingSetup.SetupActiveScene();
+        EditorSceneManager.SaveScene(scene, Backup + "Map3.live-after-configuration.unity", true);
+        EditorSceneManager.SaveScene(scene);
+        Log("Configured and saved " + scene.path + "; prior live edits captured in checkpoint.");
+        var puzzle = Find<StatuePuzzleController>(scene).Single();
+        var platform = Find<PlatformController>(scene).Single();
+        var router = Find<InteractionTriggerRouter>(scene).Single();
+        Log("Router " + EditorJsonUtility.ToJson(router));
+        Log("Platform " + EditorJsonUtility.ToJson(platform));
+        for (int i = 0; i < puzzle.OnPuzzleSolved.GetPersistentEventCount(); i++)
+            Log("Solved output " + puzzle.OnPuzzleSolved.GetPersistentTarget(i) + "." + puzzle.OnPuzzleSolved.GetPersistentMethodName(i));
+    }
+}

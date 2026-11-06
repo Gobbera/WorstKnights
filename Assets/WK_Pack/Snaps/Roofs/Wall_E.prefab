@@ -1,0 +1,153 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &4742646338736863174
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 159
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2.9999952
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 77370f28f1742b144b51fb0cfb509d7d, type: 2}
+    - target: {fileID: 919132149155446097, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      propertyPath: m_Name
+      value: Wall_E
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7225671220566003690}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -3329012291561197138}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7531309083880091781}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3275796378659639389}
+  m_SourcePrefab: {fileID: 100100000, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+--- !u!1 &5552984959460477591 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 16f0596dfb13432449d249b9c177e772, type: 3}
+  m_PrefabInstance: {fileID: 4742646338736863174}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &7225671220566003690
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5552984959460477591}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 4.000001, y: 4, z: 0.15}
+  m_Center: {x: -2.0000005, y: 2, z: 0.00000012714608}
+--- !u!114 &-3329012291561197138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5552984959460477591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac2e8041795637645942fc6f2345c16e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalReceiver
+  receiverName: Reactions
+  signalEntries:
+  - signalId: Hit
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 6e783884ba1b410408df8b90ae216cfd, type: 2}
+    effectPrefab: {fileID: 3451279753407673077, guid: 21ec746de78787842a80661b40fbf62f, type: 3}
+    effectLifetime: 1
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+--- !u!114 &7531309083880091781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5552984959460477591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae5bb85b21b7a284aa1ce87071e04bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalEmitter
+  signalReceiver: {fileID: -3329012291561197138}
+--- !u!114 &3275796378659639389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5552984959460477591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1005e141aac00d1418e15620c18c7915, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ImpactReactionSignalBridge
+  signalEmitter: {fileID: 7531309083880091781}
+  signalReceiver: {fileID: -3329012291561197138}
+  photonView: {fileID: 0}
+  signalId: Hit
+  broadcastInMultiplayer: 1

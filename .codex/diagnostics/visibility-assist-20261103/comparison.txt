@@ -1,0 +1,16 @@
+position0-off camera=(107.000, 1.650, 7.000) meanByte=0,192774562757202 meanDelta=0 changed=0/518400 maxDelta=0
+position0-current camera=(107.000, 1.650, 7.000) meanByte=0,128015046296296 meanDelta=0,125234053497942 changed=18682/518400 maxDelta=19
+position0-intensity1 camera=(107.000, 1.650, 7.000) meanByte=6,79049189814815 meanDelta=6,63043595679012 changed=507269/518400 maxDelta=138
+position0-point camera=(107.000, 1.650, 7.000) meanByte=0,12670396090535 meanDelta=0,126545138888889 changed=18857/518400 maxDelta=19
+position0-shaderfill camera=(107.000, 1.650, 7.000) meanByte=10,0796489197531 meanDelta=9,88728073559671 changed=475165/518400 maxDelta=189
+position1-off camera=(107.000, 1.650, 19.000) meanByte=0 meanDelta=0 changed=0/518400 maxDelta=0
+position1-current camera=(107.000, 1.650, 19.000) meanByte=0,0879391718106996 meanDelta=0,0879391718106996 changed=14380/518400 maxDelta=11
+position1-intensity1 camera=(107.000, 1.650, 19.000) meanByte=7,81562821502058 meanDelta=7,81562821502058 changed=515427/518400 maxDelta=142
+position1-point camera=(107.000, 1.650, 19.000) meanByte=0,0879391718106996 meanDelta=0,0879391718106996 changed=14380/518400 maxDelta=11
+position1-shaderfill camera=(107.000, 1.650, 19.000) meanByte=11,2176485339506 meanDelta=11,2176485339506 changed=486254/518400 maxDelta=191
+position2-off camera=(103.000, 1.650, 30.000) meanByte=0 meanDelta=0 changed=0/518400 maxDelta=0
+position2-current camera=(103.000, 1.650, 30.000) meanByte=0,372714763374486 meanDelta=0,372714763374486 changed=38850/518400 maxDelta=30
+position2-intensity1 camera=(103.000, 1.650, 30.000) meanByte=11,4778896604938 meanDelta=11,4778896604938 changed=507310/518400 maxDelta=248
+position2-point camera=(103.000, 1.650, 30.000) meanByte=0,373414351851852 meanDelta=0,373414351851852 changed=38850/518400 maxDelta=30
+position2-shaderfill camera=(103.000, 1.650, 30.000) meanByte=3,20014017489712 meanDelta=3,20014017489712 changed=242161/518400 maxDelta=184
+SCENE dirty before=True after=True

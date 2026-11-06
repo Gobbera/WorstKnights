@@ -1,0 +1,1 @@
+CONFIGURED end point light in prefab; original scene dirty=True

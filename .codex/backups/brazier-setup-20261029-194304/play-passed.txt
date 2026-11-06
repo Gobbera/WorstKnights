@@ -1,0 +1,6 @@
+PASS starts unlit, VFX/light off and audio silent.
+PASS empty hand and unlit torch rejected.
+PASS lit torch action ignites fire, existing light and loop; Lit signal fires once.
+PASS rendered fire: particles=52; warm pixels before/lit=0/38683
+PASS extinguish stops particles/light/audio; relight restarts loop; disabling stops audio.
+RESTORED original scene; dirty=False

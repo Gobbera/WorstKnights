@@ -1,0 +1,70 @@
+using System;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public static class InteractionTriggerSceneSetup
+{
+    [MenuItem("Tools/Mechanisms/Connect Statue Puzzle To Lever")]
+    public static void SetupActiveScene() => Configure(SceneManager.GetActiveScene(), InteractionTriggerType.Lever);
+
+    public static InteractionTriggerSystem Configure(Scene scene, InteractionTriggerType type)
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Configure fora do Play Mode.");
+        var all = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).ToArray();
+        var puzzle = all.Select(t => t.GetComponent<StatuePuzzleController>()).Single(p => p != null);
+        var sources = Enumerable.Range(0, puzzle.OnPuzzleFailed.GetPersistentEventCount()).Select(puzzle.OnPuzzleFailed.GetPersistentTarget)
+            .OfType<FlamethrowerTrapController>().Distinct().ToArray();
+        Undo.IncrementCurrentGroup();
+        int group = Undo.GetCurrentGroup();
+        Undo.SetCurrentGroupName("Migrate statue puzzle interaction trigger");
+        Undo.RecordObject(puzzle, "Move puzzle cooldown ownership");
+        var puzzleData = new SerializedObject(puzzle);
+        var cooldowns = puzzleData.FindProperty("activationCooldownSources"); cooldowns.arraySize = sources.Length;
+        for (int i = 0; i < sources.Length; i++) cooldowns.GetArrayElementAtIndex(i).objectReferenceValue = sources[i];
+        puzzleData.ApplyModifiedProperties();
+
+        var system = all.Select(t => t.GetComponent<InteractionTriggerSystem>()).FirstOrDefault(s => s != null && s.LinkedSystem == puzzle);
+        if (system == null)
+        {
+            var lever = all.FirstOrDefault(t => t.name == "Lever" && PrefabUtility.IsAnyPrefabInstanceRoot(t.gameObject));
+            if (lever == null && type == InteractionTriggerType.Lever) throw new InvalidOperationException("Selecione/posicione uma instancia do prefab Lever na cena primeiro.");
+            var root = new GameObject("Interaction Trigger System");
+            Undo.RegisterCreatedObjectUndo(root, "Create interaction trigger system");
+            SceneManager.MoveGameObjectToScene(root, scene);
+            if (lever != null) root.transform.SetPositionAndRotation(lever.position, lever.rotation);
+            system = Undo.AddComponent<InteractionTriggerSystem>(root);
+            if (lever != null && type == InteractionTriggerType.Lever)
+            {
+                Undo.SetTransformParent(lever, root.transform, "Parent existing lever");
+                Undo.RecordObject(lever, "Align existing lever");
+                lever.localPosition = Vector3.zero;
+                lever.localRotation = Quaternion.identity;
+                InteractionTriggerAuthoringUtility.Set(system, "mechanism", lever.GetComponent<InteractionTriggerMechanism>());
+            }
+        }
+        Undo.RecordObject(system, "Configure interaction trigger system");
+        InteractionTriggerAuthoringUtility.Set(system, "triggerType", (int)type);
+        InteractionTriggerAuthoringUtility.Set(system, "linkedSystem", puzzle);
+        string path = type == InteractionTriggerType.Lever ? InteractionTriggerAuthoringUtility.LeverPath : type == InteractionTriggerType.PressureButton ? InteractionTriggerAuthoringUtility.PressurePath : InteractionTriggerAuthoringUtility.ButtonPath;
+        InteractionTriggerAuthoringUtility.Set(system, "mechanismPrefab", AssetDatabase.LoadAssetAtPath<GameObject>(path));
+        InteractionTriggerAuthoringUtility.BuildMechanism(system);
+
+        foreach (var transform in all)
+        {
+            var legacy = transform.GetComponents<MonoBehaviour>().FirstOrDefault(c => c != null && c.GetType().Name == "PressureButtonController");
+            bool oldButton = transform.name == "Statue Puzzle Button" && transform.GetComponent<StatuePuzzleSubmitInteractable>() != null;
+            if (legacy == null && !oldButton) continue;
+            Undo.RecordObject(transform.gameObject, "Retire legacy puzzle input");
+            transform.gameObject.SetActive(false);
+            if (legacy != null) Undo.DestroyObjectImmediate(legacy);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(transform.gameObject);
+        }
+        EditorSceneManager.MarkSceneDirty(scene);
+        Undo.CollapseUndoOperations(group);
+        Selection.activeGameObject = system.gameObject;
+        return system;
+    }
+}

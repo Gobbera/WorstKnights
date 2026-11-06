@@ -1,0 +1,47 @@
+# Two Position Platforms
+
+## Scope and checkpoint
+
+Checkpoint: `.codex/backups/platform-two-position-20261106/` contains the saved scene and affected sources before implementation. Capture the open live scene before configuring it.
+
+## Implementation stages
+
+1. Add a reusable route handoff that activates the new target immediately and applies a per-route activation mode. Keep ordinary SelectRoute behavior available.
+2. Add TwoPosition platform motion: active/B selects the final path endpoint; inactive/A selects the original endpoint. Stop at each endpoint, support repeated trips and continuous mid-route reversal, and replicate direction with progress.
+3. Add a prepared dedicated AudioSource and Movement Audio Cue, looping only during movement and stopping at endpoints, break or disable.
+4. Migrate Map3 so solving selects/activates the platform route immediately in Alternate AB mode. Keep the authored path and speed.
+5. Validate routing, repeated trips, reversal, legacy modes, synchronization state, audio lifecycle and the configured Play Mode flow.
+
+## Authoring
+
+Choose **Platform Controller > Motion Mode > TwoPosition**. Keep the existing **Movement Points**: the original pose is A and the last path point is B. With **Activation Mode > Signal Source**, an active combined signal selects B and an inactive signal selects A. Each segment retains its authored direction, distance and speed; the return traverses the same segments in reverse order. Both endpoints stop until the input changes. Reversing during travel preserves current progress without teleporting.
+
+Use `SignalInteractionTriggerTarget` with **Follow State** to connect a modular trigger to the platform signal. Set its trigger to **Alternate AB** or **Toggle**. Pressure Buttons can use their occupied/empty state with the same target and platform mode.
+
+## Immediate completion handoff
+
+Each `InteractionTriggerRouter` route can enable **Override Activation Mode**. A Momentary puzzle route can therefore switch to an Alternate AB control route after completion. **SelectRouteAndActivate(int)** releases the old target, selects the new route and immediately activates it in B. It preserves the activator and does not replay the source's original use/activation outputs. Repeating selection of the current route does not fire it again. Plain **SelectRoute(int)** remains a deferred selection; a held target retains its original activation mode through release.
+
+In Map3, **On Puzzle Solved** calls **SelectRouteAndActivate(1)**. Route 0 checks the puzzle in Momentary mode; route 1 controls the platform in Alternate AB. Solving starts the descent immediately and leaves the lever in B. The next interaction selects A and returns to the initial position. Subsequent uses continue alternating. Errors keep the original puzzle/trap/cooldown behavior.
+
+The setup menu **Tools > Mechanisms > Connect Statue Puzzle To Platform** updates this connection without resetting Movement Points or their speeds. The live Map3 path at migration is 15.8 m downward at 2.5 m/s; this includes the user's latest unsaved distance adjustment.
+
+The lower-floor `Elevator_02` uses a Momentary `InteractionTriggerStateTarget` with Set B, targeting the main `Elevator_01` trigger. It calls the platform down and synchronizes the main lever's B state, so the next main interaction correctly selects A. Release/repeated calls do not send the platform upward. See [ElevatorCallControl.md](ElevatorCallControl.md).
+
+## Movement audio
+
+Assign **Movement Audio Cue** on `PlatformController`. **Movement Audio Source** references a dedicated source, prepared at startup with clip data requested before movement. The scene setup authors a **Platform Movement Audio** child/source before Play; older controllers create a compatibility source in Awake. No source is created on a lever activation.
+
+The cue's clip, volume/pitch variation, mixer, spatial settings and reverb are respected. Playback is forced to loop while the platform is moving, even if the cue's Loop setting is off. It follows Moving Part, remains continuous through a direction change and stops at either endpoint, when paused, broken or disabled. Empty cues are silent. Each client derives movement audio from the existing synchronized motion state; no separate audio RPC is needed. Map3 leaves Movement Audio Cue empty for the desired machinery sound to be assigned.
+
+## State synchronization
+
+Platform snapshots now include travel direction along with progress, reference time and movement state. Legacy eight-field snapshots decode as forward travel; new snapshots use nine fields. At-rest updates do not repeatedly publish unchanged endpoint state. Router selection/held route replication also restores the selected route's activation policy without replaying activation.
+
+## Validation
+
+91 Editor tests pass: 13 platform tests, 20 routing/signal tests, 23 existing trigger tests, 12 statue puzzle tests and 23 flamethrower tests. They cover repeated A/B trips, continuous mid-route reversal, segment speeds, endpoint stability, legacy modes, reverse/legacy snapshots, break/respawn, immediate/deferred handoff, context snapshots and mode restoration. Runtime and Editor projects compile without errors or warnings.
+
+Native Play Mode used an isolated copy of the configured live Map3 objects. It confirmed failed attempts still cycle all three traps, solving immediately activates B without a second interaction, the lever remains in B, both 15.8 m endpoint trips complete, additional trips remain available, reversal preserves position, and movement audio starts/stops correctly. The test cue had Loop disabled to verify the controller's forced loop. Source identity/count stayed unchanged across trips; disabling during travel stopped audio immediately. A silent temporary cue was used only in the preview; the authored scene's cue remains empty for the intended sound asset.
+
+The original scene was restored and all temporary preview assets/helper scripts were removed. The scene comparison contains the audio child (GameObject/Transform/AudioSource), five changed objects, and no removed objects. The latest authored distance and speed are preserved. Evidence: `.codex/diagnostics/platform-two-position-20261106.txt` and `platform-two-position-scene-diff-20261106.txt`. Two-client Photon validation is still required; local state tests do not simulate a server.

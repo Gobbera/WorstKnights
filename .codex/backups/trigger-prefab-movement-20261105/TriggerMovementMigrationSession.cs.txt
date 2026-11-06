@@ -1,0 +1,107 @@
+using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class TriggerMovementMigrationSession
+{
+    const string Root = "C:/Git/Unity/WorstKnights/";
+    const string Backup = Root + ".codex/backups/trigger-prefab-movement-20261105/";
+    const string CapturePath = Backup + "movement-settings.json";
+    const string Request = Root + "Temp/TriggerMovementMigration.request";
+    const string Result = Root + ".codex/diagnostics/trigger-prefab-movement-migration-20261105.txt";
+    static readonly string[] Fields = { "pressDistance", "leverAngle", "movementSpeed", "rotationSpeed" };
+    [Serializable] sealed class Snapshot { public Entry[] entries; }
+    [Serializable] sealed class Entry
+    {
+        public string systemId, scenePath, prefabPath, prompt;
+        public float pressDistance, leverAngle, movementSpeed, rotationSpeed;
+        public float[] Values => new[] { pressDistance, leverAngle, movementSpeed, rotationSpeed };
+    }
+    static TriggerMovementMigrationSession() { EditorApplication.update += Update; }
+    static void Update()
+    {
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try { if (command == "capture") Capture(); else if (command == "migrate") Migrate(); }
+        catch (Exception error) { File.AppendAllText(Result, "\nFAILED " + error); }
+    }
+    static void Capture()
+    {
+        if (File.Exists(CapturePath)) throw new InvalidOperationException("The initial movement snapshot already exists.");
+        var systems = Resources.FindObjectsOfTypeAll<InteractionTriggerSystem>().Where(s => s.gameObject.scene.IsValid() && !EditorUtility.IsPersistent(s)).ToArray();
+        foreach (var scene in systems.Select(s => s.gameObject.scene).Distinct())
+            EditorSceneManager.SaveScene(scene, Backup + scene.name + ".live-before.unity", true);
+        var entries = systems.Select(s =>
+        {
+            var data = new SerializedObject(s);
+            return new Entry
+            {
+                systemId = GlobalObjectId.GetGlobalObjectIdSlow(s).ToString(), scenePath = s.gameObject.scene.path,
+                prefabPath = s.Mechanism != null ? PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(s.Mechanism.gameObject) : AssetDatabase.GetAssetPath(data.FindProperty("mechanismPrefab").objectReferenceValue),
+                prompt = data.FindProperty("interactionPrompt").stringValue,
+                pressDistance = data.FindProperty("pressDistance").floatValue,
+                leverAngle = data.FindProperty("leverAngle").floatValue,
+                movementSpeed = data.FindProperty("movementSpeed").floatValue,
+                rotationSpeed = data.FindProperty("rotationSpeed").floatValue
+            };
+        }).ToArray();
+        File.WriteAllText(CapturePath, JsonUtility.ToJson(new Snapshot { entries = entries }, true));
+        File.WriteAllText(Result, "CAPTURE systems=" + entries.Length + "\n" + File.ReadAllText(CapturePath));
+    }
+    static void WriteMovement(InteractionTriggerMechanism mechanism, float[] values)
+    {
+        var data = new SerializedObject(mechanism);
+        for (int i = 0; i < Fields.Length; i++) data.FindProperty(Fields[i]).floatValue = values[i];
+        data.ApplyModifiedPropertiesWithoutUndo();
+    }
+    static void Migrate()
+    {
+        var entries = JsonUtility.FromJson<Snapshot>(File.ReadAllText(CapturePath)).entries;
+        foreach (var path in AssetDatabase.FindAssets("t:Prefab", new[] { InteractionTriggerAuthoringUtility.Root.TrimEnd('/') }).Select(AssetDatabase.GUIDToAssetPath))
+        {
+            var asset = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                var mechanism = asset.GetComponent<InteractionTriggerMechanism>();
+                if (mechanism == null) continue;
+                var uses = entries.Where(e => e.prefabPath == path).ToArray();
+                if (uses.Length > 0 && uses.All(e => e.Values.SequenceEqual(uses[0].Values))) WriteMovement(mechanism, uses[0].Values);
+                PrefabUtility.SaveAsPrefabAsset(asset, path);
+                File.AppendAllText(Result, "\nPASS prefab owns serialized movement: " + path);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(asset); }
+        }
+        foreach (var entry in entries)
+        {
+            if (!GlobalObjectId.TryParse(entry.systemId, out var id)) throw new InvalidOperationException("Invalid system ID.");
+            var system = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id) as InteractionTriggerSystem;
+            if (system == null || system.Mechanism == null) throw new InvalidOperationException("Could not restore captured trigger " + entry.systemId);
+            var group = entries.Where(e => e.prefabPath == entry.prefabPath).ToArray();
+            if (!group.All(e => e.Values.SequenceEqual(group[0].Values)))
+            {
+                WriteMovement(system.Mechanism, entry.Values);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(system.Mechanism);
+            }
+            var data = new SerializedObject(system);
+            if (data.FindProperty("interactionPrompt").stringValue == "[{key}] Acionar") data.FindProperty("interactionPrompt").stringValue = "[{key}] Activate";
+            data.ApplyModifiedPropertiesWithoutUndo();
+            var check = new SerializedObject(system.Mechanism);
+            for (int i = 0; i < Fields.Length; i++)
+                if (!Mathf.Approximately(check.FindProperty(Fields[i]).floatValue, entry.Values[i])) throw new InvalidOperationException("Movement changed during migration: " + Fields[i]);
+            EditorSceneManager.MarkSceneDirty(system.gameObject.scene);
+            File.AppendAllText(Result, "\nPASS scene values preserved: " + system.name + " prompt=" + system.InteractionPrompt);
+        }
+        foreach (var path in entries.Select(e => e.scenePath).Distinct())
+        {
+            var scene = SceneManager.GetSceneByPath(path);
+            EditorSceneManager.SaveScene(scene, Backup + scene.name + ".live-after.unity", true);
+            EditorSceneManager.SaveScene(scene);
+        }
+        File.AppendAllText(Result, "\nPASS migration complete; scenes saved with existing edits preserved.");
+    }
+}

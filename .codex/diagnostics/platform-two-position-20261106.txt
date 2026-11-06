@@ -1,0 +1,109 @@
+
+PASS Scene Assets/Scenes/Map3.unity dirty=True
+PASS Platform Stair_Circle (1) {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::PlatformController","platformName":"Platform","movingPart":{"instanceID":0},"networkSceneId":"Map3:Stair_Circle (1)[355]","prototypeLocalOnly":false,"motionMode":2,"movementPoints":[{"directionMode":0,"axis":1,"direction":1,"diagonalDirection":{"x":1.0,"y":0.0,"z":1.0},"distance":15.800000190734864,"speed":2.5}],"carryPlayers":true,"activationMode":2,"activationSignals":[{"instanceID":0}],"signalRequirement":0,"movementAudioCue":{"instanceID":0},"movementAudioSource":{"instanceID":0},"movementAxis":0,"movementDirection":0,"movementDistance":2.0,"movementSpeed":1.0,"legacyMotionSettingsMigrated":true,"breakable":false,"breakDelay":0.5,"topTriggerHeight":0.20000000298023225,"respawns":true,"respawnDelay":3.0,"playerDetectionMask":{"serializedVersion":"2","m_Bits":4294967291}}}
+PASS Trigger Interaction Trigger System at (153.02, 1.03, 24.44) linked=Interaction Trigger System (InteractionTriggerRouter)
+PASS PlatformControllerTests.InactiveSignalStaysAtAWithoutPublishingChangesEveryFrame
+PASS PlatformControllerTests.ActiveSignalMovesToBStopsAndDoesNotAutomaticallyReturn
+PASS PlatformControllerTests.SignalControlsRepeatedCompleteRoundTrips
+PASS PlatformControllerTests.ReversingDuringTravelPreservesPositionAndSpeed
+PASS PlatformControllerTests.MultiSegmentPathReturnsInReverseOrderAtEachSegmentsSpeed
+PASS PlatformControllerTests.AlwaysActiveTwoPositionStaysAtB
+PASS PlatformControllerTests.OneWayStillCompletesOnlyOnceAfterSignalRelease
+PASS PlatformControllerTests.PingPongStillAutomaticallyReturnsAndPausesOnSignalRelease
+PASS PlatformControllerTests.StaticMotionDoesNotMoveOnActivation
+PASS PlatformControllerTests.SnapshotRestoresReverseProgressAndRejectsOlderDirection
+PASS PlatformControllerTests.LegacySnapshotDefaultsToForwardAndInvalidDirectionIsRejected
+PASS PlatformControllerTests.BreakStopsMotionAndRespawnRestoresOriginalEndpoint
+PASS PlatformControllerTests.EditModePreparationDoesNotCreateAnAudioSource
+PASS InteractionTriggerRoutingTests.RouteChangeDuringPressDoesNotReplayAndReleasesOriginalTarget
+PASS InteractionTriggerRoutingTests.SynchronousOutputCanSwitchRouteWithoutRedirectingItsCurrentPress
+PASS InteractionTriggerRoutingTests.BusyOriginalTargetHoldsReleaseAfterRouteChanges
+PASS InteractionTriggerRoutingTests.BusyNewTargetDoesNotPreventOriginalReleaseButBlocksTheNextPress
+PASS InteractionTriggerRoutingTests.ToggleReleasesOldTargetBeforeNewRouteActivates
+PASS InteractionTriggerRoutingTests.AlternateABUsesTheSelectedRouteOnBothActionPositions
+PASS InteractionTriggerRoutingTests.PressureRouteChangeWaitsForOccupantReleaseWithoutActivatingNewTarget
+PASS InteractionTriggerRoutingTests.InvalidRouteAndNestedRouterDoNotChangeSelectionOrEmitCommands
+PASS InteractionTriggerRoutingTests.MissingDisabledAndUnavailableDestinationsBlockTheTrigger
+PASS InteractionTriggerRoutingTests.RestoredRoutingPreservesHeldDestinationWithoutReplayingGameplay
+PASS InteractionTriggerRoutingTests.SignalFollowStateTracksPressAndRelease
+PASS InteractionTriggerRoutingTests.SignalToggleRunsOncePerMomentaryPress
+PASS InteractionTriggerRoutingTests.SignalActivateLatchesAfterReleaseAndDeactivateHandlesActions
+PASS InteractionTriggerRoutingTests.SignalAdapterRespectsDisabledAndMissingSignal
+PASS InteractionTriggerRoutingTests.SceneSetupIsIdempotentAndPreservesPlatformPathAndExistingOutputs
+PASS InteractionTriggerRoutingTests.ImmediateHandoffActivatesBAndSubsequentUsesAlternateWithoutAnotherPuzzleCheck
+PASS InteractionTriggerRoutingTests.SynchronousSolveHandoffRunsOnceAndKeepsContextAsASnapshot
+PASS InteractionTriggerRoutingTests.ExternalCompletionCanActivateANewRouteWithoutAPreviousPress
+PASS InteractionTriggerRoutingTests.RestoredSelectedRouteRestoresABPolicyWithoutReplayingActivation
+PASS InteractionTriggerRoutingTests.DeferredSelectionAppliesOverrideOnlyAfterOriginalRelease
+PASS InteractionTriggerSystemTests.ToggleChangesBothStatesAndReceivesTheActivatingPlayer
+PASS InteractionTriggerSystemTests.OnceRejectsEveryUseAfterItsFirstAcceptedActivation
+PASS InteractionTriggerSystemTests.AlternateABHasDistinctOutputsAndEveryUseIsAnAction
+PASS InteractionTriggerSystemTests.MomentaryDoesNotRepeatWhileHeldAndWaitsForLinkedSystem
+PASS InteractionTriggerSystemTests.InteractionCooldownRejectsRapidUses
+PASS InteractionTriggerSystemTests.UnavailableTargetDoesNotMoveOrEmitOutputs
+PASS InteractionTriggerSystemTests.PressureDeduplicatesCollidersAndWaitsUntilEveryPlayerLeaves
+PASS InteractionTriggerSystemTests.PressurePlayerFilterRejectsPropsAndEnemyActors
+PASS InteractionTriggerSystemTests.PressureObjectsFilterAcceptsDynamicPropsButExcludesPlayersEnemiesAndLevelGeometry
+PASS InteractionTriggerSystemTests.PressureEnemyFilterRejectsPlayersAndObjects
+PASS InteractionTriggerSystemTests.PressureAnythingCombinesActorCategoriesWithoutCountingTheFloor
+PASS InteractionTriggerSystemTests.PressureSpecificObjectMatchesItsChildCollidersAndIgnoresOtherProps
+PASS InteractionTriggerSystemTests.FeetBelowOrAboveSurfaceAndExcludedLayersDoNotPress
+PASS InteractionTriggerSystemTests.EmptyPressureWaitsForBusyTargetAndUsesWorldDistanceWithScaledParent
+PASS InteractionTriggerSystemTests.PuzzleOwnsTrapCooldownAndOnlyFailureStartsFire
+PASS InteractionTriggerSystemTests.DoorTargetCanFollowToggleStateAndUnlock
+PASS InteractionTriggerSystemTests.NetworkRestoreRejectsStaleInvalidStateAndDoesNotReplayGameplay
+PASS InteractionTriggerSystemTests.PrefabCategoriesAreTypedAndPressureHasNoClickInteractorOrPuzzleReference
+PASS InteractionTriggerSystemTests.AuthoringBuildIsIdempotentAndChangingCategoryReplacesOnlyItsMechanism
+PASS InteractionTriggerSystemTests.PrefabLeverAngleAndAngularSpeedDriveTheLinkedSystemInstance
+PASS InteractionTriggerSystemTests.PrefabPressureTravelAndSpeedAlsoControlTheOccupancyDetectionBand
+PASS InteractionTriggerSystemTests.InitialBDoesNotEmitActionsAndMomentaryIgnoresHiddenStartState
+PASS InteractionTriggerSystemTests.WrongCategoryAndNonTargetComponentsCannotActivate
+PASS StatuePuzzleTests.EmptyOrIncompleteArrangement_FailsOnlyWhenSubmitted
+PASS StatuePuzzleTests.SwappedPlates_AreAcceptedButFailValidation
+PASS StatuePuzzleTests.CorrectArrangement_SolvesOnceAndLocksPlates
+PASS StatuePuzzleTests.Placement_SnapsPreservesScaleAndFreezesPhysics
+PASS StatuePuzzleTests.RemovingThenDroppingPlate_DoesNotReturnItToSlot
+PASS StatuePuzzleTests.DuplicateSlotConfiguration_DoesNotSolve
+PASS StatuePuzzleTests.FailedAttempt_CanBeCorrectedAndSubmittedAgain
+PASS StatuePuzzleTests.InventoryPlacement_ReleasesOnlySelectedHandAndKeepsOriginalPickup
+PASS StatuePuzzleTests.AllPlatePrefabs_HaveExpectedIdentities
+PASS StatuePuzzleTests.All24Permutations_OnlyTheMatchingArrangementIsCorrect
+PASS StatuePuzzleTests.ActualBase_AllFourPlatesFollowSurfaceWithoutClipping
+PASS StatuePuzzleTests.SolvedPuzzleReroutesTheNextLeverUseToTheExistingPlatformSignal
+PASS FlamethrowerTrapTests.DamagesOnlyActorsInsideTheFlameAndWithinRange
+PASS FlamethrowerTrapTests.WallShortensVisualJetAndPreventsDamageBehindIt
+PASS FlamethrowerTrapTests.OffAxisCoverBlocksDamageEvenIfCenterRayIsClear
+PASS FlamethrowerTrapTests.MultipleCollidersReceiveOneTickAndIntervalIsRespected
+PASS FlamethrowerTrapTests.PlayersAndEnemiesCanBothBeDamagedWithoutKnockback
+PASS FlamethrowerTrapTests.DamageDoesNotReachTheEndBeforeTheFlameFront
+PASS FlamethrowerTrapTests.SweepChangesBothVisualDirectionAndDamageDirection
+PASS FlamethrowerTrapTests.WarningAndExpiredDurationDoNotCauseDamage
+PASS FlamethrowerTrapTests.RepeatedTriggersDoNotStackAndStopCancelsDamage
+PASS FlamethrowerTrapTests.TargetTypeFiltersAreIndependent
+PASS FlamethrowerTrapTests.MovingDispenserReturnsToItsAuthoredPoseWhenStopped
+PASS FlamethrowerTrapTests.DisablingTrapCancelsEmissionAndDamage
+PASS FlamethrowerTrapTests.NaturalEndFadesExistingParticlesWithoutExtendingDamage
+PASS FlamethrowerTrapTests.ManualStopFadesOnceAndPreservesTheLastJetPose
+PASS FlamethrowerTrapTests.ZeroFadeDurationPreservesImmediateStop
+PASS FlamethrowerTrapTests.NewTriggerReplacesTheFadeAndRestoresFullOpacity
+PASS FlamethrowerTrapTests.EndLightFollowsTheFlameFrontAndStaysOutsideObliqueWalls
+PASS FlamethrowerTrapTests.EndLightFadesAtTheLastEndpointAndTurnsOffWithTheFire
+PASS FlamethrowerTrapTests.DispenserPrefabUsesTheExistingPivotAndDoesNotAutoPlay
+PASS FlamethrowerTrapTests.AudioAuthoringReusesDedicatedSourceWithoutChangingOtherAudio
+PASS FlamethrowerTrapTests.EditorPreviewDoesNotCreateRuntimeAudio
+PASS FlamethrowerTrapTests.FlamethrowerClipIsPreparedBeforePlayback
+PASS FlamethrowerTrapTests.ShaderWarmupContainsOnlyCapturedFlamethrowerRenderStates
+PASS EditMode passed=91 failed=0 originalDirty=True
+PASS Configured and saved Assets/Scenes/Map3.unity; prior live edits captured in checkpoint.
+PASS Router {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::InteractionTriggerRouter","routes":[{"name":"Check Statues","target":{"instanceID":0},"overrideActivationMode":true,"activationMode":0},{"name":"Control Platform","target":{"instanceID":0},"overrideActivationMode":true,"activationMode":2}],"initialRoute":0,"localOnly":false}}
+PASS Platform {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::PlatformController","platformName":"Platform","movingPart":{"instanceID":0},"networkSceneId":"Map3:Stair_Circle (1)[355]","prototypeLocalOnly":false,"motionMode":3,"movementPoints":[{"directionMode":0,"axis":1,"direction":1,"diagonalDirection":{"x":1.0,"y":0.0,"z":1.0},"distance":15.800000190734864,"speed":2.5}],"carryPlayers":true,"activationMode":2,"activationSignals":[{"instanceID":0}],"signalRequirement":0,"movementAudioCue":{"instanceID":0},"movementAudioSource":{"instanceID":0},"movementAxis":0,"movementDirection":0,"movementDistance":2.0,"movementSpeed":1.0,"legacyMotionSettingsMigrated":true,"breakable":false,"breakDelay":0.5,"topTriggerHeight":0.20000000298023225,"respawns":true,"respawnDelay":3.0,"playerDetectionMask":{"serializedVersion":"2","m_Bits":4294967291}}}
+PASS Solved output Interaction Trigger System (InteractionTriggerRouter).SelectRouteAndActivate
+PASS Play: failure keeps Momentary puzzle control, cycles three traps and leaves platform/audio idle.
+PASS Play: On Puzzle Solved immediately selects and activates B; no second interaction is needed.
+PASS Play: lever stays in B while the platform descends; existing source loops even with cue Loop disabled.
+PASS Play: B stops at the authored destination 15,8 m away with audio off; next use selects A.
+PASS Play: A returns to the original position with audio stopped; another B trip is accepted.
+PASS Play: reversing during travel is continuous, returns to A and stops audio without creating sources.
+PASS Play: disabling a moving platform immediately stops its prepared movement source.
+PASS Play restored Assets/Scenes/Map3.unity dirty=False
+FINAL: 91 Editor tests passed, 0 failed. Native Play confirmed immediate solve-to-B activation, repeated A/B endpoint travel using the authored 15.8 m path, mid-route reversal, prepared source reuse, movement-only looping and immediate stop on disable. Original scene restored; temporary validation assets/helper scripts removed. Two-client Photon session not tested.

@@ -1,0 +1,64 @@
+# Interaction Trigger Routing
+
+## Scope and checkpoint
+
+Allow a mechanism to change gameplay targets after a puzzle or another event. Keep activation policy on `InteractionTriggerSystem`, movement/audio on its prefab, and gameplay/motion rules on the destination systems.
+
+Checkpoint: `.codex/backups/interaction-trigger-routing-20261106/` contains the saved scene and affected source/documentation before implementation. Preserve a live scene copy before configuring the open scene.
+
+## Implementation stages
+
+1. Add a reusable target router with named routes and an event-callable `SelectRoute(int)` method. Preserve the destination of an ongoing press until its release; route changes never replay activation.
+2. Add a signal target adapter for existing `DoorSignalSource` consumers, including platforms and doors. Reuse their current motion and network replication.
+3. Configure Map3: route 0 checks Statue Puzzle; `On Puzzle Solved` selects route 1; the next lever use activates the elevator signal. Keep the platform's authored path and OneWay mode.
+4. Validate route transitions, busy targets, pressure occupancy, signal policies and state restoration, then exercise the configured scene flow in Play Mode.
+
+## Authoring
+
+1. Add `InteractionTriggerRouter` to the trigger controller's object and assign it to **Interaction Trigger System > Linked System**. Use one router per trigger.
+2. Add entries to **Routes**, each with a descriptive **Name** and a **Target** implementing `IInteractionTriggerTarget`. Route indices start at zero. Empty targets, disabled targets and nested routers block interaction.
+3. Set **Initial Route** to the starting destination.
+4. Connect any gameplay UnityEvent to **InteractionTriggerRouter.SelectRoute(int)** and supply the destination index. The router has no puzzle/platform dependency; another puzzle, door, quest or mechanism event can make the same selection.
+5. Keep activation mode, cooldown, occupancy filters and mechanism prefab configuration on their existing components. Selecting a route does not reset Once mode or change the trigger's activation policy.
+
+Changing the route does not invoke the new destination. Momentary, Toggle and Pressure Button retain their original destination through release, including its busy state. The next activation uses the selected destination. Alternate AB treats both positions as actions and uses the selected route for each accepted action. Route selection and restoration do not emit movement/audio or gameplay outputs by themselves.
+
+## Signal adapter
+
+`SignalInteractionTriggerTarget` connects the modular trigger contract to an existing `DoorSignalSource`. Assign its **Signal Source** and choose:
+
+| Action | Behavior |
+| --- | --- |
+| Follow State | Activate on press/B; deactivate on release/A. Useful for held platforms or doors. |
+| Toggle | Toggle once per action; a Momentary release does not toggle again. |
+| Activate | Latch the signal on. Useful for an authored OneWay platform. |
+| Deactivate | Latch the signal off. |
+
+The adapter reports no busy animation of its own; the signal consumer retains its motion, lock and replication rules. OneWay completes once started; PingPong runs while its activation requirement is satisfied. The adapter does not add elevator directions, automatic returns or path changes.
+
+## Map3 connection
+
+**Interaction Trigger System > Linked System** points to its router:
+
+| Index | Name | Target |
+| --- | --- | --- |
+| 0 | Check Statues | Statue Puzzle Controller |
+| 1 | Control Platform | Signal Interaction Trigger Target on `Stair_Circle (1)` |
+
+**Statue Puzzle > On Puzzle Solved** calls `SelectRoute(1)`. Failure keeps route 0 and the existing three flamethrower outputs/cooldowns. Success selects route 1, the lever finishes its original press, and the next use activates the elevator signal. It does not start the elevator while solving.
+
+The platform keeps its authored **OneWay** route: 15.5 meters downward at 2.5 m/s, with **Carry Players** enabled. Its **Signal Source** activation now references the authored `DoorSignalSource` on the same object. The adapter uses **Activate**, so the momentary lever's return does not cancel activation.
+
+**Tools > Mechanisms > Connect Statue Puzzle To Platform** provides a scene setup shortcut when there is one puzzle, one platform and its matching trigger. It supports Undo, preserves other routes/outputs/signal references, and avoids duplicate components or listeners. It replaces any legacy `On Puzzle Solved` enable/disable call targeting that same platform: signal activation now controls movement, and the platform must remain enabled. Map3 had a call disabling the platform on solve; this conflict is removed. For several puzzles/platforms, configure their explicit references in the Inspector. The older Lever/Pressure setup menus preserve an existing router.
+
+## Networking
+
+The Master Client selects routes and dispatches gameplay commands. Selected and held route indices are stored together with a sequence in room properties. Late join and master handoff restore the chosen destination and any original destination waiting for release without replaying gameplay. Trigger presentation, signals and platform motion use their existing replication. Keep **Local Only** consistent with the trigger when prototyping.
+
+## Validation
+
+All **73 Editor tests** passed: 15 routing/signal tests, 23 existing trigger tests, 12 statue puzzle tests and 23 flamethrower tests. The puzzle integration test follows failure, correction, solving, release and next-use signal activation, then verifies the real platform controller's movement and endpoint.
+
+Native Play Mode used an isolated copy of the configured live Map3 objects and their persistent event connections. It confirmed all three traps on failure, natural cooldown/release, correct-plate success selecting route 1, no elevator activation during solving/release, next-use signal activation, and the actual platform completing its 15.5 m downward path. The local validation disables the scene's automatic room connection. The original scene is restored and temporary validation assets are removed.
+
+Runtime and Editor projects compile without errors; the first runtime build reported existing Photon deprecation/unused-field warnings. The scene comparison contains three added components, five changed objects and no removed objects, preserving the platform's authored path and unrelated live edits. Evidence: `.codex/diagnostics/interaction-trigger-routing-20261106.txt` and `interaction-trigger-routing-scene-diff-20261106.txt`. Two-client Photon validation is still required; local state restoration tests do not simulate a network server.

@@ -1,52 +1,38 @@
 # Platform System Workflow
 
-## Component
-- `PlatformController`: controla uma rota com varios pontos de movimento em `X`, `Y`, `Z` ou diagonais, alem de plataforma quebradica com respawn opcional.
+`PlatformController` owns a path with sequential axis/diagonal movement points, player carrying, optional breaking/respawn and existing room-state replication.
 
-## Plataforma movel
-1. Adicione `PlatformController` no objeto da plataforma.
-2. Em `Moving Part`, arraste o mesh, pivot ou corpo que deve se mover.
-3. Em `Motion Mode`, escolha:
-   `PingPong`: vai e volta continuamente pela rota.
-   `OneWay`: percorre a rota uma unica vez e para no ultimo ponto.
-4. Em `Movement Points`, clique em `Add Movement Point` para criar cada trecho do trajeto.
-5. Para cada ponto configure:
-   `Direction Mode`: `Axis` ou `Diagonal`.
-   Se for `Axis`, escolha `Axis` (`X`, `Y` ou `Z`) e `Direction` (`Positive` ou `Negative`).
-   Se for `Diagonal`, configure `Diagonal Direction` com um vetor como `(1, 0, 1)` ou `(-1, 1, 0)`.
-   `Distance`: quantos metros esse trecho percorre.
-   `Speed`: velocidade desse trecho.
-6. O fim de um ponto vira a origem do ponto seguinte, permitindo criar um caminho em varias etapas.
-7. Se quiser que o jogador seja carregado junto, deixe `Carry Players` ligado.
+## Motion
 
-## Plataforma parada
-1. Em `Motion Mode`, escolha `Static`.
-2. O objeto fica parado e ainda pode ser usado como plataforma quebradica.
+1. Add `PlatformController` to the platform and assign **Moving Part** to the mesh, pivot or body that moves.
+2. Choose **Motion Mode**: Static stays still; PingPong traverses the path in both directions repeatedly while active; OneWay traverses it once; TwoPosition moves to B when active and returns to A when inactive, stopping at each endpoint.
+3. Use **Add Movement Point** to add a segment. Choose Axis (X/Y/Z plus Positive/Negative) or Diagonal, then set **Distance** in meters and **Speed** in meters per second. Diagonal vectors are normalized.
+4. Each segment begins at the previous segment's destination. **Carry Players** enables the existing passenger movement behavior.
 
-## Ativacao
-1. Em `Activation Mode`, escolha como a plataforma comeca a funcionar:
-   `Always Active`: ela fica livre para se mover o tempo todo.
-   `Player On Top`: o proprio jogador em cima da plataforma ativa o movimento.
-   `Signal Source`: a plataforma depende de sinais externos.
-2. Para `Signal Source`, arraste em `Activation Signals` os mesmos `DoorSignalSource` usados nas portas.
-3. Esses sinais podem ser ativados por:
-   `DoorSignalLever`: alavancas.
-   `DoorSignalTriggerZone`: triggers de volume.
-4. Em `Signal Requirement`, escolha se basta `Any` sinal ativo ou se precisa de `All`.
-5. Quando o `Motion Mode` estiver em `OneWay`, a plataforma completa a rota inteira na primeira ativacao valida e permanece no ultimo ponto.
+## Activation
 
-## Plataforma quebradica
-1. Ative `Breakable`.
-2. Ajuste `Break Delay`:
-   `0`: quebra imediatamente ao detectar o jogador em cima.
-   `> 0`: espera esse tempo antes de quebrar.
-3. Ajuste `Top Trigger Height` para controlar a espessura do volume que detecta o jogador sobre a superficie.
-4. Se ela deve voltar, ative `Respawns`.
-5. Ajuste `Respawn Delay` com o tempo para reaparecer.
-6. Em `Player Detection Mask`, deixe a layer do jogador incluida.
+| Activation Mode | Behavior |
+| --- | --- |
+| Always Active | Movement is continuously enabled. |
+| Player On Top | The platform's top volume detects a player and enables movement. |
+| Signal Source | **Activation Signals** references `DoorSignalSource` components. **Signal Requirement** selects Any or All. |
 
-## Comportamento
-- A plataforma quebradica ativa quando um `Player` fica em cima dela.
-- Quando respawna, ela volta para a posicao inicial e reinicia toda a rota desde o primeiro ponto.
-- O gizmo selecionado mostra todo o trajeto encadeado da plataforma movel e o volume superior usado para detectar o jogador.
-- O modo `OneWay` e ideal para plataformas acionadas por gatilho, alavanca ou pelo proprio jogador.
+A OneWay route completes once its first valid activation starts it; releasing a signal does not reverse or restart it. A PingPong route follows its activation requirement and pauses/resumes its existing traversal.
+
+Existing `DoorSignalLever` and `DoorSignalTriggerZone` can drive these signals. Modular Lever/Button/Pressure Button mechanisms can use `SignalInteractionTriggerTarget` as their **Linked System**. Set its **Signal Source** and choose Follow State, Toggle, Activate or Deactivate. Use Activate to latch a OneWay route; use Follow State for occupancy/held-switch behavior with PingPong. The adapter adds no path or motion logic.
+
+## Unlocking a mechanism after an event
+
+Assign an `InteractionTriggerRouter` to the modular trigger's **Linked System**. Configure a route to the original gameplay target and another route to the platform's signal adapter. Connect the completion event to **SelectRouteAndActivate(int)** to immediately activate the platform route in B. Set that route's **Override Activation Mode** to **Alternate AB**, and use a **Follow State** signal adapter with **TwoPosition** platform motion. Plain **SelectRoute(int)** remains available when only the next accepted interaction should reach the new target.
+
+In Map3, **Statue Puzzle > On Puzzle Solved** immediately activates route 1 on the Lever's router and starts the descent. Subsequent uses alternate A/B, returning to the original endpoint or moving to the final endpoint. The latest authored path is 15.8 m downward at 2.5 m/s with Carry Players enabled. **Tools > Mechanisms > Connect Statue Puzzle To Platform** provides the single-puzzle/single-platform setup shortcut. See [PlatformTwoPosition.md](PlatformTwoPosition.md).
+
+## Movement audio
+
+Assign **Movement Audio Cue** on PlatformController. The dedicated **Movement Audio Source** is prepared before movement, follows Moving Part and loops while moving. It stops at each endpoint, when paused, broken or disabled. The setup menu authors a source in advance; older objects have an Awake fallback. Audio derives from synchronized movement on each client without a separate audio RPC. Empty cues stay silent.
+
+## Breakable platforms
+
+Enable **Breakable**, configure **Break Delay**, **Top Trigger Height** and **Player Detection Mask**. A zero delay breaks immediately when a player occupies the top volume. Enable **Respawns** and set **Respawn Delay** to restore the original transform, visuals/colliders and restart traversal from the first point. Breaking works with Static platforms too.
+
+The selected gizmo displays the complete path and the top detection volume. Platform motion, passenger carrying and break/respawn rules remain owned by `PlatformController`; routing only selects which mechanism receives interaction commands.

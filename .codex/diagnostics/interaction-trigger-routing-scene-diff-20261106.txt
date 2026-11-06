@@ -1,0 +1,83 @@
+Compared the live scene before configuration with saved Map3.
+Added objects: ['2040459109', '6586617693389580384', '6586617693389580385']
+Removed objects: []
+Changed object 2040459106
+--- before
+
++++ after
+
+@@ -9,4 +9,5 @@
+
+   - component: {fileID: 2040459108}
+   - component: {fileID: 2040459107}
++  - component: {fileID: 2040459109}
+   m_Layer: 0
+   m_Name: Interaction Trigger System
+Changed object 2040459107
+--- before
+
++++ after
+
+@@ -14,5 +14,5 @@
+
+   mechanismPrefab: {fileID: 4592825159569229274, guid: 2ed0890f0a695d4499428307419526bc, type: 3}
+   mechanism: {fileID: 172838477}
+-  linkedSystem: {fileID: 970922657}
++  linkedSystem: {fileID: 2040459109}
+   activationMode: 0
+   startsActive: 0
+Changed object 6586617693389580380
+--- before
+
++++ after
+
+@@ -82,3 +82,9 @@
+
+       insertIndex: -1
+       addedObject: {fileID: 6586617693389580383}
++    - targetCorrespondingSourceObject: {fileID: 5102203611029950362, guid: d498db9bfe0acf14d9e32614eb0f664a, type: 3}
++      insertIndex: -1
++      addedObject: {fileID: 6586617693389580385}
++    - targetCorrespondingSourceObject: {fileID: 5102203611029950362, guid: d498db9bfe0acf14d9e32614eb0f664a, type: 3}
++      insertIndex: -1
++      addedObject: {fileID: 6586617693389580384}
+   m_SourcePrefab: {fileID: 100100000, guid: d498db9bfe0acf14d9e32614eb0f664a, type: 3}
+Changed object 6586617693389580383
+--- before
+
++++ after
+
+@@ -25,5 +25,6 @@
+
+   carryPlayers: 1
+   activationMode: 2
+-  activationSignals: []
++  activationSignals:
++  - {fileID: 6586617693389580385}
+   signalRequirement: 0
+   movementAxis: 0
+Changed object 970922657
+--- before
+
++++ after
+
+@@ -25,12 +25,12 @@
+
+     m_PersistentCalls:
+       m_Calls:
+-      - m_Target: {fileID: 6586617693389580383}
+-        m_TargetAssemblyTypeName: PlatformController, Assembly-CSharp
+-        m_MethodName: set_enabled
+-        m_Mode: 6
++      - m_Target: {fileID: 2040459109}
++        m_TargetAssemblyTypeName: InteractionTriggerRouter, Assembly-CSharp
++        m_MethodName: SelectRoute
++        m_Mode: 3
+         m_Arguments:
+           m_ObjectArgument: {fileID: 0}
+-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+-          m_IntArgument: 0
++          m_ObjectArgumentAssemblyTypeName: 
++          m_IntArgument: 1
+           m_FloatArgument: 0
+           m_StringArgument: 

@@ -32,6 +32,17 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
     [Header("Audio")]
     [Tooltip("Som emitido na saida do fogo durante o disparo. Ative Loop no AudioCue para audio continuo.")]
     [SerializeField] private AudioCue flameAudioCue;
+    [Tooltip("AudioSource dedicado em um filho da armadilha, preparado no prefab antes do disparo.")]
+    [SerializeField] private AudioSource flameAudioSource;
+
+    [Header("End Light")]
+    [SerializeField] private bool endLightEnabled = true;
+    [SerializeField] private Light endLight;
+    [SerializeField] private Color endLightColor = new Color(1f, 0.35f, 0.08f);
+    [SerializeField, Min(0f)] private float endLightIntensity = 2.5f;
+    [SerializeField, Min(0.01f)] private float endLightRange = 4f;
+    [Tooltip("Afasta a luz da superficie atingida para iluminar o lado exposto da parede.")]
+    [SerializeField, Min(0f)] private float endLightSurfaceOffset = 0.2f;
 
     [Header("Jet Shape (world units)")]
     [SerializeField, Min(0.1f)] private float range = 10f;
@@ -73,6 +84,7 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
 
     public TrapPhase Phase { get; private set; }
     public bool IsEmitting => Phase == TrapPhase.Firing;
+    public bool IsCycleActive => activationActive && Clock < activationTime + activationDelay + firingDuration + cooldown;
     public bool IsFadingOut => visualFading;
     public float Range => range;
     public float ResolvedLength { get; private set; }
@@ -81,6 +93,7 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
     public Quaternion JetRotation { get; private set; } = Quaternion.identity;
     public Vector3 JetDirection => JetRotation * Vector3.forward;
     public VisualEffect FlameEffect => flameEffect;
+    public Light EndLight => endLight;
     private bool Online => Application.IsPlaying(gameObject) && !localOnly && PhotonNetwork.InRoom && !PhotonNetwork.OfflineMode;
     private double Clock => Online ? PhotonNetwork.Time
         : Application.IsPlaying(gameObject) ? Time.timeAsDouble : Time.realtimeSinceStartupAsDouble;
@@ -88,6 +101,7 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
     private void Awake()
     {
         ResolveReferences();
+        PrepareFlameAudio();
         EnsureNetworkKey();
     }
 
@@ -95,6 +109,7 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
     {
         base.OnEnable();
         ResolveReferences();
+        PrepareFlameAudio();
         EnsureNetworkKey();
         ClearVisuals();
         if (Online) { stateSequence = 0; RestoreNetworkState(); }
@@ -116,9 +131,16 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
         damagePerSecond = Mathf.Max(0f, damagePerSecond);
         damageTickInterval = Mathf.Max(0.05f, damageTickInterval);
         movementPeriod = Mathf.Max(0.05f, movementPeriod);
+        endLightIntensity = Mathf.Max(0f, endLightIntensity);
+        endLightRange = Mathf.Max(0.01f, endLightRange);
+        endLightSurfaceOffset = Mathf.Max(0f, endLightSurfaceOffset);
     }
 
-    private void Update() => RefreshTrap();
+    private void Update()
+    {
+        PrepareFlameAudio();
+        RefreshTrap();
+    }
 
     private void FixedUpdate()
     {
@@ -151,7 +173,7 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
     {
         if (!isActiveAndEnabled) return false;
         if (Online && !PhotonNetwork.IsMasterClient) return RequestMasterTrigger();
-        if (activationActive && Clock < activationTime + activationDelay + firingDuration + cooldown) return false;
+        if (IsCycleActive) return false;
         ResolveReferences();
         if (!HasCompatibleEffect())
         {
@@ -234,6 +256,8 @@ public sealed partial class FlamethrowerTrapController : MonoBehaviourPunCallbac
             foreach (Transform child in GetComponentsInChildren<Transform>(true))
                 if (child.name == "Flamethrower_Pivot") { flamethrowerPivot = child; break; }
         if (flameEffect == null) flameEffect = GetComponentInChildren<VisualEffect>(true);
+        if (endLight == null) endLight = transform.Find(EndLightObjectName)?.GetComponent<Light>();
+        if (flameAudioSource == null) flameAudioSource = transform.Find(FlameAudioObjectName)?.GetComponent<AudioSource>();
     }
 
     private void CaptureMovement()

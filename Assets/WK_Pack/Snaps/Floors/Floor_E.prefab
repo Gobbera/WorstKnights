@@ -18,7 +18,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -4
+      value: 77
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.y
@@ -26,7 +26,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -4
+      value: -13
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       propertyPath: m_LocalRotation.w
@@ -78,6 +78,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5383898438232459942}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7092089955351875276}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4842775324280313925}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5872621220093571631}
   m_SourcePrefab: {fileID: 100100000, guid: 300545f777f7e0d44b78efb843fe5a66, type: 3}
 --- !u!1 &7545650795472292103 stripped
 GameObject:
@@ -118,3 +127,55 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FootstepSurface
   surface: {fileID: 11400000, guid: a6c779af1ff816444971b3e018ad3395, type: 2}
+--- !u!114 &7092089955351875276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7545650795472292103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac2e8041795637645942fc6f2345c16e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalReceiver
+  receiverName: Reactions
+  signalEntries:
+  - signalId: Hit
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 6e783884ba1b410408df8b90ae216cfd, type: 2}
+    effectPrefab: {fileID: 3451279753407673077, guid: 21ec746de78787842a80661b40fbf62f, type: 3}
+    effectLifetime: 1
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+--- !u!114 &4842775324280313925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7545650795472292103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae5bb85b21b7a284aa1ce87071e04bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalEmitter
+  signalReceiver: {fileID: 7092089955351875276}
+--- !u!114 &5872621220093571631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7545650795472292103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1005e141aac00d1418e15620c18c7915, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ImpactReactionSignalBridge
+  signalEmitter: {fileID: 4842775324280313925}
+  signalReceiver: {fileID: 7092089955351875276}
+  photonView: {fileID: 0}
+  signalId: Hit
+  broadcastInMultiplayer: 1

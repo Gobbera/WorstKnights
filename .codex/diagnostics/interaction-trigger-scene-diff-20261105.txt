@@ -1,0 +1,60 @@
+Scene blocks added=5 removed=0 changed=4
+--- 6586617693389580380 before
++++ 6586617693389580380 after
+@@ -67,5 +67,10 @@
+       value: 0
+       objectReference: {fileID: 0}
+-    m_RemovedComponents: []
++    - target: {fileID: 6392114280486284023, guid: d498db9bfe0acf14d9e32614eb0f664a, type: 3}
++      propertyPath: m_IsActive
++      value: 0
++      objectReference: {fileID: 0}
++    m_RemovedComponents:
++    - {fileID: 3318395037233898037, guid: d498db9bfe0acf14d9e32614eb0f664a, type: 3}
+     m_RemovedGameObjects: []
+     m_AddedGameObjects: []
+
+--- 6784347815852186537 before
++++ 6784347815852186537 after
+@@ -5,17 +5,17 @@
+   m_Modification:
+     serializedVersion: 3
+-    m_TransformParent: {fileID: 0}
++    m_TransformParent: {fileID: 2040459108}
+     m_Modifications:
+     - target: {fileID: 3816570381828464480, guid: 2ed0890f0a695d4499428307419526bc, type: 3}
+       propertyPath: m_LocalPosition.x
+-      value: 153.02107
++      value: 0
+       objectReference: {fileID: 0}
+     - target: {fileID: 3816570381828464480, guid: 2ed0890f0a695d4499428307419526bc, type: 3}
+       propertyPath: m_LocalPosition.y
+-      value: 1.0258924
++      value: 0
+       objectReference: {fileID: 0}
+     - target: {fileID: 3816570381828464480, guid: 2ed0890f0a695d4499428307419526bc, type: 3}
+       propertyPath: m_LocalPosition.z
+-      value: 24.43626
++      value: 0
+       objectReference: {fileID: 0}
+     - target: {fileID: 3816570381828464480, guid: 2ed0890f0a695d4499428307419526bc, type: 3}
+
+--- 9223372036854775807 before
++++ 9223372036854775807 after
+@@ -315,3 +315,3 @@
+   - {fileID: 864513365}
+   - {fileID: 1731639563}
+-  - {fileID: 6784347815852186537}
++  - {fileID: 2040459108}
+
+--- 970922657 before
++++ 970922657 after
+@@ -18,4 +18,8 @@
+   lockPlatesWhenSolved: 1
+   eventsOnAuthorityOnly: 1
++  activationCooldownSources:
++  - {fileID: 288831761}
++  - {fileID: 433033783}
++  - {fileID: 2006725393}
+   onPuzzleSolved:
+     m_PersistentCalls:

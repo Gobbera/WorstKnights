@@ -1,0 +1,54 @@
+utc=2026-11-03T23:39:44.4876501Z play=False
+gpu=NVIDIA GeForce RTX 2060 api=Direct3D12 cpu=Intel(R) Core(TM) i5-14600K
+scene=Assets/Scenes/Map3.unity dirty=True
+TRAP Dragon_Head_Flamethrower_Trap (3) active=True phase=Idle
+activationDelay=0,1
+firingDuration=10
+range=15
+endRadius=2,2
+damageTickInterval=0,25
+endLightRange=10
+endLightIntensity=1
+targetMask=-5 obstructionMask=-5
+light shadows=None active=False
+effect=Assets/VFX/Flamethrower/Flamethrower.vfx pause=True
+TRAP Dragon_Head_Flamethrower_Trap (2) active=True phase=Idle
+activationDelay=0,1
+firingDuration=10
+range=15
+endRadius=2,2
+damageTickInterval=0,25
+endLightRange=10
+endLightIntensity=1
+targetMask=-5 obstructionMask=-5
+light shadows=None active=False
+effect=Assets/VFX/Flamethrower/Flamethrower.vfx pause=True
+TRAP Dragon_Head_Flamethrower_Trap (1) active=True phase=Idle
+activationDelay=0,1
+firingDuration=10
+range=15
+endRadius=2,2
+damageTickInterval=0,25
+endLightRange=10
+endLightIntensity=1
+targetMask=-5 obstructionMask=-5
+light shadows=None active=False
+effect=Assets/VFX/Flamethrower/Flamethrower.vfx pause=True
+PUZZLE Statue Puzzle
+failure listener=Dragon_Head_Flamethrower_Trap (2) (FlamethrowerTrapController).TriggerTrap
+failure listener=Dragon_Head_Flamethrower_Trap (1) (FlamethrowerTrapController).TriggerTrap
+failure listener=Dragon_Head_Flamethrower_Trap (3) (FlamethrowerTrapController).TriggerTrap
+TEXTURE Assets/Textures/TEX_Fire_01.png 512x512 gpuBytes=743672
+TEXTURE Resources/unity_builtin_extra 64x64 gpuBytes=47324
+AUDIO before=Unloaded duration=10,656 channels=2 frequency=48000 preload=False background=False loadType=DecompressOnLoad
+AUDIO LoadAudioData accepted=True elapsedMs=14,6051 after=Loaded runtimeBytes=2052145
+TRIGGER cpuOnly sample=0 accepted=True elapsedMs=2,9381
+TRIGGER cpuOnly sample=1 accepted=True elapsedMs=0,0252
+TRIGGER cpuOnly sample=2 accepted=True elapsedMs=0,012
+TRIGGER cpuOnly sample=3 accepted=True elapsedMs=0,0123
+TRIGGER cpuOnly sample=4 accepted=True elapsedMs=0,0103
+TRIGGER cpuOnly sample=5 accepted=True elapsedMs=0,0098
+TRIGGER cpuOnly sample=6 accepted=True elapsedMs=0,0096
+TRIGGER cpuOnly sample=7 accepted=True elapsedMs=0,0091
+CPU-only timings exclude deferred GPU work, shader pipeline creation and real frame pacing.
+sceneDirtyAfter=True

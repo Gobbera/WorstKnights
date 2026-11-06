@@ -762,9 +762,9 @@ MonoBehaviour:
     activeDuration: 0.14
     targetDistance: 1.5
     hitRadius: 0.18
-    arcRange: 1.68
+    arcRange: 1.8
     arcAngle: 80
-    arcHalfHeight: 0
+    arcHalfHeight: 0.18
     boxCenterDistance: 1.5
     boxSize: {x: 0.36, y: 0.36, z: 0.36}
     swingAudioCue: {fileID: 11400000, guid: a12c40bdeb4dcab48b2b49087247172e, type: 2}
@@ -785,9 +785,9 @@ MonoBehaviour:
     activeDuration: 0.14
     targetDistance: 1.5
     hitRadius: 0.18
-    arcRange: 1.68
+    arcRange: 1.8
     arcAngle: 80
-    arcHalfHeight: 0
+    arcHalfHeight: 0.18
     boxCenterDistance: 1.5
     boxSize: {x: 0.36, y: 0.36, z: 0.36}
     swingAudioCue: {fileID: 11400000, guid: a12c40bdeb4dcab48b2b49087247172e, type: 2}
@@ -810,7 +810,7 @@ MonoBehaviour:
     hitRadius: 0.18
     arcRange: 1.8
     arcAngle: 30
-    arcHalfHeight: 0
+    arcHalfHeight: 0.18
     boxCenterDistance: 1.5
     boxSize: {x: 0.36, y: 0.36, z: 0.36}
     swingAudioCue: {fileID: 11400000, guid: a12c40bdeb4dcab48b2b49087247172e, type: 2}

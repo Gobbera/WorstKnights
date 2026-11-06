@@ -12,6 +12,8 @@ public class PlatformControllerEditor : Editor
     private SerializedProperty activationModeProperty;
     private SerializedProperty activationSignalsProperty;
     private SerializedProperty signalRequirementProperty;
+    private SerializedProperty movementAudioCueProperty;
+    private SerializedProperty movementAudioSourceProperty;
     private SerializedProperty breakableProperty;
     private SerializedProperty breakDelayProperty;
     private SerializedProperty topTriggerHeightProperty;
@@ -29,6 +31,8 @@ public class PlatformControllerEditor : Editor
         activationModeProperty = serializedObject.FindProperty("activationMode");
         activationSignalsProperty = serializedObject.FindProperty("activationSignals");
         signalRequirementProperty = serializedObject.FindProperty("signalRequirement");
+        movementAudioCueProperty = serializedObject.FindProperty("movementAudioCue");
+        movementAudioSourceProperty = serializedObject.FindProperty("movementAudioSource");
         breakableProperty = serializedObject.FindProperty("breakable");
         breakDelayProperty = serializedObject.FindProperty("breakDelay");
         topTriggerHeightProperty = serializedObject.FindProperty("topTriggerHeight");
@@ -46,6 +50,11 @@ public class PlatformControllerEditor : Editor
         DrawMotionSection();
         EditorGUILayout.Space();
         DrawActivationSection();
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("4. Movement Audio", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(movementAudioCueProperty, new GUIContent("Movement Audio Cue"));
+        EditorGUILayout.PropertyField(movementAudioSourceProperty, new GUIContent("Movement Audio Source"));
+        EditorGUILayout.HelpBox("The cue loops only while the platform moves. It stops at either endpoint, on break or disable. The dedicated source is prepared before activation and follows Moving Part.", MessageType.None);
         EditorGUILayout.Space();
         DrawBreakableSection();
 
@@ -68,7 +77,7 @@ public class PlatformControllerEditor : Editor
         if (motionMode == PlatformController.PlatformMotionMode.Static)
         {
             EditorGUILayout.HelpBox(
-                "Static deixa o objeto parado. Troque o Motion Mode para PingPong ou OneWay para usar a rota configurada.",
+                "Static keeps the platform still. Choose another Motion Mode to use the configured path.",
                 MessageType.None);
             return;
         }
@@ -80,13 +89,17 @@ public class PlatformControllerEditor : Editor
         {
             case PlatformController.PlatformMotionMode.OneWay:
                 EditorGUILayout.HelpBox(
-                    "OneWay percorre a rota do ponto inicial ate o ultimo ponto uma unica vez e para no destino final.",
+                    "OneWay follows the entire path once and remains at its final endpoint.",
                     MessageType.Info);
+                break;
+
+            case PlatformController.PlatformMotionMode.TwoPosition:
+                EditorGUILayout.HelpBox("TwoPosition moves to the last path point in active/B and returns to the initial position in inactive/A. It stops at each endpoint and supports repeated trips and reversal during travel.", MessageType.Info);
                 break;
 
             default:
                 EditorGUILayout.HelpBox(
-                    "PingPong percorre a rota ate o ultimo ponto e volta continuamente enquanto a plataforma estiver ativa.",
+                    "PingPong repeatedly traverses the path forward and backward while activation is satisfied.",
                     MessageType.Info);
                 break;
         }
@@ -99,7 +112,7 @@ public class PlatformControllerEditor : Editor
         if (movementPointsProperty.arraySize == 0)
         {
             EditorGUILayout.HelpBox(
-                "Adicione pelo menos um ponto para criar o trajeto da plataforma.",
+                "Add at least one movement point to create the platform path.",
                 MessageType.Warning);
         }
 
@@ -135,7 +148,7 @@ public class PlatformControllerEditor : Editor
             {
                 EditorGUILayout.PropertyField(diagonalDirectionProperty, new GUIContent("Diagonal Direction"));
                 EditorGUILayout.HelpBox(
-                    "Use um vetor como (1, 0, 1), (-1, 1, 0) ou qualquer outra diagonal desejada. O sistema normaliza esse vetor automaticamente.",
+                    "Use a vector such as (1, 0, 1) or (-1, 1, 0). The direction is normalized automatically.",
                     MessageType.None);
             }
 
@@ -175,7 +188,7 @@ public class PlatformControllerEditor : Editor
         {
             case PlatformController.PlatformActivationMode.PlayerOnTop:
                 EditorGUILayout.HelpBox(
-                    "Player On Top usa o proprio volume superior da plataforma como gatilho. Quando o jogador pisa nela, o movimento e ativado.",
+                    "Player On Top uses the platform's top detection volume as its activation input.",
                     MessageType.Info);
                 break;
 
@@ -183,13 +196,13 @@ public class PlatformControllerEditor : Editor
                 EditorGUILayout.PropertyField(activationSignalsProperty, new GUIContent("Activation Signals"), includeChildren: true);
                 EditorGUILayout.PropertyField(signalRequirementProperty, new GUIContent("Signal Requirement"));
                 EditorGUILayout.HelpBox(
-                    "Signal Source reaproveita o mesmo ecossistema das portas. Vincule aqui os Door Signal Sources que podem ser ativados por alavancas ou trigger zones.",
+                    "Assign Door Signal Sources driven by modular triggers, levers or trigger zones. Any/All defines the combined activation state.",
                     MessageType.Info);
                 break;
 
             default:
                 EditorGUILayout.HelpBox(
-                    "Always Active mantem a plataforma sempre liberada para se mover conforme o Motion Mode.",
+                    "Always Active continuously enables movement. TwoPosition stays at its B endpoint with this input.",
                     MessageType.None);
                 break;
         }
@@ -197,20 +210,20 @@ public class PlatformControllerEditor : Editor
         if (GetMotionMode() == PlatformController.PlatformMotionMode.OneWay)
         {
             EditorGUILayout.HelpBox(
-                "Com OneWay, basta a ativacao acontecer uma vez para a plataforma completar toda a rota e permanecer no ultimo ponto.",
+                "OneWay needs one activation to complete the full route and remain at its destination. Use TwoPosition for a repeatable A/B elevator.",
                 MessageType.Warning);
         }
     }
 
     private void DrawBreakableSection()
     {
-        EditorGUILayout.LabelField("4. Breakable", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("5. Breakable", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(breakableProperty, new GUIContent("Breakable"));
 
         if (!breakableProperty.boolValue)
         {
             EditorGUILayout.HelpBox(
-                "Quando Breakable esta desligado, a plataforma nao reage ao jogador em cima dela.",
+                "When Breakable is disabled, standing on the platform does not break it.",
                 MessageType.None);
             return;
         }
@@ -224,7 +237,7 @@ public class PlatformControllerEditor : Editor
 
         EditorGUILayout.PropertyField(playerDetectionMaskProperty, new GUIContent("Player Detection Mask"));
         EditorGUILayout.HelpBox(
-            "A quebra ativa quando um Player entra no volume sobre a superficie da plataforma. Se Respawns estiver ativo, ela reaparece no ponto inicial e reinicia o movimento.",
+            "A player entering the top detection volume schedules the break. Respawn restores the initial pose and restarts traversal.",
             MessageType.Info);
     }
 

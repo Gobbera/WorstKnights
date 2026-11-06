@@ -1,0 +1,152 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class PlayerMeleeArcAimValidationSession
+{
+    const string Root = "C:/Git/Unity/WorstKnights/";
+    const string Request = Root + "Temp/PlayerMeleeArcAimValidation.request";
+    const string Result = Root + ".codex/diagnostics/player-melee-arc-aim-20261105.txt";
+    const string Backup = Root + ".codex/backups/player-melee-arc-aim-20261105/";
+    const string Preview = "Assets/Tests/PlayerMeleeArcAimValidation.unity";
+    const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    static PlayerMeleeAttack melee;
+    static Transform aim;
+    static ArcAimTestReceiver ground, upper, horizontal;
+    static List<PlayerMeleeAttack.AttackConfig> configs;
+    static int stage;
+
+    static PlayerMeleeArcAimValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("ArcAim.Restore", false)) return;
+            SessionState.SetBool("ArcAim.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("ArcAim.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview);
+            Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+    static void Update()
+    {
+        if (SessionState.GetBool("ArcAim.Play", false) && EditorApplication.isPlaying)
+        {
+            try { TickPlay(); } catch (Exception error) { File.AppendAllText(Result, "\nPLAY FAILED " + error); EndPlay(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try { if (command == "tests") RunTests(); else if (command == "play") BeginPlay(); }
+        catch (Exception error) { File.AppendAllText(Result, "\nFAILED " + error); }
+    }
+    static void Log(string message) => File.AppendAllText(Result, "\nPASS " + message);
+    static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+    static void RunTests()
+    {
+        var original = SceneManager.GetActiveScene();
+        EditorSceneManager.SaveScene(original, Backup + "Map3.live-before-validation.unity", true);
+        File.WriteAllText(Result, "EDITMODE original=" + original.path + " dirty=" + original.isDirty);
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        int passed = 0, failed = 0;
+        try
+        {
+            foreach (var method in typeof(PlayerMeleeArcAimTests).GetMethods().Where(m => m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute), false).Length > 0))
+            {
+                var fixture = new PlayerMeleeArcAimTests();
+                try { fixture.SetUp(); method.Invoke(fixture, null); passed++; Log(method.Name); }
+                catch (Exception error) { failed++; File.AppendAllText(Result, "\nTEST FAILED " + method.Name + " " + error); }
+                finally { fixture.TearDown(); }
+            }
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(scene, true); }
+        Log("EditMode passed=" + passed + " failed=" + failed + " originalDirty=" + original.isDirty);
+    }
+    static void BeginPlay()
+    {
+        SessionState.SetString("ArcAim.Original", SceneManager.GetActiveScene().path);
+        var preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var root = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Player.prefab"));
+        root.name = "Arc Aim Validation Player"; root.transform.position = new Vector3(3200, 3201, 3200);
+        foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>(true)) behaviour.enabled = false;
+        var body = root.GetComponent<Rigidbody>(); body.isKinematic = true; body.useGravity = false;
+        EditorSceneManager.SaveScene(preview, Preview);
+        SessionState.SetBool("ArcAim.Play", true); EditorApplication.isPlaying = true;
+    }
+    static void TickPlay()
+    {
+        if (melee == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i) != preview)
+                    foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview);
+            var player = GameObject.Find("Arc Aim Validation Player");
+            melee = player.GetComponent<PlayerMeleeAttack>();
+            var body = player.GetComponent<Rigidbody>(); body.isKinematic = true; body.useGravity = false;
+            aim = player.GetComponentsInChildren<Camera>(true).Single(c => c.name == "FP_Camera").transform;
+            configs = (List<PlayerMeleeAttack.AttackConfig>)typeof(PlayerMeleeAttack).GetField("attackConfigs", Private).GetValue(melee);
+            float floor = player.transform.position.y - 1f;
+            ground = Target("Ground target", new Vector3(aim.position.x, floor - 0.05f, aim.position.z), new Vector3(0.4f, 0.1f, 0.4f));
+            upper = Target("Upper target", aim.position + Vector3.up * 1.35f, Vector3.one * 0.15f);
+            horizontal = Target("Horizontal target", aim.position + Vector3.forward * 1.2f, Vector3.one * 0.15f);
+            Check(configs.All(c => c.ArcRange >= aim.position.y - floor), "Authored combo cannot reach standing ground.");
+            Log("Actual Player prefab camera height=" + (aim.position.y - floor) + "; combo ranges=" + string.Join(",", configs.Select(c => c.ArcRange)));
+            stage = 0;
+        }
+        if (stage == 0)
+        {
+            aim.rotation = Quaternion.Euler(89, 0, 0);
+            HitAll();
+            Check(ground.Hits == 3 && upper.Hits == 0, "Downward aim did not hit the ground with all authored combo steps.");
+            Check(ground.LastDamage.HitDirection.y < -0.99f, "Ground impact direction did not follow downward camera pitch.");
+            Log("Play: all three actual prefab combo steps hit the ground when looking down; hit point/direction follow the aimed arc.");
+            stage = 1;
+        }
+        else if (stage == 1)
+        {
+            aim.rotation = Quaternion.Euler(-89, 0, 0); HitAll();
+            Check(upper.Hits == 3 && ground.Hits == 3, "Upward aim did not hit only the upper target.");
+            Check(upper.LastDamage.HitDirection.y > 0.99f, "Upper impact direction did not follow camera pitch.");
+            Log("Play: all three combo steps hit the upper target when looking up and do not hit the ground again.");
+            stage = 2;
+        }
+        else
+        {
+            typeof(PlayerMeleeAttack).GetField("useVerticalCameraAim", Private).SetValue(melee, false);
+            aim.rotation = Quaternion.Euler(75, 0, 0); HitAll();
+            Check(horizontal.Hits >= 3 && Mathf.Abs(horizontal.LastDamage.HitDirection.y) < 0.001f, "Disabled vertical aiming did not preserve horizontal hits.");
+            Log("Play: disabling Use Vertical Camera Aim restores horizontal attack direction.");
+            EndPlay();
+        }
+    }
+    static ArcAimTestReceiver Target(string name, Vector3 position, Vector3 size)
+    {
+        var root = new GameObject(name); root.transform.position = position; root.AddComponent<BoxCollider>().size = size; return root.AddComponent<ArcAimTestReceiver>();
+    }
+    static void HitAll()
+    {
+        Physics.SyncTransforms();
+        foreach (var config in configs)
+        {
+            typeof(PlayerMeleeAttack).GetMethod("ScheduleHitboxWindow", Private).Invoke(melee, new object[] { config });
+            typeof(PlayerMeleeAttack).GetMethod("TryHitTargets", Private).Invoke(melee, new object[] { config });
+        }
+    }
+    static void EndPlay()
+    {
+        SessionState.SetBool("ArcAim.Play", false); SessionState.SetBool("ArcAim.Restore", true); EditorApplication.isPlaying = false;
+    }
+}

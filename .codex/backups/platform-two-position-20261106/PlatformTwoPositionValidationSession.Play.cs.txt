@@ -1,0 +1,173 @@
+using System;
+using System.Linq;
+using Photon.Pun;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+internal static partial class PlatformTwoPositionValidationSession
+{
+    private const string Preview = "Assets/Tests/PlatformTwoPositionValidation.unity";
+    private const string PreviewCue = "Assets/Tests/PlatformTwoPositionValidationAudio.asset";
+    private static InteractionTriggerSystem source;
+    private static InteractionTriggerRouter router;
+    private static StatuePuzzleController puzzle;
+    private static PlatformController platform;
+    private static DoorSignalSource signal;
+    private static AudioSource audioSource;
+    private static Vector3 start, end, beforeReversal;
+    private static int stage, audioSourceCount;
+    private static double deadline, movedAt, travelDuration;
+
+    private static void SetupPlayCallbacks()
+    {
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("Routing.Play", false))
+            {
+                foreach (var manager in UnityEngine.Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include))
+                { manager.StopAllCoroutines(); manager.enabled = false; manager.gameObject.SetActive(false); }
+                if (PhotonNetwork.IsConnected) PhotonNetwork.Disconnect();
+            }
+            if (state != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("Routing.Restore", false)) return;
+            SessionState.SetBool("Routing.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("Routing.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            if (original.IsValid() && SessionState.GetBool("Routing.Dirty", false)) EditorSceneManager.MarkSceneDirty(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview); AssetDatabase.DeleteAsset(PreviewCue);
+            if (original.IsValid()) Selection.activeGameObject = Find<InteractionTriggerSystem>(original).Single().gameObject;
+            Log("Play restored " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+
+    private static void BeginPlay()
+    {
+        var original = SceneManager.GetActiveScene();
+        bool dirty = original.isDirty;
+        SessionState.SetString("Routing.Original", original.path); SessionState.SetBool("Routing.Dirty", dirty);
+        EditorSceneManager.SaveScene(original, Preview, true);
+        if (dirty) EditorSceneManager.MarkSceneDirty(original);
+        var preview = EditorSceneManager.OpenScene(Preview, OpenSceneMode.Additive);
+        SceneManager.SetActiveScene(preview);
+        var s = Find<InteractionTriggerSystem>(preview).Single();
+        var p = Find<StatuePuzzleController>(preview).Single();
+        var elevator = Find<PlatformController>(preview).Single();
+        var traps = Find<FlamethrowerTrapController>(preview).Where(t => t.isActiveAndEnabled).ToArray();
+        var keep = p.Slots.Select(slot => slot.transform.root.gameObject)
+            .Concat(Find<StatuePuzzlePlate>(preview).Select(plate => plate.transform.root.gameObject))
+            .Concat(traps.Select(t => t.transform.root.gameObject))
+            .Concat(new[] { s.transform.root.gameObject, p.transform.root.gameObject, elevator.transform.root.gameObject }).ToHashSet();
+        foreach (var root in preview.GetRootGameObjects()) if (!keep.Contains(root)) root.SetActive(false);
+        SetBool(s, "localOnly", true); SetBool(s.GetComponent<InteractionTriggerRouter>(), "localOnly", true);
+        SetBool(elevator, "prototypeLocalOnly", true); SetBool(elevator.GetComponent<DoorSignalSource>(), "prototypeLocalOnly", true);
+        foreach (var trap in traps)
+        {
+            SetBool(trap, "localOnly", true);
+            var data = new SerializedObject(trap); data.FindProperty("damagePerSecond").floatValue = 0; data.ApplyModifiedPropertiesWithoutUndo();
+        }
+        foreach (var plate in Find<StatuePuzzlePlate>(preview))
+            foreach (var body in plate.GetComponentsInChildren<Rigidbody>()) { body.isKinematic = true; body.useGravity = false; }
+        var cue = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AudioCue>("Assets/SFX/Audiocue's/Lever_01.asset"));
+        var cueData = new SerializedObject(cue); cueData.FindProperty("baseVolume").floatValue = 0; cueData.FindProperty("loop").boolValue = false; cueData.ApplyModifiedPropertiesWithoutUndo();
+        AssetDatabase.CreateAsset(cue, PreviewCue);
+        var platformData = new SerializedObject(elevator); platformData.FindProperty("movementAudioCue").objectReferenceValue = cue; platformData.ApplyModifiedPropertiesWithoutUndo();
+        var camera = new GameObject("Validation Camera").AddComponent<Camera>(); camera.gameObject.AddComponent<AudioListener>();
+        camera.transform.position = elevator.transform.position + new Vector3(10, 7, -10); camera.transform.LookAt(elevator.transform.position);
+        EditorSceneManager.SaveScene(preview);
+        SessionState.SetBool("Routing.Play", true); EditorApplication.isPlaying = true;
+    }
+
+    private static void SetBool(UnityEngine.Object target, string field, bool value)
+    {
+        var data = new SerializedObject(target); data.FindProperty(field).boolValue = value; data.ApplyModifiedPropertiesWithoutUndo();
+    }
+    private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
+    private static void AtStart() => Check(Vector3.Distance(platform.transform.position, start) < 0.03f, "Platform did not return to A.");
+    private static void CheckAudio(bool moving)
+    {
+        Check(audioSource == (AudioSource)typeof(PlatformController).GetField("movementAudioSource", Private).GetValue(platform), "Movement replaced the prepared source.");
+        Check(platform.GetComponentsInChildren<AudioSource>(true).Length == audioSourceCount, "Movement created extra AudioSources.");
+        Check(audioSource.isPlaying == moving, "Movement audio playing=" + audioSource.isPlaying + " expected=" + moving);
+        if (moving) Check(audioSource.loop && audioSource.clip != null, "Movement must force a loop for the cue.");
+    }
+    private static void TickPlay()
+    {
+        if (source == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i) != preview)
+                    foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview);
+            source = Find<InteractionTriggerSystem>(preview).Single(); router = source.GetComponent<InteractionTriggerRouter>();
+            puzzle = Find<StatuePuzzleController>(preview).Single(); platform = Find<PlatformController>(preview).Single(); signal = platform.GetComponent<DoorSignalSource>();
+            audioSource = (AudioSource)typeof(PlatformController).GetField("movementAudioSource", Private).GetValue(platform);
+            audioSourceCount = platform.GetComponentsInChildren<AudioSource>(true).Length;
+            start = platform.transform.position; stage = 0; deadline = EditorApplication.timeSinceStartup + 65;
+            travelDuration = (double)typeof(PlatformController).GetField("totalForwardDuration", Private).GetValue(platform);
+            var moving = (Transform)typeof(PlatformController).GetField("movingPart", Private).GetValue(platform);
+            var localEnd = (Vector3)typeof(PlatformController).GetMethod("EvaluateLocalPositionAtTime", Private).Invoke(platform, new object[] { travelDuration });
+            end = moving.parent != null ? moving.parent.TransformPoint(localEnd) : localEnd;
+            Check(source.Mode == InteractionTriggerMode.Momentary && source.TryUse(null), "Initial puzzle attempt rejected.");
+            Check(puzzle.IsTriggerBusy && !signal.IsActive, "Failure must leave the elevator inactive."); CheckAudio(false);
+            var cooldowns = (FlamethrowerTrapController[])typeof(StatuePuzzleController).GetField("activationCooldownSources", Private).GetValue(puzzle);
+            Check(cooldowns.Length == 3 && cooldowns.All(t => t.IsCycleActive), "Failure did not activate all three traps.");
+            Log("Play: failure keeps Momentary puzzle control, cycles three traps and leaves platform/audio idle.");
+        }
+        Check(EditorApplication.timeSinceStartup < deadline, "Play validation timed out at stage " + stage);
+        if (stage == 0)
+        {
+            if (!source.CanInteract) return;
+            var plates = Find<StatuePuzzlePlate>(puzzle.gameObject.scene);
+            foreach (var slot in puzzle.Slots) Check(slot.TryPlacePlate(plates.Single(p => p.Identity == slot.ExpectedIdentity)), "Could not place plate.");
+            Check(source.TryUse(null) && puzzle.IsSolved && router.SelectedRoute == 1, "Solve did not hand off to platform route.");
+            Check(signal.IsActive && source.IsActive && source.Mode == InteractionTriggerMode.AlternateAB, "Solving must immediately activate B and switch to AB.");
+            movedAt = Time.timeAsDouble; stage = 1;
+            Log("Play: On Puzzle Solved immediately selects and activates B; no second interaction is needed.");
+        }
+        else if (stage == 1 && Time.timeAsDouble > movedAt + 1.2)
+        {
+            Check(start.y - platform.transform.position.y > 2 && source.IsActive && platform.IsMoving, "B did not descend or the lever auto-released.");
+            CheckAudio(true); stage = 2;
+            Log("Play: lever stays in B while the platform descends; existing source loops even with cue Loop disabled.");
+        }
+        else if (stage == 2 && Time.timeAsDouble > movedAt + travelDuration + 0.6)
+        {
+            Check(Vector3.Distance(platform.transform.position, end) < 0.03f && !platform.IsMoving, "B endpoint incorrect.");
+            CheckAudio(false); Check(source.TryUse(null) && !signal.IsActive && !source.IsActive, "Next interaction did not select A.");
+            movedAt = Time.timeAsDouble; stage = 3;
+            Log("Play: B stops at the authored destination " + Vector3.Distance(start, end) + " m away with audio off; next use selects A.");
+        }
+        else if (stage == 3 && Time.timeAsDouble > movedAt + travelDuration + 0.6)
+        {
+            AtStart(); CheckAudio(false); Check(!platform.IsMoving && source.TryUse(null) && signal.IsActive, "A did not stop or another trip was rejected.");
+            movedAt = Time.timeAsDouble; stage = 4;
+            Log("Play: A returns to the original position with audio stopped; another B trip is accepted.");
+        }
+        else if (stage == 4 && Time.timeAsDouble > movedAt + 1)
+        {
+            CheckAudio(true); beforeReversal = platform.transform.position;
+            Check(source.TryUse(null) && !signal.IsActive, "Mid-route reversal rejected.");
+            Check(Vector3.Distance(platform.transform.position, beforeReversal) < 0.01f, "Reversal jumped position.");
+            movedAt = Time.timeAsDouble; stage = 5;
+        }
+        else if (stage == 5 && Time.timeAsDouble > movedAt + 1.8)
+        {
+            AtStart(); CheckAudio(false); Check(source.TryUse(null), "Third B trip rejected.");
+            movedAt = Time.timeAsDouble; stage = 6;
+            Log("Play: reversing during travel is continuous, returns to A and stops audio without creating sources.");
+        }
+        else if (stage == 6 && Time.timeAsDouble > movedAt + 0.5)
+        {
+            CheckAudio(true); platform.enabled = false; CheckAudio(false);
+            Log("Play: disabling a moving platform immediately stops its prepared movement source."); EndPlay();
+        }
+    }
+    private static void EndPlay()
+    {
+        SessionState.SetBool("Routing.Play", false); SessionState.SetBool("Routing.Restore", true); EditorApplication.isPlaying = false;
+    }
+}

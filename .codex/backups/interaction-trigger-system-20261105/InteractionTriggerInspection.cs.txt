@@ -1,0 +1,47 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class InteractionTriggerInspection
+{
+    const string Output = "C:/Git/Unity/WorstKnights/.codex/diagnostics/interaction-trigger-inspection-20261105.txt";
+    static InteractionTriggerInspection() { EditorApplication.update += Inspect; }
+    static string PathOf(Transform t) => t.parent == null ? t.name : PathOf(t.parent) + "/" + t.name;
+    static void Inspect()
+    {
+        if (File.Exists(Output) || EditorApplication.isCompiling || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        var report = new StringBuilder();
+        try
+        {
+            var scene = SceneManager.GetActiveScene();
+            report.AppendLine("SCENE " + scene.path + " dirty=" + scene.isDirty);
+            EditorSceneManager.SaveScene(scene, "C:/Git/Unity/WorstKnights/.codex/backups/interaction-trigger-system-20261105/Map3.live-before.unity", true);
+            var transforms = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).ToArray();
+            foreach (var root in transforms.Where(t => t.name.IndexOf("lever", StringComparison.OrdinalIgnoreCase) >= 0 || t.GetComponent<PressureButtonController>() != null))
+            {
+                report.AppendLine("CANDIDATE " + PathOf(root) + " prefab=" + PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(root.gameObject));
+                foreach (var child in root.GetComponentsInChildren<Transform>(true))
+                {
+                    report.AppendLine(PathOf(child) + " pos=" + child.position.ToString("F4") + " local=" + child.localPosition.ToString("F4") + " rot=" + child.localEulerAngles.ToString("F2") + " scale=" + child.lossyScale.ToString("F3"));
+                    report.AppendLine("components=" + string.Join(",", child.GetComponents<Component>().Where(c => c != null).Select(c => c.GetType().Name)));
+                    foreach (var mesh in child.GetComponents<MeshFilter>()) report.AppendLine("mesh=" + mesh.sharedMesh.name + " bounds=" + mesh.sharedMesh.bounds);
+                    foreach (var renderer in child.GetComponents<Renderer>()) report.AppendLine("renderer=" + renderer.bounds);
+                    foreach (var collider in child.GetComponents<Collider>()) report.AppendLine("collider=" + collider.GetType().Name + " bounds=" + collider.bounds);
+                }
+            }
+            foreach (var puzzle in transforms.Select(t => t.GetComponent<StatuePuzzleController>()).Where(p => p != null))
+            {
+                report.AppendLine("PUZZLE " + PathOf(puzzle.transform));
+                for (int i = 0; i < puzzle.OnPuzzleFailed.GetPersistentEventCount(); i++) report.AppendLine("FAILED " + puzzle.OnPuzzleFailed.GetPersistentTarget(i) + "." + puzzle.OnPuzzleFailed.GetPersistentMethodName(i));
+            }
+        }
+        catch (Exception error) { report.AppendLine(error.ToString()); }
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Output)); File.WriteAllText(Output, report.ToString());
+    }
+}

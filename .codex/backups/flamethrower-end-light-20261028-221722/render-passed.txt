@@ -1,0 +1,3 @@
+RENDER warm wall pixels before/active/fading/off: 0/32262/20915/0
+PASS end light illuminates wall, fades with fire, and switches off; VFX excluded from camera to isolate illumination.
+RESTORED original scene; dirty=True

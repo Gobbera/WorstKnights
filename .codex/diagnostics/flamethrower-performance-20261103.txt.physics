@@ -1,0 +1,63 @@
+utc=2026-11-03T23:42:21.2030054Z play=False
+gpu=NVIDIA GeForce RTX 2060 api=Direct3D12 cpu=Intel(R) Core(TM) i5-14600K
+scene=Assets/Scenes/Map3.unity dirty=True
+TRAP Dragon_Head_Flamethrower_Trap (3) active=True phase=Idle
+activationDelay=0,1
+firingDuration=10
+range=15
+endRadius=2,2
+damageTickInterval=0,25
+endLightRange=10
+endLightIntensity=1
+targetMask=-5 obstructionMask=-5
+light shadows=None active=False
+effect=Assets/VFX/Flamethrower/Flamethrower.vfx pause=True
+PHYSICS length=15 rayHits=0 overlapColliders=11 actors=0
+PHYSICS layers=Ground:3,Default:8
+PHYSICS warmed full overlap plus actor lookup cpuMsPerCall=0,0076315
+TRAP Dragon_Head_Flamethrower_Trap (2) active=True phase=Idle
+activationDelay=0,1
+firingDuration=10
+range=15
+endRadius=2,2
+damageTickInterval=0,25
+endLightRange=10
+endLightIntensity=1
+targetMask=-5 obstructionMask=-5
+light shadows=None active=False
+effect=Assets/VFX/Flamethrower/Flamethrower.vfx pause=True
+PHYSICS length=15 rayHits=0 overlapColliders=12 actors=0
+PHYSICS layers=Default:10,Ground:2
+PHYSICS warmed full overlap plus actor lookup cpuMsPerCall=0,0078435
+TRAP Dragon_Head_Flamethrower_Trap (1) active=True phase=Idle
+activationDelay=0,1
+firingDuration=10
+range=15
+endRadius=2,2
+damageTickInterval=0,25
+endLightRange=10
+endLightIntensity=1
+targetMask=-5 obstructionMask=-5
+light shadows=None active=False
+effect=Assets/VFX/Flamethrower/Flamethrower.vfx pause=True
+PHYSICS length=15 rayHits=0 overlapColliders=10 actors=0
+PHYSICS layers=Default:7,Ground:3
+PHYSICS warmed full overlap plus actor lookup cpuMsPerCall=0,0070475
+PUZZLE Statue Puzzle
+failure listener=Dragon_Head_Flamethrower_Trap (2) (FlamethrowerTrapController).TriggerTrap
+failure listener=Dragon_Head_Flamethrower_Trap (1) (FlamethrowerTrapController).TriggerTrap
+failure listener=Dragon_Head_Flamethrower_Trap (3) (FlamethrowerTrapController).TriggerTrap
+TEXTURE Assets/Textures/TEX_Fire_01.png 512x512 gpuBytes=743672
+TEXTURE Resources/unity_builtin_extra 64x64 gpuBytes=47324
+AUDIO before=Loaded duration=10,656 channels=2 frequency=48000 preload=False background=False loadType=DecompressOnLoad
+AUDIO LoadAudioData accepted=True elapsedMs=0,0694 after=Loaded runtimeBytes=2047097
+TRIGGER cpuOnly sample=0 accepted=True elapsedMs=2,6427
+TRIGGER cpuOnly sample=1 accepted=True elapsedMs=0,0279
+TRIGGER cpuOnly sample=2 accepted=True elapsedMs=0,0119
+TRIGGER cpuOnly sample=3 accepted=True elapsedMs=0,0108
+TRIGGER cpuOnly sample=4 accepted=True elapsedMs=0,0104
+TRIGGER cpuOnly sample=5 accepted=True elapsedMs=0,0101
+TRIGGER cpuOnly sample=6 accepted=True elapsedMs=0,0101
+TRIGGER cpuOnly sample=7 accepted=True elapsedMs=0,0106
+CPU-only timings exclude deferred GPU work, shader pipeline creation and real frame pacing.
+sceneDirtyAfter=True

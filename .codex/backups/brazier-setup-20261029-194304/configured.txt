@@ -1,0 +1,2 @@
+CONFIGURED Brazier with existing torch/interaction/reaction components; authored assets retained.
+PASS Chandelier prefab regression.

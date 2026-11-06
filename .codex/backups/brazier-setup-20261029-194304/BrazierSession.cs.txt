@@ -1,0 +1,261 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class BrazierSession
+{
+    const string Path = "Assets/WK_Pack/Snaps/Objects/Brazier.prefab";
+    const string ReferencePath = "Assets/WK_Pack/Snaps/Objects/Chandelier.prefab";
+    const string PreviewPath = "Assets/Tests/BrazierValidation.unity";
+    const string Request = "Temp/Brazier.request";
+    const string Result = "Temp/Brazier.result.txt";
+    const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    static GameObject brazier;
+    static WallTorchStateController state;
+    static PlayerInteractionReactionSignalBridge bridge;
+    static AudioSource audio;
+    static Camera camera;
+    static RenderTexture target;
+    static int stage, ignitions, beforePixels, litPixels;
+    static float changedAt;
+    static readonly List<string> report = new List<string>();
+    static string Backup => File.ReadAllText("Temp/Brazier.backup.txt").Trim();
+
+    static BrazierSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("Brazier.Restore", false)) return;
+            SessionState.SetBool("Brazier.Restore", false);
+            Scene original = SceneManager.GetSceneByPath(SessionState.GetString("Brazier.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            Scene temporary = SceneManager.GetSceneByPath(PreviewPath);
+            if (temporary.IsValid()) EditorSceneManager.CloseScene(temporary, true);
+            AssetDatabase.DeleteAsset(PreviewPath);
+            EditorSceneManager.SaveScene(original, System.IO.Path.Combine(Backup, "Map3.live-after-brazier.unity"), true);
+            File.AppendAllText(Result, "\nRESTORED original scene; dirty=" + original.isDirty);
+        };
+    }
+    static void Update()
+    {
+        if (SessionState.GetBool("Brazier.Play", false) && EditorApplication.isPlaying)
+        {
+            try { Tick(); } catch (Exception error) { File.WriteAllText(Result, error.ToString()); EndPlay(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Play Mode is active.");
+            if (command == "configure") Configure();
+            else if (command == "play") BeginPlay();
+        }
+        catch (Exception error) { File.WriteAllText(Result, error.ToString()); }
+    }
+    static void Edit(UnityEngine.Object obj, Action<SerializedObject> change)
+    {
+        var data = new SerializedObject(obj); change(data); data.ApplyModifiedPropertiesWithoutUndo();
+    }
+    static void Check(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+    }
+    static void Configure()
+    {
+        Scene original = SceneManager.GetActiveScene();
+        EditorSceneManager.SaveScene(original, System.IO.Path.Combine(Backup, "Map3.live-before-brazier.unity"), true);
+        var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+        bool useStage = prefabStage != null && prefabStage.assetPath == Path;
+        GameObject root = useStage ? prefabStage.prefabContentsRoot : PrefabUtility.LoadPrefabContents(Path);
+        try
+        {
+            var reference = AssetDatabase.LoadAssetAtPath<GameObject>(ReferencePath);
+            Transform vfx = root.transform.Find("VFX");
+            Transform prompt = root.transform.Find("Prompt_Pivot");
+            AudioSource source = root.transform.Find("Audio Source")?.GetComponent<AudioSource>();
+            Light light = vfx?.GetComponentInChildren<Light>(true);
+            Check(vfx != null && prompt != null && source != null && light != null, "Missing authored VFX, prompt, audio or light.");
+            float intensity = light.intensity, range = light.range;
+            Color color = light.color;
+            var template = new SerializedObject(reference.GetComponent<TorchFlameController>());
+            var flame = root.GetComponent<TorchFlameController>() ?? root.AddComponent<TorchFlameController>();
+            Edit(flame, data =>
+            {
+                foreach (string name in new[] { "enableFlicker", "intensityVariation", "rangeVariation", "colorVariation", "flickerSpeed", "flickerResponse", "movementRadius", "movementSpeed", "enableSputter", "sputterChancePerSecond", "sputterDuration", "sputterIntensityMultiplier", "hideFlameDuringSputter" })
+                    data.CopyFromSerializedProperty(template.FindProperty(name));
+                data.FindProperty("flameRoot").objectReferenceValue = vfx.gameObject;
+                data.FindProperty("flameLight").objectReferenceValue = light;
+                data.FindProperty("litOnAwake").boolValue = false;
+                data.FindProperty("deactivateFlameRootWhenUnlit").boolValue = true;
+                data.FindProperty("baseIntensity").floatValue = intensity;
+                data.FindProperty("baseRange").floatValue = range;
+                data.FindProperty("baseColor").colorValue = color;
+                data.FindProperty("litLoopAudioCue").objectReferenceValue = template.FindProperty("litLoopAudioCue").objectReferenceValue;
+                data.FindProperty("litLoopAudioSource").objectReferenceValue = source;
+                data.FindProperty("litLoopAudioAnchor").objectReferenceValue = source.transform;
+                data.FindProperty("autoCreateLitLoopAudioSource").boolValue = false;
+                data.FindProperty("stopLitLoopWhenPresentationHidden").boolValue = true;
+            });
+            var controller = root.GetComponent<WallTorchStateController>() ?? root.AddComponent<WallTorchStateController>();
+            Edit(controller, data =>
+            {
+                data.FindProperty("torchName").stringValue = "Brazier";
+                data.FindProperty("flameController").objectReferenceValue = flame;
+                data.FindProperty("networkSceneId").stringValue = string.Empty;
+                data.FindProperty("prototypeLocalOnly").boolValue = false;
+                data.FindProperty("startsLit").boolValue = false;
+            });
+            var interaction = root.GetComponent<WallTorchInteractable>() ?? root.AddComponent<WallTorchInteractable>();
+            Edit(interaction, data =>
+            {
+                data.FindProperty("stateController").objectReferenceValue = controller;
+                data.FindProperty("requireLitTorchInHand").boolValue = true;
+                data.FindProperty("interactionPromptPivot").objectReferenceValue = prompt;
+                data.FindProperty("lightInteractionPrompt").stringValue = "Press [{key}] to light the brazier";
+            });
+            var receiver = root.GetComponent<ReactionSignalReceiver>() ?? root.AddComponent<ReactionSignalReceiver>();
+            var referenceSignals = new SerializedObject(reference.GetComponent<ReactionSignalReceiver>()).FindProperty("signalEntries");
+            Edit(receiver, data =>
+            {
+                data.FindProperty("receiverName").stringValue = "Brazier reactions";
+                var signals = data.FindProperty("signalEntries"); signals.arraySize = 1;
+                var signal = signals.GetArrayElementAtIndex(0);
+                signal.FindPropertyRelative("signalId").stringValue = "Lit";
+                signal.FindPropertyRelative("feedbackOrigin").objectReferenceValue = vfx;
+                signal.FindPropertyRelative("audioCue").objectReferenceValue = referenceSignals.GetArrayElementAtIndex(0).FindPropertyRelative("audioCue").objectReferenceValue;
+                signal.FindPropertyRelative("effectPrefab").objectReferenceValue = null;
+                signal.FindPropertyRelative("effectLifetime").floatValue = 5f;
+            });
+            var emitter = root.GetComponent<ReactionSignalEmitter>() ?? root.AddComponent<ReactionSignalEmitter>();
+            Edit(emitter, data => data.FindProperty("signalReceiver").objectReferenceValue = receiver);
+            var proxy = root.GetComponent<PlayerInteractionReactionSignalBridge>() ?? root.AddComponent<PlayerInteractionReactionSignalBridge>();
+            Edit(proxy, data =>
+            {
+                data.FindProperty("targetInteractable").objectReferenceValue = interaction;
+                data.FindProperty("forwardToTargetInteractable").boolValue = true;
+                data.FindProperty("requireSuccessfulTargetInteraction").boolValue = true;
+                data.FindProperty("emitWithoutTargetInteractable").boolValue = false;
+                data.FindProperty("signalEmitter").objectReferenceValue = emitter;
+                data.FindProperty("signalReceiver").objectReferenceValue = receiver;
+                data.FindProperty("interactedSignalId").stringValue = "Lit";
+                data.FindProperty("feedbackOrigin").objectReferenceValue = vfx;
+            });
+            vfx.gameObject.SetActive(false); light.enabled = false;
+            light.intensity = intensity; light.range = range; light.color = color;
+            PrefabUtility.SaveAsPrefabAsset(root, Path);
+        }
+        finally { if (!useStage) PrefabUtility.UnloadPrefabContents(root); }
+        Type testType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("ChandelierPrefabTests")).First(t => t != null);
+        testType.GetMethod("Chandelier_UsesOneInteractionForAllCandles").Invoke(Activator.CreateInstance(testType), null);
+        File.WriteAllText(Result, "CONFIGURED Brazier with existing torch/interaction/reaction components; authored assets retained.\nPASS Chandelier prefab regression.");
+    }
+    static void BeginPlay()
+    {
+        Scene original = SceneManager.GetActiveScene();
+        SessionState.SetString("Brazier.Original", original.path);
+        Scene temporary = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var root = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Path));
+        root.name = "Brazier Validation"; root.transform.position = new Vector3(1000f, 1000f, 1000f);
+        foreach (Transform t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 31;
+        Edit(root.GetComponent<WallTorchStateController>(), data => data.FindProperty("prototypeLocalOnly").boolValue = true);
+        var view = new GameObject("Brazier Validation Camera").AddComponent<Camera>();
+        view.gameObject.AddComponent<AudioListener>();
+        view.transform.position = root.transform.position + new Vector3(2f, 1.8f, 2f);
+        view.transform.LookAt(root.transform.position + Vector3.up * 0.65f);
+        view.cullingMask = 1 << 31; view.clearFlags = CameraClearFlags.SolidColor; view.backgroundColor = Color.black;
+        view.orthographic = true; view.orthographicSize = 1.1f;
+        view.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+        view.GetUniversalAdditionalCameraData().volumeLayerMask = 0;
+        EditorSceneManager.SaveScene(temporary, PreviewPath);
+        SessionState.SetBool("Brazier.Play", true); EditorApplication.isPlaying = true;
+    }
+    static void OnIgnited() => ignitions++;
+    static void Tick()
+    {
+        if (brazier == null)
+        {
+            Scene preview = SceneManager.GetSceneByPath(PreviewPath);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i) != preview)
+                    foreach (GameObject root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            brazier = GameObject.Find("Brazier Validation");
+            state = brazier.GetComponent<WallTorchStateController>();
+            bridge = brazier.GetComponent<PlayerInteractionReactionSignalBridge>();
+            audio = brazier.transform.Find("Audio Source").GetComponent<AudioSource>();
+            camera = GameObject.Find("Brazier Validation Camera").GetComponent<Camera>();
+            target = new RenderTexture(1000, 800, 24); camera.targetTexture = target;
+            Check(!state.IsLit && !brazier.transform.Find("VFX").gameObject.activeSelf && !audio.isPlaying, "Brazier must start unlit and silent.");
+            report.Add("PASS starts unlit, VFX/light off and audio silent.");
+            beforePixels = Capture("Temp/Brazier-before.png");
+            var actor = new GameObject("Held torch validation"); actor.SetActive(false);
+            var equipment = actor.AddComponent<HandEquipmentController>(); equipment.enabled = false;
+            ItemDefinition torch = Resources.Load<ItemDefinition>("Items/Torch");
+            var context = new PlayerHeldItemInteractionContext(null, equipment, HandType.Right, torch, KeyCode.Mouse0, "LMB");
+            Check(!bridge.TryInteractWithHeldItem(context), "Empty hand ignited brazier.");
+            ((ItemDefinition[])typeof(HandEquipmentController).GetField("rightHandSlots", Private).GetValue(equipment))[0] = torch;
+            var sourceObject = new GameObject("Unlit held torch"); sourceObject.SetActive(false);
+            var source = sourceObject.AddComponent<WorldPickupItem>();
+            var flame = sourceObject.AddComponent<TorchFlameController>(); flame.SetLit(false);
+            ((WorldPickupItem[])typeof(HandEquipmentController).GetField("rightHandPickupSources", Private).GetValue(equipment))[0] = source;
+            Check(!bridge.TryGetHeldItemInteractionPrompt(context, out _) && !bridge.TryInteractWithHeldItem(context), "Unlit torch ignited brazier.");
+            report.Add("PASS empty hand and unlit torch rejected.");
+            var signals = (List<ReactionSignalReceiver.ReactionSignalEntry>)typeof(ReactionSignalReceiver).GetField("signalEntries", Private).GetValue(brazier.GetComponent<ReactionSignalReceiver>());
+            signals[0].onSignalReceived.AddListener(OnIgnited);
+            flame.SetLit(true);
+            Check(bridge.TryGetHeldItemInteractionPrompt(context, out string prompt) && prompt.Contains("brazier"), "Missing held torch prompt.");
+            Check(bridge.TryInteractWithHeldItem(context) && state.IsLit, "Lit held torch could not ignite brazier.");
+            Check(audio.isPlaying && audio.loop && audio.clip != null, "Authored audio source did not play fire loop.");
+            Check(ignitions == 1 && !bridge.TryInteractWithHeldItem(context) && ignitions == 1, "Repeated ignition duplicated Lit signal.");
+            Check(brazier.GetComponentsInChildren<AudioSource>(true).Length == 1, "Fire created an extra audio source.");
+            report.Add("PASS lit torch action ignites fire, existing light and loop; Lit signal fires once.");
+            stage = 1; changedAt = Time.time;
+        }
+        else if (stage == 1 && Time.time - changedAt >= 1.2f)
+        {
+            litPixels = Capture("Temp/Brazier-lit.png");
+            int particles = brazier.GetComponentsInChildren<ParticleSystem>(true).Sum(p => p.particleCount);
+            Check(particles > 0 && litPixels > beforePixels + 300, "Fire particles were not visibly rendered.");
+            Check(brazier.GetComponentInChildren<Light>(true).enabled, "Flame light stayed disabled.");
+            report.Add("PASS rendered fire: particles=" + particles + "; warm pixels before/lit=" + beforePixels + "/" + litPixels);
+            Check(state.RequestExtinguish() && !state.IsLit && !audio.isPlaying && !brazier.transform.Find("VFX").gameObject.activeSelf, "Extinguishing did not stop VFX/audio.");
+            stage = 2; changedAt = Time.time;
+        }
+        else if (stage == 2 && Time.time - changedAt >= 0.2f)
+        {
+            int off = Capture("Temp/Brazier-off.png");
+            Check(off < litPixels && !brazier.GetComponentInChildren<Light>(true).enabled, "Light or fire remained after extinguishing.");
+            Check(state.RequestLight() && audio.isPlaying, "Relighting did not restart the existing loop.");
+            brazier.SetActive(false); Check(!audio.isPlaying, "Disabled brazier kept playing fire audio.");
+            report.Add("PASS extinguish stops particles/light/audio; relight restarts loop; disabling stops audio.");
+            File.WriteAllText(Result, string.Join("\n", report)); EndPlay();
+        }
+    }
+    static int Capture(string path)
+    {
+        camera.Render(); RenderTexture previous = RenderTexture.active; RenderTexture.active = target;
+        var picture = new Texture2D(1000, 800, TextureFormat.RGB24, false);
+        try
+        {
+            picture.ReadPixels(new Rect(0f, 0f, 1000f, 800f), 0, 0); picture.Apply();
+            File.WriteAllBytes(path, picture.EncodeToPNG());
+            return picture.GetPixels32().Count(p => p.r > 80 && p.r > p.b * 1.4f && p.r + p.g > 150);
+        }
+        finally { RenderTexture.active = previous; UnityEngine.Object.DestroyImmediate(picture); }
+    }
+    static void EndPlay()
+    {
+        if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); }
+        SessionState.SetBool("Brazier.Play", false); SessionState.SetBool("Brazier.Restore", true);
+        EditorApplication.isPlaying = false;
+    }
+}

@@ -1,0 +1,160 @@
+using System;
+using System.Linq;
+using Photon.Pun;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+internal static partial class InteractionTriggerRoutingValidationSession
+{
+    private const string Preview = "Assets/Tests/InteractionTriggerRoutingValidation.unity";
+    private static InteractionTriggerSystem playSystem;
+    private static InteractionTriggerRouter playRouter;
+    private static StatuePuzzleController playPuzzle;
+    private static PlatformController playPlatform;
+    private static DoorSignalSource playSignal;
+    private static Vector3 platformStart;
+    private static int stage;
+    private static double deadline, activatedAt;
+
+    private static void SetupPlayCallbacks()
+    {
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("Routing.Play", false))
+            {
+                foreach (var manager in UnityEngine.Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include))
+                {
+                    manager.StopAllCoroutines(); manager.enabled = false; manager.gameObject.SetActive(false);
+                }
+                if (PhotonNetwork.IsConnected) PhotonNetwork.Disconnect();
+            }
+            if (state != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("Routing.Restore", false)) return;
+            SessionState.SetBool("Routing.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("Routing.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            if (original.IsValid() && SessionState.GetBool("Routing.Dirty", false)) EditorSceneManager.MarkSceneDirty(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview);
+            Log("Play restored " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+
+    private static void BeginPlay()
+    {
+        var original = SceneManager.GetActiveScene();
+        bool dirty = original.isDirty;
+        SessionState.SetString("Routing.Original", original.path);
+        SessionState.SetBool("Routing.Dirty", dirty);
+        EditorSceneManager.SaveScene(original, Preview, true);
+        if (dirty) EditorSceneManager.MarkSceneDirty(original);
+        var preview = EditorSceneManager.OpenScene(Preview, OpenSceneMode.Additive);
+        SceneManager.SetActiveScene(preview);
+        var system = Find<InteractionTriggerSystem>(preview).Single();
+        var puzzle = Find<StatuePuzzleController>(preview).Single();
+        var platform = Find<PlatformController>(preview).Single();
+        var traps = Find<FlamethrowerTrapController>(preview).Where(t => t.isActiveAndEnabled).ToArray();
+        var keep = puzzle.Slots.Select(s => s.transform.root.gameObject)
+            .Concat(Find<StatuePuzzlePlate>(preview).Select(p => p.transform.root.gameObject))
+            .Concat(traps.Select(t => t.transform.root.gameObject))
+            .Concat(new[] { system.transform.root.gameObject, puzzle.transform.root.gameObject, platform.transform.root.gameObject }).ToHashSet();
+        foreach (var root in preview.GetRootGameObjects()) if (!keep.Contains(root)) root.SetActive(false);
+        SetBool(system, "localOnly", true); SetBool(system.GetComponent<InteractionTriggerRouter>(), "localOnly", true);
+        SetBool(platform, "prototypeLocalOnly", true); SetBool(platform.GetComponent<DoorSignalSource>(), "prototypeLocalOnly", true);
+        foreach (var trap in traps)
+        {
+            SetBool(trap, "localOnly", true);
+            var data = new SerializedObject(trap); data.FindProperty("damagePerSecond").floatValue = 0; data.ApplyModifiedPropertiesWithoutUndo();
+        }
+        foreach (var plate in Find<StatuePuzzlePlate>(preview))
+            foreach (var body in plate.GetComponentsInChildren<Rigidbody>()) { body.isKinematic = true; body.useGravity = false; }
+        var camera = new GameObject("Validation Camera").AddComponent<Camera>();
+        camera.transform.position = platform.transform.position + new Vector3(10, 7, -10);
+        camera.transform.LookAt(platform.transform.position);
+        EditorSceneManager.SaveScene(preview);
+        SessionState.SetBool("Routing.Play", true);
+        EditorApplication.isPlaying = true;
+    }
+
+    private static void SetBool(UnityEngine.Object target, string field, bool value)
+    {
+        var data = new SerializedObject(target); data.FindProperty(field).boolValue = value; data.ApplyModifiedPropertiesWithoutUndo();
+    }
+    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+
+    private static void TickPlay()
+    {
+        if (playSystem == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i) != preview)
+                    foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview);
+            Check(!PhotonNetwork.InRoom || PhotonNetwork.OfflineMode, "Local validation must not submit a multiplayer puzzle check.");
+            playSystem = Find<InteractionTriggerSystem>(preview).Single();
+            playRouter = playSystem.GetComponent<InteractionTriggerRouter>();
+            playPuzzle = Find<StatuePuzzleController>(preview).Single();
+            playPlatform = Find<PlatformController>(preview).Single();
+            playSignal = playPlatform.GetComponent<DoorSignalSource>();
+            platformStart = playPlatform.transform.position;
+            stage = 0; deadline = EditorApplication.timeSinceStartup + 45;
+            Check(playSystem.TryUse(null), "Initial lever use rejected.");
+            Check(playRouter.SelectedRoute == 0 && !playSignal.IsActive && playPuzzle.IsTriggerBusy, "Failed check must retain the puzzle route and start trap cooldowns.");
+            var cooldowns = (FlamethrowerTrapController[])typeof(StatuePuzzleController).GetField("activationCooldownSources", Private).GetValue(playPuzzle);
+            Check(cooldowns.Length == 3 && cooldowns.All(t => t.IsCycleActive), "All three real traps must cycle on failure.");
+            Log("Play: configured Map3 lever rejects incorrect plates, starts all three traps and leaves the elevator idle.");
+        }
+        Check(EditorApplication.timeSinceStartup < deadline, "Play validation timed out at stage " + stage);
+        if (stage == 0)
+        {
+            if (playSystem.IsActive || !playSystem.CanInteract) return;
+            Check(!playPuzzle.IsTriggerBusy && !playSignal.IsActive && Vector3.Distance(playPlatform.transform.position, platformStart) < 0.01f, "Cooldown release changed the platform.");
+            var plates = Find<StatuePuzzlePlate>(playPuzzle.gameObject.scene);
+            foreach (var slot in playPuzzle.Slots)
+            {
+                var plate = plates.Single(p => p.Identity == slot.ExpectedIdentity);
+                Check(slot.TryPlacePlate(plate), "Could not place matching plate for " + slot.ExpectedIdentity);
+            }
+            Check(playPuzzle.HasCorrectArrangement(), "Placed plates are not a correct arrangement; slot owners=" + string.Join(",", playPuzzle.Slots.Select(s => s.Puzzle == playPuzzle)));
+            Check(playSystem.TryUse(null), "Correct arrangement lever use rejected; active=" + playSystem.IsActive + " busy=" + playSystem.IsBusy);
+            Check(playPuzzle.IsSolved, "Puzzle not solved after use; inRoom=" + PhotonNetwork.InRoom + " offline=" + PhotonNetwork.OfflineMode + " busy=" + playPuzzle.IsTriggerBusy);
+            Check(playRouter.SelectedRoute == 1, "Solved event did not select route 1; selected=" + playRouter.SelectedRoute + " outputs=" + string.Join(",", Enumerable.Range(0, playPuzzle.OnPuzzleSolved.GetPersistentEventCount()).Select(i => playPuzzle.OnPuzzleSolved.GetPersistentTarget(i) + "." + playPuzzle.OnPuzzleSolved.GetPersistentMethodName(i))));
+            Check(!playSignal.IsActive, "The solving press activated the platform.");
+            Log("Play: correct plates solve once; persistent On Puzzle Solved selects route 1 without activating the elevator.");
+            stage = 1;
+        }
+        else if (stage == 1)
+        {
+            if (playSystem.IsActive || !playSystem.CanInteract) return;
+            Check(!playSignal.IsActive && Vector3.Distance(playPlatform.transform.position, platformStart) < 0.01f, "Solving press release reached the platform.");
+            Check(playSystem.TryUse(null) && playSignal.IsActive, "Next lever use did not activate the platform signal.");
+            activatedAt = Time.timeAsDouble;
+            Log("Play: old press releases to the puzzle; the next lever use activates the authored platform signal.");
+            stage = 2;
+        }
+        else if (stage == 2)
+        {
+            if (Time.timeAsDouble < activatedAt + 1.2) return;
+            Check(platformStart.y - playPlatform.transform.position.y > 2 && playSignal.IsActive && !playSystem.IsActive, "Platform did not descend while lever returned and signal stayed latched.");
+            Log("Play: actual platform descends at its authored speed after the momentary lever returns; activation stays latched.");
+            stage = 3;
+        }
+        else if (Time.timeAsDouble >= activatedAt + 6.8)
+        {
+            Check(Mathf.Abs(playPlatform.transform.position.y - (platformStart.y - 15.5f)) < 0.02f, "Platform did not stop at the authored 15.5 m destination.");
+            Check(Mathf.Abs(playPlatform.transform.position.x - platformStart.x) < 0.01f && Mathf.Abs(playPlatform.transform.position.z - platformStart.z) < 0.01f, "Platform deviated from its vertical path.");
+            Log("Play: OneWay platform completes 15.5 m downward travel and stops at the original authored destination.");
+            EndPlay();
+        }
+    }
+
+    private static void EndPlay()
+    {
+        SessionState.SetBool("Routing.Play", false);
+        SessionState.SetBool("Routing.Restore", true);
+        EditorApplication.isPlaying = false;
+    }
+}

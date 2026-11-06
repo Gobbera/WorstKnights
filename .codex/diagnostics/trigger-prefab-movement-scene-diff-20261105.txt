@@ -1,0 +1,30 @@
+added=0 removed=4
+--- 2040459107 before
++++ 2040459107 after
+@@ -20,9 +20,5 @@
+   momentaryDuration: 0.3
+   waitForLinkedSystem: 1
+-  interactionPrompt: '[{key}] Acionar'
+-  pressDistance: 0.04
+-  leverAngle: -50
+-  movementSpeed: 0.25
+-  rotationSpeed: 180
++  interactionPrompt: '[{key}] Activate'
+   pressureFilter: 0
+   specificObject: {fileID: 0}
+
+--- 9223372036854775807 before
++++ 9223372036854775807 after
+@@ -122,12 +122,8 @@
+   - {fileID: 5191776068076181417}
+   - {fileID: 1658435587}
+-  - {fileID: 1357932019}
+   - {fileID: 1879472482}
+-  - {fileID: 1837229643}
+   - {fileID: 5134552534993665430}
+   - {fileID: 1289084773}
+-  - {fileID: 655522501}
+   - {fileID: 1135681601}
+-  - {fileID: 217064975}
+   - {fileID: 1421251187}
+   - {fileID: 1982726702}

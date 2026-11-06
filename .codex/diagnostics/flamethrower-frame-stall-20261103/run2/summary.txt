@@ -1,0 +1,22 @@
+original=Assets/Scenes/Map3.unity dirty=True center=(152.89, 8.70, 31.54)
+TRAP Dragon_Head_Flamethrower_Trap (1) position=(160.99, 7.72, 32.20)
+TRAP Dragon_Head_Flamethrower_Trap (2) position=(153.14, 7.72, 34.55)
+TRAP Dragon_Head_Flamethrower_Trap (3) position=(144.54, 7.72, 32.31)
+CONNECTION -1 Editor
+COUNTERS gpu=0 cpu=3 supportsGpuRecorder=True
+START idle frame=2 profiler=-1
+RESULT idle samples=280 delta median/max=7,88179598748684/127,362206578255 player median/max=5,3246/39,4295 vfxGPU median/max=0/0 vfxCPU median/max=0,0258/0,1318
+START three-first frame=383 profiler=377
+RESULT three-first samples=241 delta median/max=9,46259964257479/159,367695450783 player median/max=6,3289/161,1386 vfxGPU median/max=0/0 vfxCPU median/max=0,0571/0,1808
+START three-repeat frame=719 profiler=713
+RESULT three-repeat samples=248 delta median/max=9,54550039023161/143,854200839996 player median/max=7,3095/28,7005 vfxGPU median/max=0/0 vfxCPU median/max=0,0546/0,1208
+START three-no-draw frame=1053 profiler=1047
+RESULT three-no-draw samples=329 delta median/max=7,79640022665262/130,564108490944 player median/max=5,8286/13,203 vfxGPU median/max=0/0 vfxCPU median/max=0,0077/0,0255
+START three-no-light frame=1474 profiler=1468
+RESULT three-no-light samples=273 delta median/max=9,71390306949615/140,177398920059 player median/max=7,5074/25,0643 vfxGPU median/max=0/0 vfxCPU median/max=0,0551/0,1163
+START three-no-audio frame=1851 profiler=1845
+RESULT three-no-audio samples=298 delta median/max=8,99909995496273/143,420398235321 player median/max=6,9267/12,9331 vfxGPU median/max=0/0 vfxCPU median/max=0,0521/0,1213
+START one-repeat frame=2252 profiler=2246
+RESULT one-repeat samples=333 delta median/max=8,03820136934519/135,224997997284 player median/max=6,2037/10,3849 vfxGPU median/max=0/0 vfxCPU median/max=0,034/0,1365
+
+RESTORED Assets/Scenes/Map3.unity dirty=True

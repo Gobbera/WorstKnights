@@ -1,0 +1,157 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &5593778878786587102
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 141.82843
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.000006285496
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 29.828428
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.38268343
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.92387956
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -135
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 2b0e3aaabcc24404eb5fd7d111ab83fe, type: 2}
+    - target: {fileID: -7511558181221131132, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 77370f28f1742b144b51fb0cfb509d7d, type: 2}
+    - target: {fileID: 919132149155446097, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      propertyPath: m_Name
+      value: Wall_Arch
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4114579502889599583}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4792853561492619921}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4542101133881479086}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6173574047552806797}
+  m_SourcePrefab: {fileID: 100100000, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+--- !u!1 &4710890078520833167 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 452b45cc8ac3f5b4d8309217eb67c0a0, type: 3}
+  m_PrefabInstance: {fileID: 5593778878786587102}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &4114579502889599583
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4710890078520833167}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 3.797109, y: 8.004985, z: 8.000097}
+  m_Center: {x: 1.4463515, y: 3.9975066, z: -0.000048041355}
+--- !u!114 &4792853561492619921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4710890078520833167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac2e8041795637645942fc6f2345c16e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalReceiver
+  receiverName: Reactions
+  signalEntries:
+  - signalId: Hit
+    feedbackOrigin: {fileID: 0}
+    audioCue: {fileID: 11400000, guid: 6e783884ba1b410408df8b90ae216cfd, type: 2}
+    effectPrefab: {fileID: 3451279753407673077, guid: 21ec746de78787842a80661b40fbf62f, type: 3}
+    effectLifetime: 1
+    onSignalReceived:
+      m_PersistentCalls:
+        m_Calls: []
+--- !u!114 &4542101133881479086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4710890078520833167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae5bb85b21b7a284aa1ce87071e04bb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReactionSignalEmitter
+  signalReceiver: {fileID: 4792853561492619921}
+--- !u!114 &6173574047552806797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4710890078520833167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1005e141aac00d1418e15620c18c7915, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ImpactReactionSignalBridge
+  signalEmitter: {fileID: 4542101133881479086}
+  signalReceiver: {fileID: 4792853561492619921}
+  photonView: {fileID: 0}
+  signalId: Hit
+  broadcastInMultiplayer: 1

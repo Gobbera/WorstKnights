@@ -244,6 +244,67 @@ public sealed class StatuePuzzleTests
         }
     }
 
+    [Test]
+    public void SolvedPuzzleReroutesTheNextLeverUseToTheExistingPlatformSignal()
+    {
+        const BindingFlags privateFlags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var root = Create("Puzzle and elevator trigger"); root.SetActive(false);
+        var system = root.AddComponent<InteractionTriggerSystem>();
+        Set(system, "localOnly", true); Set(system, "interactionCooldown", 0f);
+        var mechanism = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(InteractionTriggerAuthoringUtility.LeverPath), root.transform).GetComponent<InteractionTriggerMechanism>();
+        Set(system, "mechanism", mechanism);
+        var platform = Create("Elevator").AddComponent<PlatformController>();
+        Set(platform, "prototypeLocalOnly", true);
+        Set(platform, "motionMode", PlatformController.PlatformMotionMode.OneWay);
+        Set(platform, "movementPoints", new List<PlatformController.PlatformMovementPoint>
+        {
+            new PlatformController.PlatformMovementPoint { axis = PlatformController.PlatformAxis.Y, direction = PlatformController.PlatformDirection.Negative, distance = 15.5f, speed = 2.5f }
+        });
+        Set(platform, "activationMode", PlatformController.PlatformActivationMode.SignalSource);
+        var signal = platform.gameObject.AddComponent<DoorSignalSource>(); Set(signal, "prototypeLocalOnly", true);
+        Set(platform, "activationSignals", new[] { signal });
+        var adapter = platform.gameObject.AddComponent<SignalInteractionTriggerTarget>();
+        Set(adapter, "signalSource", signal); Set(adapter, "action", SignalTriggerAction.Activate);
+        var router = root.AddComponent<InteractionTriggerRouter>();
+        Set(router, "localOnly", true);
+        Set(router, "routes", new[] { new InteractionTriggerRouter.Route { target = puzzle }, new InteractionTriggerRouter.Route { target = adapter } });
+        Set(system, "linkedSystem", router);
+        puzzle.OnPuzzleSolved.AddListener(() => router.SelectRoute(1));
+        root.SetActive(true);
+        typeof(InteractionTriggerSystem).GetMethod("Initialize", privateFlags).Invoke(system, null);
+        typeof(PlatformController).GetMethod("Awake", privateFlags).Invoke(platform, null);
+        var update = typeof(PlatformController).GetMethod("UpdateAuthoritativeState", privateFlags);
+        update.Invoke(platform, new object[] { 0d });
+
+        Assert.That(system.TryUse(null), Is.True);
+        Assert.That(failed, Is.EqualTo(1));
+        Assert.That(router.SelectedRoute, Is.Zero);
+        Assert.That(signal.IsActive, Is.False);
+        Set(system, "changedAt", -10000d);
+        typeof(InteractionTriggerSystem).GetMethod("RefreshTrigger", privateFlags).Invoke(system, new object[] { 1f });
+        for (int i = 0; i < 4; i++) Assert.That(slots[i].TryPlacePlate(plates[i]), Is.True);
+
+        Assert.That(system.TryUse(null), Is.True);
+        Assert.That(puzzle.IsSolved, Is.True);
+        Assert.That(router.SelectedRoute, Is.EqualTo(1));
+        Assert.That(signal.IsActive, Is.False, "Solving must only unlock the next use.");
+        Set(system, "changedAt", -10000d);
+        typeof(InteractionTriggerSystem).GetMethod("RefreshTrigger", privateFlags).Invoke(system, new object[] { 1f });
+        Assert.That(signal.IsActive, Is.False, "Release must still go to the puzzle.");
+        Assert.That(system.TryUse(null), Is.True);
+        Assert.That(signal.IsActive, Is.True);
+        update.Invoke(platform, new object[] { 10d });
+        typeof(PlatformController).GetMethod("ApplyMotionPoseForCurrentState", privateFlags).Invoke(platform, new object[] { 11d });
+        Assert.That(platform.transform.localPosition.y, Is.EqualTo(-2.5f).Within(0.001f));
+        Set(system, "changedAt", -10000d);
+        typeof(InteractionTriggerSystem).GetMethod("RefreshTrigger", privateFlags).Invoke(system, new object[] { 1f });
+        Assert.That(signal.IsActive, Is.True, "OneWay activation remains latched after the lever returns.");
+        update.Invoke(platform, new object[] { 17d });
+        typeof(PlatformController).GetMethod("ApplyMotionPoseForCurrentState", privateFlags).Invoke(platform, new object[] { 17d });
+        Assert.That(platform.transform.localPosition.y, Is.EqualTo(-15.5f).Within(0.001f));
+        Assert.That(solved, Is.EqualTo(1)); Assert.That(failed, Is.EqualTo(1));
+    }
+
     private GameObject Create(string name)
     {
         var result = new GameObject(name);

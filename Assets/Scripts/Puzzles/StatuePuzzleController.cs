@@ -5,13 +5,17 @@ using UnityEngine.Events;
 
 [DisallowMultipleComponent]
 [AddComponentMenu("World/Puzzles/Statue Puzzle Controller")]
-public sealed class StatuePuzzleController : MonoBehaviour
+public sealed class StatuePuzzleController : MonoBehaviour, IInteractionTriggerTarget
 {
-    [Tooltip("Exatamente quatro bases, uma para cada identidade.")]
+    [Tooltip("Exactly four slots, one for each statue identity.")]
     [SerializeField] private StatuePuzzleSlot[] slots = new StatuePuzzleSlot[4];
     [SerializeField] private bool lockPlatesWhenSolved = true;
-    [Tooltip("No multiplayer, apenas o Master Client dispara os outputs de gameplay.")]
+    [Tooltip("In multiplayer, only the Master Client invokes gameplay outputs.")]
     [SerializeField] private bool eventsOnAuthorityOnly = true;
+    [Header("Interaction Trigger")]
+    [Tooltip("Traps whose active cycles and cooldowns block new attempts and mechanism release.")]
+    [SerializeField] private FlamethrowerTrapController[] activationCooldownSources = new FlamethrowerTrapController[0];
+    private bool triggerCheckPending;
     [Header("Outputs")]
     [SerializeField] private UnityEvent onPuzzleSolved = new UnityEvent();
     [SerializeField] private UnityEvent onPuzzleFailed = new UnityEvent();
@@ -23,10 +27,40 @@ public sealed class StatuePuzzleController : MonoBehaviour
     public IReadOnlyList<StatuePuzzleSlot> Slots => slots;
     public UnityEvent OnPuzzleSolved => onPuzzleSolved;
     public UnityEvent OnPuzzleFailed => onPuzzleFailed;
+    public event System.Action SolutionChecked;
+    public bool CanTrigger => isActiveAndEnabled && !IsSolved && !IsTriggerBusy;
+    public bool IsTriggerBusy
+    {
+        get
+        {
+            if (triggerCheckPending) return true;
+            if (activationCooldownSources != null)
+                foreach (var source in activationCooldownSources)
+                    if (source != null && source.isActiveAndEnabled && source.IsCycleActive) return true;
+            return false;
+        }
+    }
     public string NetworkSceneId => string.IsNullOrEmpty(networkSceneId)
         ? networkSceneId = SceneNetworkStateIdUtility.BuildSceneObjectId(transform) : networkSceneId;
 
     private void Awake() => _ = NetworkSceneId;
+
+    public void ReceiveTrigger(InteractionTriggerContext context)
+    {
+        if (!context.TriggersAction || !CanTrigger) return;
+        if (!PhotonNetwork.InRoom || PhotonNetwork.OfflineMode)
+        {
+            ApplyCheckSolution(context.Player);
+            return;
+        }
+        // Keep checks ordered with plate-placement RPCs through the server.
+        if (!PhotonNetwork.IsMasterClient) return;
+        triggerCheckPending = true;
+        foreach (var equipment in FindObjectsByType<HandEquipmentController>())
+            if (equipment.TryRequestTriggeredStatuePuzzleCheck(this, context.Player)) return;
+        triggerCheckPending = false;
+        Debug.LogWarning("[StatuePuzzle] No local inventory is ready to submit the puzzle check.", this);
+    }
 
     // Signature is intentionally void so buttons, levers and UnityEvents can call it.
     [ContextMenu("Check Solution")]
@@ -65,6 +99,7 @@ public sealed class StatuePuzzleController : MonoBehaviour
 
     public void ApplyCheckSolution(PlayerHealth submittingPlayer = null)
     {
+        triggerCheckPending = false;
         if (IsSolved)
             return;
 
@@ -79,13 +114,17 @@ public sealed class StatuePuzzleController : MonoBehaviour
         }
 
         if (eventsOnAuthorityOnly && PhotonNetwork.InRoom && !PhotonNetwork.OfflineMode && !PhotonNetwork.IsMasterClient)
+        {
+            SolutionChecked?.Invoke();
             return;
+        }
 
-        Debug.Log(correct ? "[StatuePuzzle] Puzzle resolvido." : "[StatuePuzzle] Combinacao incorreta ou incompleta.", this);
+        Debug.Log(correct ? "[StatuePuzzle] Puzzle solved." : "[StatuePuzzle] Incorrect or incomplete arrangement.", this);
         if (correct)
             onPuzzleSolved.Invoke();
         else
             onPuzzleFailed.Invoke();
+        SolutionChecked?.Invoke();
     }
 
     public static StatuePuzzleController FindByNetworkSceneId(string id)

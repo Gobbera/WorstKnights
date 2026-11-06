@@ -1,0 +1,33 @@
+SCENE Assets/Scenes/Map3.unity dirty=True
+CANDIDATE Stair_Circle (1)/Pressure_Button prefab=Assets/WK_Pack/Snaps/Roofs/Stair_Circle (1).prefab
+Stair_Circle (1)/Pressure_Button pos=(153.0000, 0.8708, 23.0000) local=(0.0000, 0.8708, 0.0000) rot=(0.00, 0.00, 0.00) scale=(1.000, 1.000, 1.000)
+components=Transform,MeshFilter,MeshRenderer,BoxCollider,Rigidbody,AudioSource,PressureButtonController
+mesh=Pressure_Button bounds=Center: (0.00, 0.11, 0.00), Extents: (0.91, 0.11, 0.91)
+renderer=Center: (153.00, 0.98, 23.00), Extents: (0.91, 0.11, 0.91)
+collider=BoxCollider bounds=Center: (153.00, 0.98, 23.00), Extents: (0.91, 0.11, 0.91)
+CANDIDATE Lever prefab=Assets/Prefabs/Mechanisms/Triggers/Levers/Lever.prefab
+Lever pos=(153.0211, 1.0259, 24.4363) local=(153.0211, 1.0259, 24.4363) rot=(0.00, 0.00, 0.00) scale=(1.000, 1.000, 1.000)
+components=Transform,BoxCollider
+collider=BoxCollider bounds=Center: (153.02, 1.03, 24.44), Extents: (0.50, 0.50, 0.50)
+Lever/Lever pos=(153.0211, 1.0259, 24.4363) local=(0.0000, 0.0000, 0.0000) rot=(270.00, 0.00, 0.00) scale=(1.000, 1.000, 1.000)
+components=Transform,MeshFilter,MeshRenderer
+mesh=Lever bounds=Center: (0.00, 0.00, 0.16), Extents: (0.20, 0.56, 0.16)
+renderer=Center: (153.02, 1.18, 24.44), Extents: (0.20, 0.16, 0.56)
+Lever/Lever_Arm pos=(153.0211, 1.0259, 24.4363) local=(0.0000, 0.0000, 0.0000) rot=(270.00, 0.00, 0.00) scale=(1.000, 1.000, 1.000)
+components=Transform,MeshFilter,MeshRenderer
+mesh=Lever_Arm bounds=Center: (0.00, 0.00, 0.62), Extents: (0.09, 0.34, 0.79)
+renderer=Center: (153.02, 1.65, 24.44), Extents: (0.09, 0.79, 0.34)
+CANDIDATE Lever/Lever prefab=Assets/Prefabs/Mechanisms/Triggers/Levers/Lever.prefab
+Lever/Lever pos=(153.0211, 1.0259, 24.4363) local=(0.0000, 0.0000, 0.0000) rot=(270.00, 0.00, 0.00) scale=(1.000, 1.000, 1.000)
+components=Transform,MeshFilter,MeshRenderer
+mesh=Lever bounds=Center: (0.00, 0.00, 0.16), Extents: (0.20, 0.56, 0.16)
+renderer=Center: (153.02, 1.18, 24.44), Extents: (0.20, 0.16, 0.56)
+CANDIDATE Lever/Lever_Arm prefab=Assets/Prefabs/Mechanisms/Triggers/Levers/Lever.prefab
+Lever/Lever_Arm pos=(153.0211, 1.0259, 24.4363) local=(0.0000, 0.0000, 0.0000) rot=(270.00, 0.00, 0.00) scale=(1.000, 1.000, 1.000)
+components=Transform,MeshFilter,MeshRenderer
+mesh=Lever_Arm bounds=Center: (0.00, 0.00, 0.62), Extents: (0.09, 0.34, 0.79)
+renderer=Center: (153.02, 1.65, 24.44), Extents: (0.09, 0.79, 0.34)
+PUZZLE Statue Puzzle
+FAILED Dragon_Head_Flamethrower_Trap (2) (FlamethrowerTrapController).TriggerTrap
+FAILED Dragon_Head_Flamethrower_Trap (1) (FlamethrowerTrapController).TriggerTrap
+FAILED Dragon_Head_Flamethrower_Trap (3) (FlamethrowerTrapController).TriggerTrap

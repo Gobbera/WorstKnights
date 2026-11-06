@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 0f0265124d02e83479245e830fc63a68
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 12391, guid: 0000000000000000e000000000000000, type: 0}
+  runtimePlatform: 2
+  graphicsDeviceType: 18
+  version: 0
+  qualityLevelName: PC
+  shaderVariantCount: 3
+  graphicsStateCount: 3

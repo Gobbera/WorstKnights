@@ -209,7 +209,7 @@ public sealed class PlayerMeleeAttackConfigDrawer : PropertyDrawer
             return;
 
         lineRect.height = EditorGUI.GetPropertyHeight(property, true);
-        EditorGUI.PropertyField(lineRect, property, new GUIContent(label), true);
+        EditorGUI.PropertyField(lineRect, property, new GUIContent(label, property.tooltip), true);
         lineRect.y += lineRect.height + VerticalSpacing;
     }
 

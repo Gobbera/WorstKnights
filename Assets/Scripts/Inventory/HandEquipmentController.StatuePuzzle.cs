@@ -61,6 +61,25 @@ public partial class HandEquipmentController
     }
 
     [PunRPC]
+    private void RpcCheckStatuePuzzleFromTrigger(string puzzleId, int submittingViewId, PhotonMessageInfo info)
+    {
+        if (!IsInventoryActionAuthorized(info)) return;
+        var actor = submittingViewId != 0 ? PhotonView.Find(submittingViewId) : null;
+        StatuePuzzleController.FindByNetworkSceneId(puzzleId)?.ApplyCheckSolution(actor != null ? actor.GetComponent<PlayerHealth>() : null);
+    }
+
+    public bool TryRequestTriggeredStatuePuzzleCheck(StatuePuzzleController puzzle, PlayerHealth submittingPlayer)
+    {
+        ResolveReferences();
+        if (!HasLocalAuthority() || puzzle == null || puzzle.IsSolved) return false;
+        if (!ShouldUseNetworkSync()) { puzzle.ApplyCheckSolution(submittingPlayer); return true; }
+        if (!PhotonNetwork.IsMasterClient || string.IsNullOrEmpty(puzzle.NetworkSceneId)) return false;
+        var actor = submittingPlayer != null ? submittingPlayer.GetComponent<PhotonView>() : null;
+        photonView.RPC(nameof(RpcCheckStatuePuzzleFromTrigger), RpcTarget.AllBufferedViaServer, puzzle.NetworkSceneId, actor != null ? actor.ViewID : 0);
+        return true;
+    }
+
+    [PunRPC]
     private void RpcPlaceStatuePlate(string pickupId, int handValue, int slotIndex, string targetId, PhotonMessageInfo info)
     {
         if (!IsInventoryActionAuthorized(info) || (handValue != (int)HandType.Left && handValue != (int)HandType.Right))
