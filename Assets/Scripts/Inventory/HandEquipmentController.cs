@@ -171,7 +171,7 @@ public partial class HandEquipmentController : MonoBehaviour
         if (!HasLocalAuthority())
             return;
 
-        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        if (InGameSettingsMenuController.IsAnyMenuOpen || PlayerInteractionControl.IsLockedFor(this))
         {
             StopShieldGuard();
             return;
@@ -190,6 +190,7 @@ public partial class HandEquipmentController : MonoBehaviour
 
     public void HandleRuntimeInput()
     {
+        if (PlayerInteractionControl.IsLockedFor(this)) { StopShieldGuard(); return; }
         if (UpdateShieldGuardInput())
             return;
 

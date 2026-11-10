@@ -13,7 +13,7 @@ using UnityEngine;
 
 [DefaultExecutionOrder(-1000)]
 [DisallowMultipleComponent]
-public sealed class VivoxVoiceManager : MonoBehaviourPunCallbacks
+public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 {
     private const string ChannelPrefix = "kwk-pun-room-";
     private const string PhotonVivoxPlayerIdProperty = "kwkVivoxPlayerId";
@@ -129,6 +129,7 @@ public sealed class VivoxVoiceManager : MonoBehaviourPunCallbacks
     {
         UpdateChannelRecovery();
         UpdateVoiceSpatialization();
+        UpdateUnityVoiceOutputs();
     }
 
     private void OnApplicationQuit()
@@ -142,6 +143,7 @@ public sealed class VivoxVoiceManager : MonoBehaviourPunCallbacks
             return;
 
         UnsubscribeFromVivoxEvents();
+        ClearUnityVoiceOutputs();
         Instance = null;
     }
 
@@ -530,6 +532,7 @@ public sealed class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void OnVivoxParticipantRemovedFromChannel(VivoxParticipant participant)
     {
+        RemoveUnityVoiceOutput(participant);
         TryResolveParticipantPlayerId(participant, out string participantPlayerId);
         if (!TryResolveParticipantChannelName(participant, out string channelName))
         {
@@ -867,6 +870,7 @@ public sealed class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void ClearProximityMixState()
     {
+        ClearUnityVoiceOutputs();
         participantVolumeByPlayerId.Clear();
         proximityMutedPlayerIds.Clear();
         unresolvedParticipantWarnings.Clear();

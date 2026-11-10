@@ -30,9 +30,9 @@ The lower-floor `Elevator_02` uses a Momentary `InteractionTriggerStateTarget` w
 
 ## Movement audio
 
-Assign **Movement Audio Cue** on `PlatformController`. **Movement Audio Source** references a dedicated source, prepared at startup with clip data requested before movement. The scene setup authors a **Platform Movement Audio** child/source before Play; older controllers create a compatibility source in Awake. No source is created on a lever activation.
+Assign **Start Audio Cue**, **Moving Audio Cue** and **Stop Audio Cue** on `PlatformController`. Start plays once on departure, Moving loops throughout travel, and Stop plays once on arrival at either endpoint. Start and Moving begin together. The original movement cue/source are retained under the Moving labels, preserving existing scene and prefab references.
 
-The cue's clip, volume/pitch variation, mixer, spatial settings and reverb are respected. Playback is forced to loop while the platform is moving, even if the cue's Loop setting is off. It follows Moving Part, remains continuous through a direction change and stops at either endpoint, when paused, broken or disabled. Empty cues are silent. Each client derives movement audio from the existing synchronized motion state; no separate audio RPC is needed. Map3 leaves Movement Audio Cue empty for the desired machinery sound to be assigned.
+Each stage has a dedicated source prepared before activation, and clip data is requested at startup. **Prepare Audio Sources** and the routing setup author the three sources before Play; older controllers have an Awake fallback. The cue's volume/pitch variation, mixer, spatial settings and reverb are respected. Moving is forced to loop; Start and Stop are forced to play once, regardless of cue Loop flags. All sources follow Moving Part. Continuous reversal retains the loop without replaying Start/Stop. Pause, break and disable do not fake an arrival. A restored moving state resumes only the loop. Empty stages are silent. Each client uses existing synchronized motion state without another audio RPC. See [PlatformAudioStages.md](PlatformAudioStages.md).
 
 ## State synchronization
 

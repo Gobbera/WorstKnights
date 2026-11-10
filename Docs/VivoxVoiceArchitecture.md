@@ -123,22 +123,15 @@ O `RoomList` atual representa o lobby global de descoberta do Photon. Ele não p
 
 A referência útil de Lethal Company é a voz local como parte do espaço do jogo, complementada por walkie-talkies para comunicação remota. A página oficial destaca os walkie-talkies como ferramenta da equipe; relatos e comportamento observado pela comunidade descrevem voz/texto por proximidade e controle individual de volume. Para este projeto, a ideia será reproduzir a função dramática, não copiar valores de alcance sem teste próprio.
 
-## Estágio 3 planejado: ambiência e mixagem
+## Stage 3: environment reverb and future mixing
 
-O Vivox 16.9 fornece Audio Taps. Um Participant Audio Tap pode encaminhar a voz de outro usuário para um `AudioSource`, que então pode usar componentes de áudio e `AudioMixerGroup` do Unity. Esse será o ponto de integração para abafamento, eco, reverb, filtros e snapshots por ambiente.
+The current simulated proximity mode and non-positional 2D mode now route remote speech through owned Vivox Participant Audio Taps. Each tap suppresses its original channel-mix playback and supplies a persistent Unity AudioSource with environment-reverb sends enabled. The listener's existing reverb zone and transition therefore affect received speech.
 
-O estágio 3 deverá incluir:
+Participant taps expose unmixed audio, so the voice manager mirrors its existing proximity gain and mute onto each Unity source. Sources stay 2D to avoid a second distance rolloff. Native Vivox positional output retains its existing direct route.
 
-- associação estável entre participante Vivox e jogador Photon;
-- um emissor/tap por participante remoto quando efeitos individuais forem necessários;
-- roteamento para grupos dedicados do Audio Mixer, separado de SFX e música;
-- volumes, filtros e snapshots controlados pelo ambiente do emissor e/ou ouvinte;
-- prevenção de áudio duplicado ao usar o mix original do Vivox e um Audio Tap;
-- limpeza de taps quando o participante sair, morrer, trocar de canal ou desconectar.
+Configure Unity Voice Output, Environment Reverb Send and optional Voice Mixer Group on Assets/Resources/Voice/VivoxVoiceSettings.asset. The local microphone is not tapped. Outputs are released when participants or channels leave, and existing participants are reconciled after connection recovery. Disabling routing or a failed tap registration retains direct Vivox output.
 
-Há uma restrição relevante: Channel Audio Tap se aplica apenas ao primeiro canal ingressado. Para efeitos por voz e por jogador, Participant Audio Taps são a base mais flexível.
-
-O projeto já possui `GameAudioService`, `AudioCue` e roteamento opcional para `AudioMixerGroup`. A voz reutilizará essa convenção de mixer, mas não o pool de one-shots: cada participante remoto precisa de uma fonte duradoura com ciclo de vida próprio. Ainda não existe um asset `.mixer` dedicado no projeto; criar os grupos de voz e seus efeitos pertence ao estágio 3, sem antecipar alterações de mixagem no estágio 1.
+See [VivoxEnvironmentReverb.md](VivoxEnvironmentReverb.md) for the checkpoint, supported modes and validation limits. Future radio, per-speaker environments, occlusion and dedicated mixer snapshots remain separate design work; they do not use the one-shot SFX pool.
 
 ## Riscos e problemas conhecidos
 

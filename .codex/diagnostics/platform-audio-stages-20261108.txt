@@ -1,0 +1,24 @@
+BEFORE Stair_Circle (1) dirty=False data={"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::PlatformController","platformName":"Platform","movingPart":{"instanceID":0},"networkSceneId":"Map3:Stair_Circle (1)[355]","prototypeLocalOnly":false,"motionMode":3,"movementPoints":[{"directionMode":0,"axis":1,"direction":1,"diagonalDirection":{"x":1.0,"y":0.0,"z":1.0},"distance":15.800000190734864,"speed":2.5}],"carryPlayers":true,"activationMode":2,"activationSignals":[{"instanceID":0}],"signalRequirement":0,"startAudioCue":{"instanceID":0},"movementAudioCue":{"instanceID":0},"stopAudioCue":{"instanceID":0},"startAudioSource":{"instanceID":0},"movementAudioSource":{"instanceID":0},"stopAudioSource":{"instanceID":0},"movementAxis":0,"movementDirection":0,"movementDistance":2.0,"movementSpeed":1.0,"legacyMotionSettingsMigrated":true,"breakable":false,"breakDelay":0.5,"topTriggerHeight":0.20000000298023225,"respawns":true,"respawnDelay":3.0,"playerDetectionMask":{"serializedVersion":"2","m_Bits":4294967291}}}
+TESTS passed=136 failed=0 originalDirty=False
+PREPARED Stair_Circle (1) dirty=False data={"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::PlatformController","platformName":"Platform","movingPart":{"instanceID":0},"networkSceneId":"Map3:Stair_Circle (1)[355]","prototypeLocalOnly":false,"motionMode":3,"movementPoints":[{"directionMode":0,"axis":1,"direction":1,"diagonalDirection":{"x":1.0,"y":0.0,"z":1.0},"distance":15.800000190734864,"speed":2.5}],"carryPlayers":true,"activationMode":2,"activationSignals":[{"instanceID":0}],"signalRequirement":0,"startAudioCue":{"instanceID":0},"movementAudioCue":{"instanceID":0},"stopAudioCue":{"instanceID":0},"startAudioSource":{"instanceID":0},"movementAudioSource":{"instanceID":0},"stopAudioSource":{"instanceID":0},"movementAxis":0,"movementDirection":0,"movementDistance":2.0,"movementSpeed":1.0,"legacyMotionSettingsMigrated":true,"breakable":false,"breakDelay":0.5,"topTriggerHeight":0.20000000298023225,"respawns":true,"respawnDelay":3.0,"playerDetectionMask":{"serializedVersion":"2","m_Bits":4294967291}}}
+AUTHORING COMPLETE dirty=False
+PASS Three sources prepared before departure
+PASS Start is one-shot and Moving loops despite opposite cue flags
+PASS Steady movement does not replay Start
+PASS Mid-trip reversal keeps audio continuous
+PASS Arrival at A cuts motion and plays Stop once
+PASS Rest does not replay Stop
+PASS Next departure reuses sources and cuts previous Stop
+PASS Arrival at B plays Stop
+PASS Disable silences all stages
+PASS Re-enable restores loop without replaying departure
+PASS Break silences all stages without arrival
+PASS Start works with no Moving cue
+PASS Stop works with no Moving cue
+PASS Empty edge stages do not prevent the Moving loop
+PASS Arrival is silent when Stop is empty
+PASS Initial moving snapshot restores loop without past Start or Stop
+PASS Source count remains three across all trips and states
+PLAY PASSED all stages
+RESTORED Assets/Scenes/Map3.unity dirty=False
+FINAL: 136 Editor cases passed; native Play stages passed; Map3 prepared and saved; original cue/source and path preserved; temporary validator archived outside Assets and removed. No Photon snapshot format changes or audio RPCs.

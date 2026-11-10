@@ -6,7 +6,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [AddComponentMenu("World/Doors/Door Controller")]
-public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IPlayerInteractionPromptProvider, IPlayerInteractionPromptPlacementProvider, IPlayerHeldItemInteractionProvider
+public partial class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IPlayerInteractionPromptProvider, IPlayerInteractionPromptPlacementProvider, IPlayerHeldItemInteractionProvider
 {
     private const string RoomPropertyKeyPrefix = "door:";
     private const string EnemyInteractionLockRoomPropertySuffix = ":enemyLockUntil";
@@ -65,6 +65,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     [Header("Motion")]
     [SerializeField] private DoorMotionMode motionMode = DoorMotionMode.Rotate;
     [SerializeField] private Transform rotatePivot;
+    [Tooltip("Optional peer door. Assign this controller back on the peer to open and close them together. Neither door is the primary.")]
+    [SerializeField] private DoorController pairedDoor;
     [SerializeField] private bool openAwayFromInteractor;
     [SerializeField] private Vector3 openLocalEulerAngles = new Vector3(0f, 90f, 0f);
     [SerializeField] private Vector3 openLocalPositionOffset = Vector3.zero;
@@ -83,6 +85,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private Quaternion closedLocalRotation;
     private Vector3 closedPivotLocalPosition;
     private Quaternion closedPivotLocalRotation;
+    private Vector3 closedMotionReferencePoint;
     private Vector3 openLocalPosition;
     private Quaternion openLocalRotation;
     private float openProgress;
@@ -105,7 +108,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     public bool IsOpen => isOpen;
     public bool IsLocked => isLocked;
     public int CurrentOpenRotationDirection => openRotationDirection;
-    public bool IsMoving => motionMode != DoorMotionMode.Destroy
+    public bool IsMoving => IsMovingLocally || (GetPairedDoor() != null && GetPairedDoor().IsMovingLocally);
+    private bool IsMovingLocally => motionMode != DoorMotionMode.Destroy
         && movingPart != null
         && Mathf.Abs(openProgress - (isOpen ? 1f : 0f)) > MotionEndpointEpsilon;
     public bool SupportsDirectionalOpen => motionMode == DoorMotionMode.Rotate && movingPart != null;
@@ -171,7 +175,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private void Update()
     {
-        UpdateDoorMotion();
+        UpdatePairedDoorMotion();
     }
 
     public override void OnDisable()
@@ -190,6 +194,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
         if (UsesLockConfiguration && lockMode == DoorLockMode.SignalSource)
             EvaluateSignalDrivenState();
+
+        var peer = GetPairedDoor();
+        if (!isLocked && peer != null && peer.isLocked) return peer.TryInteract(interactor);
 
         if (HasLatchedPermanentSignalOpenState)
             return true;
@@ -210,6 +217,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     {
         promptTemplate = string.Empty;
         ResolveReferences();
+
+        var peer = GetPairedDoor();
+        if (!isLocked && peer != null && peer.isLocked) return peer.TryGetInteractionPrompt(context, out promptTemplate);
 
         if (IsPlayerInteractionBlockedByEnemy())
             return false;
@@ -236,6 +246,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     public bool TryGetHeldItemInteractionPrompt(PlayerHeldItemInteractionContext context, out string promptTemplate)
     {
+        var peer = GetPairedDoor();
+        if (!isLocked && peer != null && peer.isLocked) return peer.TryGetHeldItemInteractionPrompt(context, out promptTemplate);
         promptTemplate = string.Empty;
         if (IsPlayerInteractionBlockedByEnemy())
             return false;
@@ -249,6 +261,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     public bool TryInteractWithHeldItem(PlayerHeldItemInteractionContext context)
     {
+        var peer = GetPairedDoor();
+        if (!isLocked && peer != null && peer.isLocked) return peer.TryInteractWithHeldItem(context);
         if (IsPlayerInteractionBlockedByEnemy())
             return false;
 
@@ -270,6 +284,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     public bool TrySubmitPasscode(string submittedPasscode, PlayerPickupInteractor interactor = null)
     {
+        var peer = GetPairedDoor();
+        if (!isLocked && peer != null && peer.isLocked) return peer.TrySubmitPasscode(submittedPasscode, interactor);
         if (IsPlayerInteractionBlockedByEnemy())
             return false;
 
@@ -490,12 +506,18 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private bool RequestSetDoorState(bool targetOpen, bool targetLocked, int targetOpenRotationDirection)
     {
         NormalizeRequestedDoorState(ref targetOpen, ref targetLocked);
+        var peer = GetPairedDoor();
+        if (peer != null) peer.NormalizeRequestedDoorState(ref targetOpen, ref targetLocked);
+        int peerDirection = peer != null && targetOpen ? ResolvePairedRotationDirection(peer, targetOpenRotationDirection)
+            : peer != null ? peer.openRotationDirection : targetOpenRotationDirection;
 
         bool rotationDirectionChanged = targetOpen
             && motionMode == DoorMotionMode.Rotate
             && openRotationDirection != targetOpenRotationDirection;
 
-        if (isOpen == targetOpen && isLocked == targetLocked && !rotationDirectionChanged)
+        if (isOpen == targetOpen && isLocked == targetLocked && !rotationDirectionChanged
+            && (peer == null || (peer.isOpen == targetOpen && peer.isLocked == targetLocked
+                && (peer.motionMode != DoorMotionMode.Rotate || !targetOpen || peer.openRotationDirection == peerDirection))))
             return false;
 
         if (ShouldUsePhotonViewSync())
@@ -526,6 +548,16 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     }
 
     private bool ApplyDoorState(bool targetOpen, bool targetLocked, int targetOpenRotationDirection)
+    {
+        var peer = GetPairedDoor();
+        int peerDirection = peer != null && targetOpen ? ResolvePairedRotationDirection(peer, targetOpenRotationDirection)
+            : peer != null ? peer.openRotationDirection : targetOpenRotationDirection;
+        bool changed = ApplyLocalDoorState(targetOpen, targetLocked, targetOpenRotationDirection);
+        if (peer != null) changed = peer.ApplyLocalDoorState(targetOpen, targetLocked, peerDirection) || changed;
+        return changed;
+    }
+
+    private bool ApplyLocalDoorState(bool targetOpen, bool targetLocked, int targetOpenRotationDirection)
     {
         bool rotationDirectionChanged = targetOpen
             && motionMode == DoorMotionMode.Rotate
@@ -679,6 +711,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         closedLocalPosition = movingPart.localPosition;
         closedLocalRotation = movingPart.localRotation;
         CaptureClosedPivotPose();
+        CaptureMotionReferencePoint();
 
         switch (motionMode)
         {
@@ -748,11 +781,12 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         if (motionMode == DoorMotionMode.Rotate)
         {
             ApplyRotateDoorPose(evaluatedProgress);
-            return;
         }
-
-        movingPart.localPosition = Vector3.LerpUnclamped(closedLocalPosition, openLocalPosition, evaluatedProgress);
-        movingPart.localRotation = Quaternion.SlerpUnclamped(closedLocalRotation, openLocalRotation, evaluatedProgress);
+        else
+        {
+            movingPart.localPosition = Vector3.LerpUnclamped(closedLocalPosition, openLocalPosition, evaluatedProgress);
+            movingPart.localRotation = Quaternion.SlerpUnclamped(closedLocalRotation, openLocalRotation, evaluatedProgress);
+        }
     }
 
     private void ApplyRotateDoorPose(float evaluatedProgress)
@@ -839,36 +873,36 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
             return 1;
         }
 
-        Vector3 interactorLocalPosition = WorldToMotionSpace(interactorWorldPosition);
-        Vector3 closedDoorNormal = closedLocalRotation * Vector3.forward;
+        Vector3 closedDoorCenter = GetMotionReferenceWorldPosition(0f, 1);
+        Vector3 closedDoorNormal = GetClosedDoorWorldNormal();
         if (closedDoorNormal.sqrMagnitude <= 0.0001f)
-            return ResolveOpenRotationDirectionByDistance(interactorLocalPosition);
+            return ResolveOpenRotationDirectionByDistance(interactorWorldPosition);
 
         closedDoorNormal.Normalize();
-        float interactorSide = Vector3.Dot(interactorLocalPosition - closedLocalPosition, closedDoorNormal);
+        float interactorSide = Vector3.Dot(interactorWorldPosition - closedDoorCenter, closedDoorNormal);
         if (Mathf.Abs(interactorSide) <= 0.001f)
-            return ResolveOpenRotationDirectionByDistance(interactorLocalPosition);
+            return ResolveOpenRotationDirectionByDistance(interactorWorldPosition);
 
-        ResolveRotateOpenPose(1, out Vector3 defaultOpenLocalPosition, out _);
-        ResolveRotateOpenPose(-1, out Vector3 invertedOpenLocalPosition, out _);
+        Vector3 defaultOpenPosition = GetMotionReferenceWorldPosition(1f, 1);
+        Vector3 invertedOpenPosition = GetMotionReferenceWorldPosition(1f, -1);
 
         float desiredSideSign = -Mathf.Sign(interactorSide);
-        float defaultSideScore = Vector3.Dot(defaultOpenLocalPosition - closedLocalPosition, closedDoorNormal) * desiredSideSign;
-        float invertedSideScore = Vector3.Dot(invertedOpenLocalPosition - closedLocalPosition, closedDoorNormal) * desiredSideSign;
+        float defaultSideScore = Vector3.Dot(defaultOpenPosition - closedDoorCenter, closedDoorNormal) * desiredSideSign;
+        float invertedSideScore = Vector3.Dot(invertedOpenPosition - closedDoorCenter, closedDoorNormal) * desiredSideSign;
 
         if (Mathf.Abs(defaultSideScore - invertedSideScore) > 0.001f)
             return defaultSideScore > invertedSideScore ? 1 : -1;
 
-        return ResolveOpenRotationDirectionByDistance(interactorLocalPosition);
+        return ResolveOpenRotationDirectionByDistance(interactorWorldPosition);
     }
 
-    private int ResolveOpenRotationDirectionByDistance(Vector3 interactorLocalPosition)
+    private int ResolveOpenRotationDirectionByDistance(Vector3 interactorWorldPosition)
     {
-        ResolveRotateOpenPose(1, out Vector3 defaultOpenLocalPosition, out _);
-        ResolveRotateOpenPose(-1, out Vector3 invertedOpenLocalPosition, out _);
+        Vector3 defaultOpenPosition = GetMotionReferenceWorldPosition(1f, 1);
+        Vector3 invertedOpenPosition = GetMotionReferenceWorldPosition(1f, -1);
 
-        float defaultDistance = (defaultOpenLocalPosition - interactorLocalPosition).sqrMagnitude;
-        float invertedDistance = (invertedOpenLocalPosition - interactorLocalPosition).sqrMagnitude;
+        float defaultDistance = (defaultOpenPosition - interactorWorldPosition).sqrMagnitude;
+        float invertedDistance = (invertedOpenPosition - interactorWorldPosition).sqrMagnitude;
         return invertedDistance > defaultDistance ? -1 : 1;
     }
 
@@ -929,12 +963,13 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
             return;
         }
 
+        bool destroysController = destroyTarget == gameObject;
         if (Application.isPlaying)
             Destroy(destroyTarget);
         else
             DestroyImmediate(destroyTarget);
 
-        if (destroyTarget != gameObject)
+        if (!destroysController)
             enabled = false;
     }
 
@@ -948,7 +983,7 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private void DisableDoorColliders()
     {
-        Collider[] doorColliders = GetComponentsInChildren<Collider>(true);
+        Collider[] doorColliders = GetLocalMovingPartColliders();
         for (int i = 0; i < doorColliders.Length; i++)
         {
             if (doorColliders[i] != null)
@@ -1017,16 +1052,21 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private bool IsInteractionCooldownActive()
     {
+        var peer = GetPairedDoor();
         return IsPlayerInteractionBlockedByEnemy()
-            || (interactionCooldown > 0f && Time.time < nextAllowedInteractionTime);
+            || (interactionCooldown > 0f && Time.time < nextAllowedInteractionTime)
+            || (peer != null && peer.interactionCooldown > 0f && Time.time < peer.nextAllowedInteractionTime);
     }
 
     private void ArmInteractionCooldown()
     {
-        if (interactionCooldown <= 0f || !Application.isPlaying)
-            return;
-
-        nextAllowedInteractionTime = Mathf.Max(nextAllowedInteractionTime, Time.time + interactionCooldown);
+        if (!Application.isPlaying) return;
+        var peer = GetPairedDoor();
+        float duration = peer != null ? Mathf.Max(interactionCooldown, peer.interactionCooldown) : interactionCooldown;
+        if (duration <= 0f) return;
+        float deadline = Time.time + duration;
+        nextAllowedInteractionTime = Mathf.Max(nextAllowedInteractionTime, deadline);
+        if (peer != null) peer.nextAllowedInteractionTime = Mathf.Max(peer.nextAllowedInteractionTime, deadline);
     }
 
     private bool IsEnemyPlayerInteractionLockActive()
@@ -1036,9 +1076,11 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private bool IsPlayerInteractionBlockedByEnemy()
     {
-        return IsEnemyPlayerInteractionLockActive()
-            || IsEnemyTraversalInteractionBlockActive();
+        var peer = GetPairedDoor();
+        return IsLocallyBlockedByEnemy() || (peer != null && peer.IsLocallyBlockedByEnemy());
     }
+
+    private bool IsLocallyBlockedByEnemy() => IsEnemyPlayerInteractionLockActive() || IsEnemyTraversalInteractionBlockActive();
 
     private bool IsEnemyTraversalInteractionBlockActive()
     {
@@ -1085,6 +1127,12 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         float lockUntil = Time.time + safeDuration;
         enemyPlayerInteractionLockUntil = Mathf.Max(enemyPlayerInteractionLockUntil, lockUntil);
         nextAllowedInteractionTime = Mathf.Max(nextAllowedInteractionTime, lockUntil);
+        var peer = GetPairedDoor();
+        if (peer != null)
+        {
+            peer.enemyPlayerInteractionLockUntil = Mathf.Max(peer.enemyPlayerInteractionLockUntil, lockUntil);
+            peer.nextAllowedInteractionTime = Mathf.Max(peer.nextAllowedInteractionTime, lockUntil);
+        }
     }
 
     private bool ShouldUsePhotonViewSync()
@@ -1148,10 +1196,14 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         if (!ShouldUseRoomPropertySync() || PhotonNetwork.CurrentRoom == null)
             return;
 
+        var peer = GetPairedDoor();
+        bool permanentOpen = signalPermanentOpenLatched || (peer != null && peer.signalPermanentOpenLatched);
         Hashtable roomState = new Hashtable
         {
-            { BuildRoomPropertyKey(), EncodeDoorState(targetOpen, targetLocked, signalPermanentOpenLatched, targetOpenRotationDirection) }
+            { BuildRoomPropertyKey(), EncodeDoorState(targetOpen, targetLocked, permanentOpen, targetOpenRotationDirection) }
         };
+        if (peer != null && peer.ShouldUseRoomPropertySync())
+            roomState[peer.BuildRoomPropertyKey()] = EncodeDoorState(targetOpen, targetLocked, permanentOpen, peer.openRotationDirection);
         PhotonNetwork.CurrentRoom.SetCustomProperties(roomState);
     }
 
@@ -1168,6 +1220,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
         {
             { BuildEnemyInteractionLockPropertyKey(), PhotonNetwork.ServerTimestamp + safeDurationMilliseconds }
         };
+        var peer = GetPairedDoor();
+        if (peer != null && peer.ShouldUseRoomPropertySync())
+            roomState[peer.BuildEnemyInteractionLockPropertyKey()] = roomState[BuildEnemyInteractionLockPropertyKey()];
         PhotonNetwork.CurrentRoom.SetCustomProperties(roomState);
     }
 
@@ -1218,6 +1273,8 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
     private void ApplyRoomSyncedState(bool targetOpen, bool targetLocked, bool permanentSignalOpenLatched, int targetOpenRotationDirection)
     {
         signalPermanentOpenLatched = permanentSignalOpenLatched;
+        var peer = GetPairedDoor();
+        if (peer != null) peer.signalPermanentOpenLatched = permanentSignalOpenLatched;
         ApplyDoorState(targetOpen, targetLocked, targetOpenRotationDirection);
     }
 
@@ -1295,7 +1352,9 @@ public class DoorController : MonoBehaviourPunCallbacks, IPlayerInteractable, IP
 
     private bool UsesLockConfiguration => startupState == DoorStartupState.StartsLocked;
     private bool UsesSignalSourceLock => UsesLockConfiguration && lockMode == DoorLockMode.SignalSource;
-    private bool HasLatchedPermanentSignalOpenState => UsesSignalSourceLock && stayOpenAfterFirstSignalOpen && signalPermanentOpenLatched;
+    private bool HasLocalPermanentSignalOpenState => UsesSignalSourceLock && stayOpenAfterFirstSignalOpen && signalPermanentOpenLatched;
+    private bool HasLatchedPermanentSignalOpenState => HasLocalPermanentSignalOpenState
+        || (GetPairedDoor() != null && GetPairedDoor().HasLocalPermanentSignalOpenState);
 
     private bool ShouldLatchPermanentSignalOpen(bool targetOpen, bool targetLocked)
     {

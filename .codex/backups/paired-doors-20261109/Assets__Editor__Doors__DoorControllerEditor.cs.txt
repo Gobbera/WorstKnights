@@ -1,0 +1,245 @@
+using UnityEditor;
+using UnityEngine;
+
+[CustomEditor(typeof(DoorController))]
+public class DoorControllerEditor : Editor
+{
+    private const float StartupButtonSpacing = 6f;
+
+    private SerializedProperty doorNameProperty;
+    private SerializedProperty movingPartProperty;
+    private SerializedProperty photonViewProperty;
+    private SerializedProperty prototypeLocalOnlyProperty;
+    private SerializedProperty interactionCooldownProperty;
+    private SerializedProperty openInteractionPromptProperty;
+    private SerializedProperty closeInteractionPromptProperty;
+    private SerializedProperty unlockInteractionPromptProperty;
+    private SerializedProperty passcodeInteractionPromptProperty;
+    private SerializedProperty interactionPromptPivotProperty;
+    private SerializedProperty interactionPromptLocalOffsetProperty;
+    private SerializedProperty startupStateProperty;
+    private SerializedProperty autoOpenOnUnlockProperty;
+    private SerializedProperty closeWhenSignalTurnsOffProperty;
+    private SerializedProperty relockWhenSignalTurnsOffProperty;
+    private SerializedProperty motionModeProperty;
+    private SerializedProperty rotatePivotProperty;
+    private SerializedProperty additionalLeavesProperty;
+    private SerializedProperty openAwayFromInteractorProperty;
+    private SerializedProperty openLocalEulerAnglesProperty;
+    private SerializedProperty openLocalPositionOffsetProperty;
+    private SerializedProperty moveDurationProperty;
+    private SerializedProperty destroyDelayProperty;
+    private SerializedProperty moveCurveProperty;
+    private SerializedProperty lockModeProperty;
+    private SerializedProperty requiredKeyItemProperty;
+    private SerializedProperty requiredPasscodeProperty;
+    private SerializedProperty requiredSignalsProperty;
+    private SerializedProperty signalRequirementProperty;
+    private SerializedProperty stayOpenAfterFirstSignalOpenProperty;
+
+    private void OnEnable()
+    {
+        doorNameProperty = serializedObject.FindProperty("doorName");
+        movingPartProperty = serializedObject.FindProperty("movingPart");
+        photonViewProperty = serializedObject.FindProperty("photonView");
+        prototypeLocalOnlyProperty = serializedObject.FindProperty("prototypeLocalOnly");
+        interactionCooldownProperty = serializedObject.FindProperty("interactionCooldown");
+        openInteractionPromptProperty = serializedObject.FindProperty("openInteractionPrompt");
+        closeInteractionPromptProperty = serializedObject.FindProperty("closeInteractionPrompt");
+        unlockInteractionPromptProperty = serializedObject.FindProperty("unlockInteractionPrompt");
+        passcodeInteractionPromptProperty = serializedObject.FindProperty("passcodeInteractionPrompt");
+        interactionPromptPivotProperty = serializedObject.FindProperty("interactionPromptPivot");
+        interactionPromptLocalOffsetProperty = serializedObject.FindProperty("interactionPromptLocalOffset");
+        startupStateProperty = serializedObject.FindProperty("startupState");
+        autoOpenOnUnlockProperty = serializedObject.FindProperty("autoOpenOnUnlock");
+        closeWhenSignalTurnsOffProperty = serializedObject.FindProperty("closeWhenSignalTurnsOff");
+        relockWhenSignalTurnsOffProperty = serializedObject.FindProperty("relockWhenSignalTurnsOff");
+        motionModeProperty = serializedObject.FindProperty("motionMode");
+        rotatePivotProperty = serializedObject.FindProperty("rotatePivot");
+        additionalLeavesProperty = serializedObject.FindProperty("additionalLeaves");
+        openAwayFromInteractorProperty = serializedObject.FindProperty("openAwayFromInteractor");
+        openLocalEulerAnglesProperty = serializedObject.FindProperty("openLocalEulerAngles");
+        openLocalPositionOffsetProperty = serializedObject.FindProperty("openLocalPositionOffset");
+        moveDurationProperty = serializedObject.FindProperty("moveDuration");
+        destroyDelayProperty = serializedObject.FindProperty("destroyDelay");
+        moveCurveProperty = serializedObject.FindProperty("moveCurve");
+        lockModeProperty = serializedObject.FindProperty("lockMode");
+        requiredKeyItemProperty = serializedObject.FindProperty("requiredKeyItem");
+        requiredPasscodeProperty = serializedObject.FindProperty("requiredPasscode");
+        requiredSignalsProperty = serializedObject.FindProperty("requiredSignals");
+        signalRequirementProperty = serializedObject.FindProperty("signalRequirement");
+        stayOpenAfterFirstSignalOpenProperty = serializedObject.FindProperty("stayOpenAfterFirstSignalOpen");
+    }
+
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update();
+
+        DrawSetupSection();
+        EditorGUILayout.Space();
+        DrawStartupStateSection();
+        EditorGUILayout.Space();
+        DrawMotionSection();
+
+        if (GetStartupState() == DoorController.DoorStartupState.StartsLocked)
+        {
+            EditorGUILayout.Space();
+            DrawLockSection();
+        }
+
+        serializedObject.ApplyModifiedProperties();
+    }
+
+    private void DrawSetupSection()
+    {
+        EditorGUILayout.LabelField("1. Setup", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(doorNameProperty, new GUIContent("Door Name"));
+        EditorGUILayout.PropertyField(movingPartProperty, new GUIContent("Moving Part"));
+        EditorGUILayout.PropertyField(photonViewProperty, new GUIContent("Photon View"));
+        EditorGUILayout.PropertyField(prototypeLocalOnlyProperty, new GUIContent("Prototype Local Only"));
+        EditorGUILayout.PropertyField(interactionCooldownProperty, new GUIContent("Interaction Cooldown"));
+        EditorGUILayout.PropertyField(openInteractionPromptProperty, new GUIContent("Open Prompt"));
+        EditorGUILayout.PropertyField(closeInteractionPromptProperty, new GUIContent("Close Prompt"));
+        EditorGUILayout.PropertyField(unlockInteractionPromptProperty, new GUIContent("Unlock Prompt"));
+        EditorGUILayout.PropertyField(passcodeInteractionPromptProperty, new GUIContent("Passcode Prompt"));
+        EditorGUILayout.PropertyField(interactionPromptPivotProperty, new GUIContent("Prompt Pivot"));
+        EditorGUILayout.PropertyField(interactionPromptLocalOffsetProperty, new GUIContent("Prompt Local Offset"));
+        EditorGUILayout.HelpBox(
+            "Use {key} for the configured interaction key. Prompt Pivot places the local player's prompt on the object; leave it empty to use the crosshair prompt.",
+            MessageType.None);
+    }
+
+    private void DrawStartupStateSection()
+    {
+        EditorGUILayout.LabelField("2. Startup State", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Choose whether the door starts open, closed without a lock, or locked.",
+            MessageType.None);
+
+        Rect buttonRowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+        float buttonWidth = (buttonRowRect.width - (StartupButtonSpacing * 2f)) / 3f;
+        Rect startsOpenRect = new Rect(buttonRowRect.x, buttonRowRect.y, buttonWidth, buttonRowRect.height);
+        Rect startsClosedRect = new Rect(buttonRowRect.x + buttonWidth + StartupButtonSpacing, buttonRowRect.y, buttonWidth, buttonRowRect.height);
+        Rect startsLockedRect = new Rect(buttonRowRect.x + ((buttonWidth + StartupButtonSpacing) * 2f), buttonRowRect.y, buttonWidth, buttonRowRect.height);
+
+        DoorController.DoorStartupState startupState = GetStartupState();
+        DrawStartupStateButton(startsOpenRect, "Starts Open", startupState == DoorController.DoorStartupState.StartsOpen, DoorController.DoorStartupState.StartsOpen);
+        DrawStartupStateButton(startsClosedRect, "Starts Closed", startupState == DoorController.DoorStartupState.StartsClosed, DoorController.DoorStartupState.StartsClosed);
+        DrawStartupStateButton(startsLockedRect, "Starts Locked", startupState == DoorController.DoorStartupState.StartsLocked, DoorController.DoorStartupState.StartsLocked);
+
+        switch (startupState)
+        {
+            case DoorController.DoorStartupState.StartsLocked:
+                EditorGUILayout.HelpBox(
+                    "Starts Locked closes the door and enables the lock settings below.",
+                    MessageType.Info);
+                break;
+
+            case DoorController.DoorStartupState.StartsClosed:
+                EditorGUILayout.HelpBox(
+                    "Starts Closed keeps the door closed and available without a key, passcode or signal.",
+                    MessageType.None);
+                break;
+
+            default:
+                EditorGUILayout.HelpBox(
+                    "Starts Open opens every configured leaf and hides the unused lock settings.",
+                    MessageType.None);
+                break;
+        }
+    }
+
+    private void DrawMotionSection()
+    {
+        EditorGUILayout.LabelField("3. Motion", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(motionModeProperty, new GUIContent("Motion Mode"));
+
+        DoorController.DoorMotionMode motionMode = (DoorController.DoorMotionMode)motionModeProperty.enumValueIndex;
+        switch (motionMode)
+        {
+            case DoorController.DoorMotionMode.Rotate:
+                EditorGUILayout.PropertyField(rotatePivotProperty, new GUIContent("Rotate Pivot"));
+                EditorGUILayout.PropertyField(openAwayFromInteractorProperty, new GUIContent("Open Away From Player"));
+                EditorGUILayout.PropertyField(openLocalEulerAnglesProperty, new GUIContent("Open Local Euler Angles"));
+                EditorGUILayout.PropertyField(openLocalPositionOffsetProperty, new GUIContent("Open Local Position Offset"));
+                EditorGUILayout.PropertyField(moveDurationProperty, new GUIContent("Move Duration"));
+                EditorGUILayout.PropertyField(moveCurveProperty, new GUIContent("Move Curve"));
+                EditorGUILayout.HelpBox(
+                    "Rotate Pivot defines the hinge position and rotation axis in the closed pose.",
+                    MessageType.None);
+                break;
+
+            case DoorController.DoorMotionMode.Slide:
+                EditorGUILayout.PropertyField(openLocalPositionOffsetProperty, new GUIContent("Open Local Position Offset"));
+                EditorGUILayout.PropertyField(moveDurationProperty, new GUIContent("Move Duration"));
+                EditorGUILayout.PropertyField(moveCurveProperty, new GUIContent("Move Curve"));
+                break;
+
+            case DoorController.DoorMotionMode.Destroy:
+                EditorGUILayout.PropertyField(destroyDelayProperty, new GUIContent("Destroy Delay"));
+                EditorGUILayout.HelpBox(
+                    "Destroy removes the primary Moving Part and additional leaves when the door opens.",
+                    MessageType.Warning);
+                break;
+        }
+        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(additionalLeavesProperty, new GUIContent("Additional Leaves"), true);
+        EditorGUILayout.HelpBox("Additional leaves share this controller's interaction, state, duration and curve. Assign each leaf and its hinge, then choose its angle using that hinge's axes. Mirrored imports may need matching angle values. Keep one Door Controller on the common parent.", MessageType.None);
+    }
+
+    private void DrawLockSection()
+    {
+        EditorGUILayout.LabelField("4. Lock", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(lockModeProperty, new GUIContent("Lock Mode"));
+        EditorGUILayout.PropertyField(autoOpenOnUnlockProperty, new GUIContent("Auto Open On Unlock"));
+
+        DoorController.DoorLockMode lockMode = (DoorController.DoorLockMode)lockModeProperty.enumValueIndex;
+        switch (lockMode)
+        {
+            case DoorController.DoorLockMode.KeyItem:
+                EditorGUILayout.PropertyField(requiredKeyItemProperty, new GUIContent("Required Key Item"));
+                break;
+
+            case DoorController.DoorLockMode.Passcode:
+                EditorGUILayout.PropertyField(requiredPasscodeProperty, new GUIContent("Required Passcode"));
+                break;
+
+            case DoorController.DoorLockMode.SignalSource:
+                EditorGUILayout.PropertyField(requiredSignalsProperty, new GUIContent("Required Signals"), includeChildren: true);
+                EditorGUILayout.PropertyField(signalRequirementProperty, new GUIContent("Signal Requirement"));
+                EditorGUILayout.PropertyField(stayOpenAfterFirstSignalOpenProperty, new GUIContent("Stay Open After First Open"));
+                EditorGUILayout.PropertyField(closeWhenSignalTurnsOffProperty, new GUIContent("Close When Signal Turns Off"));
+                EditorGUILayout.PropertyField(relockWhenSignalTurnsOffProperty, new GUIContent("Relock When Signal Turns Off"));
+
+                if (stayOpenAfterFirstSignalOpenProperty.boolValue)
+                {
+                    EditorGUILayout.HelpBox(
+                        "After the first signal-driven opening, the door stays open and ignores later close commands.",
+                        MessageType.Info);
+                }
+                break;
+
+            default:
+                EditorGUILayout.HelpBox(
+                    "None starts locked but allows any valid interaction to unlock without a key, passcode or signal.",
+                    MessageType.None);
+                break;
+        }
+    }
+
+    private DoorController.DoorStartupState GetStartupState()
+    {
+        return (DoorController.DoorStartupState)startupStateProperty.enumValueIndex;
+    }
+
+    private void DrawStartupStateButton(Rect rect, string label, bool isActive, DoorController.DoorStartupState targetState)
+    {
+        Color previousBackgroundColor = GUI.backgroundColor;
+        GUI.backgroundColor = isActive ? new Color(0.3f, 0.75f, 0.35f, 1f) : previousBackgroundColor;
+
+        if (GUI.Button(rect, label))
+            startupStateProperty.enumValueIndex = (int)targetState;
+
+        GUI.backgroundColor = previousBackgroundColor;
+    }
+}

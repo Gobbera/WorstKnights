@@ -1,0 +1,153 @@
+using System;
+using System.Linq;
+using Photon.Pun;
+using UnityEditor;
+using UnityEditor.Animations;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+internal static partial class TimedInteractionValidationSession
+{
+    private const string Preview = "Assets/Tests/TimedInteractionValidation.unity";
+    private const string PreviewAnimator = "Assets/Tests/TimedInteractionValidation.controller";
+    private static GameObject player;
+    private static PlayerPickupInteractor interactor;
+    private static PlayerMovement movement;
+    private static PlayerController controller;
+    private static PlayerInteractionControl control;
+    private static InteractionTriggerSystem system;
+    private static InteractionTriggerInteractable interactable;
+    private static Animator probe;
+    private static Vector3 lockedAt;
+    private static int stage, started, finished;
+    private static double phaseAt;
+    private static float lockDuration;
+    private static TimedInteractionTestInput input;
+
+    private static void SetupPlayCallbacks()
+    {
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("Routing.Play", false))
+            {
+                foreach (var manager in UnityEngine.Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include))
+                { manager.StopAllCoroutines(); manager.enabled = false; manager.gameObject.SetActive(false); }
+                if (PhotonNetwork.IsConnected) PhotonNetwork.Disconnect();
+            }
+            if (state != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("Routing.Restore", false)) return;
+            SessionState.SetBool("Routing.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("Routing.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            if (original.IsValid() && SessionState.GetBool("Routing.Dirty", false)) EditorSceneManager.MarkSceneDirty(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview); AssetDatabase.DeleteAsset(PreviewAnimator);
+            Log("Play restored " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+    private static void BeginPlay()
+    {
+        var original = SceneManager.GetActiveScene();
+        SessionState.SetString("Routing.Original", original.path); SessionState.SetBool("Routing.Dirty", original.isDirty);
+        var preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var actor = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Player.prefab"));
+        actor.name = "Timed Interaction Player"; actor.transform.position = new Vector3(3500, 3501, 3500);
+        foreach (var behaviour in actor.GetComponentsInChildren<MonoBehaviour>(true))
+            if (behaviour is not PlayerMovement && behaviour is not PlayerInputHandler && behaviour is not PlayerController
+                && behaviour is not PlayerPickupInteractor && behaviour is not PlayerInteractionControl && behaviour is not MouseLook)
+                behaviour.enabled = false;
+        var floor = new GameObject("Validation Floor"); floor.transform.position = new Vector3(3500, 3499.9f, 3500); floor.AddComponent<BoxCollider>().size = new Vector3(30, 0.2f, 30);
+        var root = new GameObject("Timed Interaction System"); root.transform.position = new Vector3(3500, 3501.7f, 3501);
+        var trigger = root.AddComponent<InteractionTriggerSystem>();
+        var mechanism = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(TimedInteractionAuthoringUtility.VariantPath), root.transform);
+        InteractionTriggerAuthoringUtility.Set(trigger, "mechanism", mechanism.GetComponent<InteractionTriggerMechanism>());
+        var data = new SerializedObject(trigger); data.FindProperty("localOnly").boolValue = true; data.FindProperty("activationMode").enumValueIndex = (int)InteractionTriggerMode.Toggle; data.FindProperty("interactionCooldown").floatValue = 0; data.ApplyModifiedPropertiesWithoutUndo();
+        var interaction = new SerializedObject(mechanism.GetComponent<InteractionTriggerInteractable>()); interaction.FindProperty("playerAnimationTrigger").stringValue = "InteractionProbe"; interaction.ApplyModifiedPropertiesWithoutUndo();
+        var animatorController = AnimatorController.CreateAnimatorControllerAtPath(PreviewAnimator);
+        animatorController.AddParameter("InteractionProbe", AnimatorControllerParameterType.Trigger);
+        var machine = animatorController.layers[0].stateMachine;
+        machine.defaultState = machine.AddState("Idle"); var active = machine.AddState("Interacting");
+        var transition = machine.defaultState.AddTransition(active); transition.hasExitTime = false; transition.duration = 0; transition.AddCondition(AnimatorConditionMode.If, 0, "InteractionProbe");
+        var animatorProbe = new GameObject("Interaction Animation Probe"); animatorProbe.transform.SetParent(actor.transform, false); animatorProbe.AddComponent<Animator>().runtimeAnimatorController = animatorController;
+        EditorSceneManager.SaveScene(preview, Preview);
+        SessionState.SetBool("Routing.Play", true); EditorApplication.isPlaying = true;
+    }
+    private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
+    private static void Set(object value, string field, object data) => value.GetType().GetField(field, Private).SetValue(value, data);
+    private static object Call(object value, string method, params object[] args) => value.GetType().GetMethod(method, Private).Invoke(value, args);
+
+    private static void TickPlay()
+    {
+        if (player == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++) if (SceneManager.GetSceneAt(i) != preview)
+                foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview);
+            player = preview.GetRootGameObjects().Single(r => r.name == "Timed Interaction Player");
+            typeof(PhotonView).GetProperty("IsMine").SetValue(player.GetComponent<PhotonView>(), true);
+            movement = player.GetComponent<PlayerMovement>(); controller = player.GetComponent<PlayerController>();
+            interactor = player.GetComponent<PlayerPickupInteractor>(); control = player.GetComponent<PlayerInteractionControl>();
+            var body = player.GetComponent<Rigidbody>(); body.isKinematic = false; body.useGravity = true;
+            input = new TimedInteractionTestInput(); Set(controller, "playerInput", input);
+            system = Find<InteractionTriggerSystem>(preview).Single(); interactable = system.Mechanism.GetComponent<InteractionTriggerInteractable>();
+            probe = player.GetComponentsInChildren<Animator>(true).Single(a => a.name == "Interaction Animation Probe");
+            lockDuration = new SerializedObject(interactable).FindProperty("controlLockDuration").floatValue;
+            interactable.OnInteractionStarted.AddListener(_ => started++); interactable.OnInteractionFinished.AddListener(_ => finished++);
+            stage = 0; phaseAt = EditorApplication.timeSinceStartup;
+        }
+        if (stage == 0 && EditorApplication.timeSinceStartup > phaseAt + 0.4)
+        {
+            system.transform.position = interactor.InteractionOrigin + Vector3.forward * 2.5f; Physics.SyncTransforms();
+            Check(!interactable.TryInteract(interactor) && !control.IsLocked, "Out-of-range use should not start a lock.");
+            system.transform.position = interactor.InteractionOrigin + Vector3.forward * 0.8f; Physics.SyncTransforms();
+            input.Move = Vector2.right;
+            Check(interactable.TryInteract(interactor) && control.IsLocked && started == 1, "Accepted variant use did not start the owner lock.");
+            lockedAt = player.transform.position; phaseAt = Time.timeAsDouble; stage = 1;
+            Log("Play: actual Player + Lever variant rejects far use; accepted near use starts configured timed lock and start event.");
+        }
+        else if (stage == 1 && Time.timeAsDouble > phaseAt + lockDuration * 0.5)
+        {
+            Check(control.IsLocked && Vector3.ProjectOnPlane(player.transform.position - lockedAt, Vector3.up).magnitude < 0.04f, "Held movement displaced the player during interaction.");
+            Check(!movement.TryAttack() && !movement.TryKick() && !movement.CanBeginInventoryItemAction(), "Gameplay actions remained available during lock.");
+            Check(!interactor.TryInteract() && !interactor.TryPickupItem(), "Other interactions remained available during lock.");
+            Check(probe.GetCurrentAnimatorStateInfo(0).IsName("Interacting"), "Configured player Animator trigger did not enter its interaction state.");
+            var look = player.GetComponentInChildren<MouseLook>(true); float yaw = look.ViewYaw, pitch = look.ViewPitch;
+            Set(look, "smoothMouse", Vector2.one * 100); Call(look, "Update");
+            Check(look.ViewYaw == yaw && look.ViewPitch == pitch, "Look accumulated input during lock.");
+            stage = 2;
+            Log("Play: movement, look, combat, inventory and repeated interactions are blocked; Animator trigger enters authored probe state.");
+        }
+        else if (stage == 2 && Time.timeAsDouble > phaseAt + lockDuration + 0.6)
+        {
+            Check(!control.IsLocked && finished == 1, "Timer did not unlock once.");
+            Check(Vector3.ProjectOnPlane(player.transform.position - lockedAt, Vector3.up).magnitude > 0.1f, "Held movement did not resume after expiry.");
+            input.Move = Vector2.zero;
+            system.transform.position = interactor.InteractionOrigin + Vector3.forward * 0.8f; Physics.SyncTransforms();
+            Check(interactable.TryInteract(interactor) && control.IsLocked, "Next valid use failed after unlock.");
+            interactable.enabled = false;
+            Check(!control.IsLocked && finished == 2, "Disabling the interactable left player locked.");
+            interactable.enabled = true; Set(interactable, "lockPlayerControls", false);
+            Check(interactable.TryInteract(interactor) && !control.IsLocked && finished == 3, "Optional lock disabled did not preserve ordinary interaction.");
+            Log("Play: expiry restores movement, disable releases immediately, and Lock Player Controls off permits ordinary use.");
+            EndPlay();
+        }
+        Check(stage == 0 || Time.timeAsDouble - phaseAt < 10, "Play validation timed out.");
+    }
+    private static void EndPlay() { SessionState.SetBool("Routing.Play", false); SessionState.SetBool("Routing.Restore", true); EditorApplication.isPlaying = false; }
+}
+
+internal sealed class TimedInteractionTestInput : IPlayerInput
+{
+    public Vector2 Move;
+    public Vector2 MovementInput => Move;
+    public bool AttackPressed => false;
+    public bool KickPressed => false;
+    public bool JumpPressed => false;
+    public bool CrouchHeld => false;
+    public bool CrouchPressed => false;
+    public bool CrouchReleased => false;
+    public bool SprintPressed => false;
+    public void UpdateInput() { }
+}

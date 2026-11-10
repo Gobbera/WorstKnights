@@ -8,6 +8,7 @@ public sealed partial class InteractionTriggerSystem : IOnEventCallback
     private const byte UseRequestEvent = 73;
     private string networkKey;
     private int stateSequence;
+    private int lastUseActivatorViewId;
     private void EnsureNetworkKey()
     {
         if (!string.IsNullOrEmpty(networkKey)) return;
@@ -26,7 +27,14 @@ public sealed partial class InteractionTriggerSystem : IOnEventCallback
         if (!Online || !PhotonNetwork.IsMasterClient || evt.Code != UseRequestEvent || evt.CustomData is not object[] request || request.Length != 3
             || request[0] is not string key || key != networkKey || request[1] is not int viewId || request[2] is not int expected || expected != stateSequence) return;
         var view = PhotonView.Find(viewId);
-        if (view == null || mechanism == null || view.OwnerActorNr != evt.Sender || Vector3.Distance(view.transform.position, mechanism.transform.position) > 6f) return;
+        if (view == null || mechanism == null || view.OwnerActorNr != evt.Sender) return;
+        var actor = view.GetComponent<PlayerPickupInteractor>();
+        var interactable = mechanism.GetComponent<InteractionTriggerInteractable>();
+        if (interactable != null && actor != null)
+        {
+            if (!interactable.IsInInteractionRange(actor)) return;
+        }
+        else if (Vector3.Distance(view.transform.position, mechanism.transform.position) > 6f) return;
         TryUse(view.gameObject);
     }
     private void PublishNetworkState(bool used)
@@ -35,7 +43,7 @@ public sealed partial class InteractionTriggerSystem : IOnEventCallback
         if (!Online || !PhotonNetwork.IsMasterClient || string.IsNullOrEmpty(networkKey)) return;
         PhotonNetwork.CurrentRoom.SetCustomProperties(new Hashtable
         {
-            { networkKey, new object[] { stateSequence, IsActive, HasBeenUsed, changedAt, readyAt, used } }
+            { networkKey, new object[] { stateSequence, IsActive, HasBeenUsed, changedAt, readyAt, used, lastUseActivatorViewId } }
         });
     }
     private void RestoreNetworkState()
@@ -45,17 +53,24 @@ public sealed partial class InteractionTriggerSystem : IOnEventCallback
     }
     private void ApplyNetworkState(object value, bool initial)
     {
-        if (value is not object[] state || state.Length != 6 || state[0] is not int sequence || sequence <= stateSequence
+        if (value is not object[] state || (state.Length != 6 && state.Length != 7) || state[0] is not int sequence || sequence <= stateSequence
             || state[1] is not bool active || state[2] is not bool used || state[3] is not double changed || state[4] is not double ready || state[5] is not bool
-            || double.IsNaN(changed) || double.IsInfinity(changed) || double.IsNaN(ready) || double.IsInfinity(ready)) return;
+            || double.IsNaN(changed) || double.IsInfinity(changed) || double.IsNaN(ready) || double.IsInfinity(ready)
+            || (state.Length == 7 && (state[6] is not int id || id < 0))) return;
         stateSequence = sequence;
         IsActive = active;
         HasBeenUsed = used;
         changedAt = changed;
         readyAt = ready;
         mechanism?.SetState(active, !initial, initial);
+        if (!initial && (bool)state[5] && state.Length == 7 && (int)state[6] > 0)
+        {
+            var actor = PhotonView.Find((int)state[6]);
+            var interactor = actor != null ? actor.GetComponent<PlayerPickupInteractor>() : null;
+            if (interactor != null) mechanism?.GetComponent<InteractionTriggerInteractable>()?.NotifyAccepted(interactor, sequence);
+        }
     }
-    public override void OnJoinedRoom() { stateSequence = 0; RestoreNetworkState(); }
+    public override void OnJoinedRoom() { stateSequence = 0; mechanism?.GetComponent<InteractionTriggerInteractable>()?.ResetAcceptanceSequence(); RestoreNetworkState(); }
     public override void OnMasterClientSwitched(Player newMasterClient) => RestoreNetworkState();
     public override void OnRoomPropertiesUpdate(Hashtable changes)
     {

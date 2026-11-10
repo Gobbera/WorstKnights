@@ -1,0 +1,281 @@
+using System;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+public sealed class DoubleLeafDoorTests
+{
+    private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    private GameObject root;
+    private DoorController door, other;
+    private Transform left, right, leftPivot, rightPivot, frame;
+    private Quaternion leftRest, rightRest;
+    private Vector3 leftPosition, rightPosition;
+
+    [SetUp]
+    public void SetUp()
+    {
+        root = new GameObject("Double Door");
+        left = Child("Left", root.transform); right = Child("Right", root.transform);
+        leftPivot = Child("Pivot", left); rightPivot = Child("Pivot", right);
+        leftPivot.localPosition = Vector3.right * 1.5f; rightPivot.localPosition = Vector3.left * 1.5f;
+        foreach (var part in new[] { left, right })
+        {
+            var collider = part.gameObject.AddComponent<BoxCollider>(); collider.center = new Vector3(part == left ? 0.5f : -0.5f, 1, 0); collider.size = new Vector3(0.5f, 2, 0.15f);
+        }
+        frame = Child("Frame", root.transform); frame.gameObject.AddComponent<BoxCollider>(); frame.position = Vector3.up * 5;
+        door = left.gameObject.AddComponent<DoorController>(); other = right.gameObject.AddComponent<DoorController>();
+        Set("movingPart", left); Set("rotatePivot", leftPivot); Set("startupState", DoorController.DoorStartupState.StartsClosed);
+        Set("prototypeLocalOnly", true); Set("interactionCooldown", 0f); Set("openLocalEulerAngles", Vector3.up * 90);
+        Set("moveCurve", AnimationCurve.Linear(0, 0, 1, 1)); Set("moveDuration", 0f);
+        SetOther("movingPart", right); SetOther("rotatePivot", rightPivot); SetOther("startupState", DoorController.DoorStartupState.StartsClosed);
+        SetOther("prototypeLocalOnly", true); SetOther("interactionCooldown", 0f); SetOther("openLocalEulerAngles", Vector3.down * 90);
+        SetOther("moveDuration", 0f); SetOther("moveCurve", AnimationCurve.Linear(0, 0, 1, 1));
+        Set("pairedDoor", other); SetOther("pairedDoor", door); Capture();
+    }
+    [TearDown] public void TearDown() { if (root != null) Object.DestroyImmediate(root); }
+    private static Transform Child(string name, Transform parent) { var child = new GameObject(name).transform; child.SetParent(parent, false); return child; }
+    private void Set(string name, object value) => typeof(DoorController).GetField(name, Private).SetValue(door, value);
+    private object Call(string name, params object[] args) => typeof(DoorController).GetMethods(Private).Single(m => m.Name == name && m.GetParameters().Length == args.Length).Invoke(door, args);
+    private void SetOther(string name, object value) => typeof(DoorController).GetField(name, Private).SetValue(other, value);
+    private object CallOther(string name, params object[] args) => typeof(DoorController).GetMethods(Private).Single(m => m.Name == name && m.GetParameters().Length == args.Length).Invoke(other, args);
+    private void Capture() { Call("Awake"); CallOther("Awake"); leftRest = left.localRotation; rightRest = right.localRotation; leftPosition = left.localPosition; rightPosition = right.localPosition; }
+    private void Pose(float progress) { Call("ApplyDoorPoseInstant", progress); CallOther("ApplyDoorPoseInstant", progress); }
+    private void TickBoth() { Call("UpdateDoorMotion"); CallOther("UpdateDoorMotion"); }
+    private static void Near(Vector3 actual, Vector3 expected) => Assert.That(Vector3.Distance(actual, expected), Is.LessThan(0.001f));
+
+    [Test]
+    public void OneInteractionOpensBothLeavesAndEmitsOneDoorEvent()
+    {
+        int opened = 0; door.Opened += _ => opened++;
+        Assert.That(door.TryInteract(null), Is.True); TickBoth();
+        Assert.That(door.IsOpen, Is.True); Assert.That(opened, Is.EqualTo(1));
+        Assert.That(Quaternion.Angle(leftRest, left.localRotation), Is.EqualTo(90).Within(0.01f));
+        Assert.That(Quaternion.Angle(rightRest, right.localRotation), Is.EqualTo(90).Within(0.01f));
+        Assert.That(left.position.z, Is.GreaterThan(1)); Assert.That(right.position.z, Is.GreaterThan(1));
+    }
+    [Test]
+    public void ClosingReturnsBothLeavesAndEmitsOneClosedEvent()
+    {
+        int closed = 0; door.Closed += _ => closed++;
+        door.TryInteract(null); TickBoth(); door.TryInteract(null); TickBoth();
+        Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+        Assert.That(Quaternion.Angle(leftRest, left.localRotation), Is.LessThan(0.01f));
+        Assert.That(Quaternion.Angle(rightRest, right.localRotation), Is.LessThan(0.01f)); Assert.That(closed, Is.EqualTo(1));
+    }
+    [Test]
+    public void InteractionThroughEitherColliderResolvesToTheSameStateAndCooldown()
+    {
+        Set("interactionCooldown", 10f);
+        Assert.That(left.GetComponent<DoorController>(), Is.Not.SameAs(right.GetComponent<DoorController>()));
+        Assert.That(door.PairedDoor, Is.SameAs(other)); Assert.That(other.PairedDoor, Is.SameAs(door));
+        Assert.That(left.GetComponentInParent<DoorController>().TryInteract(null), Is.True);
+        // Runtime arms the deadline in Play Mode; provide that accepted deadline for this Edit Mode fixture.
+        Set("nextAllowedInteractionTime", Time.time + 10f);
+        Assert.That(right.GetComponentInParent<DoorController>().TryInteract(null), Is.False);
+        Assert.That(door.IsOpen, Is.True);
+    }
+    [Test]
+    public void PartialProgressSharesTheCurveAndKeepsBothChildHingesAnchored()
+    {
+        root.transform.SetPositionAndRotation(new Vector3(5, 2, -3), Quaternion.Euler(0, 35, 0)); root.transform.localScale = Vector3.one * 1.7f;
+        Vector3 a = leftPivot.position, b = rightPivot.position; Pose(0.37f);
+        Assert.That(Quaternion.Angle(leftRest, left.localRotation), Is.EqualTo(33.3f).Within(0.02f));
+        Assert.That(Quaternion.Angle(rightRest, right.localRotation), Is.EqualTo(33.3f).Within(0.02f)); Near(leftPivot.position, a); Near(rightPivot.position, b);
+    }
+    [Test]
+    public void NegativeScaleImportedLeafUsesItsAuthoredHingeAxes()
+    {
+        right.localRotation = Quaternion.Euler(0, 180, 180); right.localScale = new Vector3(-1, -1, -0.0588f);
+        rightPivot.localPosition = Vector3.right * 1.5f; SetOther("openLocalEulerAngles", Vector3.up * 90);
+        Capture(); Vector3 a = leftPivot.position, b = rightPivot.position; Pose(1);
+        Near(leftPivot.position, a); Near(rightPivot.position, b);
+        Assert.That(left.position.z, Is.GreaterThan(1)); Assert.That(right.position.z, Is.GreaterThan(1));
+        Pose(0); Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+    }
+    [Test]
+    public void ReversingFromPartialProgressReturnsBothToTheClosedPose()
+    {
+        door.RequestOpen(); Pose(0.43f); door.RequestClose(); Pose(0.17f);
+        Assert.That(Quaternion.Angle(leftRest, left.localRotation), Is.EqualTo(15.3f).Within(0.02f));
+        Assert.That(Quaternion.Angle(rightRest, right.localRotation), Is.EqualTo(15.3f).Within(0.02f));
+        Pose(0); Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+    }
+    [Test]
+    public void OpeningAwayFromEitherSideAppliesTheSameDirectionToBothLeaves()
+    {
+        Set("openAwayFromInteractor", true); SetOther("openAwayFromInteractor", true);
+        door.RequestOpenAwayFrom(Vector3.forward * 3); Pose(1);
+        Assert.That(left.position.z, Is.LessThan(-1)); Assert.That(right.position.z, Is.LessThan(-1));
+        door.RequestClose(); Pose(0); door.RequestOpenAwayFrom(Vector3.back * 3); Pose(1);
+        Assert.That(left.position.z, Is.GreaterThan(1)); Assert.That(right.position.z, Is.GreaterThan(1));
+    }
+    [Test]
+    public void OnePasscodeUnlocksAndOpensBothLeaves()
+    {
+        Set("startupState", DoorController.DoorStartupState.StartsLocked); Set("lockMode", DoorController.DoorLockMode.Passcode); Set("requiredPasscode", "2468");
+        SetOther("startupState", DoorController.DoorStartupState.StartsLocked); SetOther("lockMode", DoorController.DoorLockMode.Passcode); SetOther("requiredPasscode", "2468"); Capture();
+        Assert.That(door.IsLocked, Is.True); Assert.That(door.TrySubmitPasscode("0000"), Is.False); Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+        Assert.That(door.TrySubmitPasscode("2468"), Is.True); TickBoth();
+        Assert.That(door.IsLocked, Is.False); Assert.That(right.position.z, Is.GreaterThan(1)); Assert.That(left.position.z, Is.GreaterThan(1));
+    }
+    [Test]
+    public void RoomStateRestorationDrivesBothLeavesWithOneDirection()
+    {
+        Call("ApplyRoomSyncedState", true, false, false, -1); TickBoth();
+        Assert.That(left.position.z, Is.LessThan(-1)); Assert.That(right.position.z, Is.LessThan(-1));
+        Call("ApplyRoomSyncedState", false, false, false, -1); TickBoth(); Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+    }
+    [Test]
+    public void BothPeersExposeTheSameLeafCollidersAndExcludeTheFrame()
+    {
+        CollectionAssert.AreEquivalent(door.GetMovingPartColliders(), other.GetMovingPartColliders());
+        var colliders = door.GetMovingPartColliders();
+        Assert.That(colliders.Length, Is.EqualTo(2));
+        CollectionAssert.Contains(colliders, left.GetComponent<Collider>()); CollectionAssert.Contains(colliders, right.GetComponent<Collider>());
+        CollectionAssert.DoesNotContain(colliders, frame.GetComponent<Collider>());
+    }
+    [Test]
+    public void EnemyRouteChecksDetectTheOtherPeerInThePath()
+    {
+        var host = Child("Traversal Probe", root.transform); var volume = host.gameObject.AddComponent<EnemyTraversalVolume>(); Physics.SyncTransforms();
+        var start = new Vector3(-0.5f, 1, -2); var end = new Vector3(-0.5f, 1, 2);
+        Assert.That(volume.IsDoorObstructingTraversalRoute(door, start, new[] { end }, 0.1f), Is.True);
+        right.gameObject.SetActive(false); Physics.SyncTransforms();
+        Assert.That(volume.IsDoorObstructingTraversalRoute(door, start, new[] { end }, 0.1f), Is.False);
+    }
+    [Test]
+    public void EnemyTraversalIgnoresAndRestoresBothLeavesWithoutIgnoringTheFrame()
+    {
+        var enemy = Child("Enemy Collision Probe", root.transform);
+        var capsule = enemy.gameObject.AddComponent<CapsuleCollider>(); enemy.gameObject.AddComponent<Rigidbody>();
+        var traversal = enemy.gameObject.AddComponent<EnemyTraversalController>();
+        typeof(EnemyTraversalController).GetField("capsule", Private).SetValue(traversal, capsule);
+        typeof(EnemyTraversalController).GetField("activeDoor", Private).SetValue(traversal, door);
+        Physics.SyncTransforms();
+        try
+        {
+            typeof(EnemyTraversalController).GetMethod("IgnoreOpenDoorCollision", Private).Invoke(traversal, null);
+            Assert.That(Physics.GetIgnoreCollision(capsule, left.GetComponent<Collider>()), Is.True);
+            Assert.That(Physics.GetIgnoreCollision(capsule, right.GetComponent<Collider>()), Is.True);
+            Assert.That(Physics.GetIgnoreCollision(capsule, frame.GetComponent<Collider>()), Is.False);
+        }
+        finally { typeof(EnemyTraversalController).GetMethod("RestoreDoorCollision", Private).Invoke(traversal, null); }
+        Assert.That(Physics.GetIgnoreCollision(capsule, left.GetComponent<Collider>()), Is.False);
+        Assert.That(Physics.GetIgnoreCollision(capsule, right.GetComponent<Collider>()), Is.False);
+    }
+    [Test]
+    public void UnpairedControllersRetainIndependentSingleDoorMotion()
+    {
+        Set("pairedDoor", null); SetOther("pairedDoor", null); Capture(); door.TryInteract(null); TickBoth();
+        Assert.That(left.position.z, Is.GreaterThan(1)); Near(right.localPosition, rightPosition);
+    }
+    [Test]
+    public void SlidingLeavesUseIndependentOffsetsWithSharedProgress()
+    {
+        Set("motionMode", DoorController.DoorMotionMode.Slide); Set("openLocalPositionOffset", Vector3.right * 2); SetOther("motionMode", DoorController.DoorMotionMode.Slide); SetOther("openLocalPositionOffset", Vector3.left * 2);
+        Capture(); Pose(0.5f); Near(left.localPosition, Vector3.right); Near(right.localPosition, Vector3.left);
+    }
+    [Test]
+    public void StartsOpenAppliesTheInitialPoseToEveryLeaf()
+    {
+        Set("startupState", DoorController.DoorStartupState.StartsOpen); SetOther("startupState", DoorController.DoorStartupState.StartsOpen); Call("Awake"); CallOther("Awake");
+        Assert.That(door.IsOpen, Is.True); Assert.That(left.position.z, Is.GreaterThan(1)); Assert.That(right.position.z, Is.GreaterThan(1));
+    }
+    [Test]
+    public void DestroyModeRemovesBothLeavesAndPreservesTheFrame()
+    {
+        Set("motionMode", DoorController.DoorMotionMode.Destroy); SetOther("motionMode", DoorController.DoorMotionMode.Destroy); door.RequestOpen();
+        Assert.That(left == null && right == null, Is.True); Assert.That(frame != null && frame.GetComponent<Collider>().enabled, Is.True);
+    }
+    [Test]
+    public void EitherRootOwnsItsControllerAndCanInitiateThePair()
+    {
+        int a = 0, b = 0; door.Opened += _ => a++; other.Opened += _ => b++;
+        Assert.That(other.TryInteract(null), Is.True); TickBoth();
+        Assert.That(door.IsOpen && other.IsOpen, Is.True); Assert.That(a, Is.EqualTo(1)); Assert.That(b, Is.EqualTo(1));
+        Assert.That(other.RequestOpen(), Is.False); Assert.That(door.RequestClose(), Is.True); TickBoth();
+        Assert.That(door.IsOpen || other.IsOpen, Is.False);
+    }
+    [Test]
+    public void OneSidedOrSelfPairingDoesNotCreateAPrimaryDoor()
+    {
+        SetOther("pairedDoor", null); Assert.That(door.PairedDoor, Is.Null); Assert.That(other.PairedDoor, Is.Null);
+        door.TryInteract(null); Call("UpdateDoorMotion"); Assert.That(door.IsOpen, Is.True); Assert.That(other.IsOpen, Is.False);
+        Set("pairedDoor", door); Assert.That(door.PairedDoor, Is.Null);
+    }
+    [Test]
+    public void EachRootRetainsItsOwnPromptAnchor()
+    {
+        Set("interactionPromptPivot", leftPivot); SetOther("interactionPromptPivot", rightPivot);
+        Assert.That(door.TryGetInteractionPromptPlacement(default, out var a), Is.True);
+        Assert.That(other.TryGetInteractionPromptPlacement(default, out var b), Is.True);
+        Assert.That(a.Anchor, Is.SameAs(leftPivot)); Assert.That(b.Anchor, Is.SameAs(rightPivot));
+    }
+    [Test]
+    public void AnUnlockedPeerCannotBypassTheOtherPeersPasscode()
+    {
+        SetOther("startupState", DoorController.DoorStartupState.StartsLocked); SetOther("lockMode", DoorController.DoorLockMode.Passcode); SetOther("requiredPasscode", "2468"); Capture();
+        Assert.That(door.TrySubmitPasscode("0000"), Is.False); Assert.That(other.IsLocked, Is.True);
+        Assert.That(door.TrySubmitPasscode("2468"), Is.True); TickBoth(); Assert.That(door.IsOpen && other.IsOpen, Is.True);
+    }
+    [Test]
+    public void DestroyingOneRootDoesNotDisableTheSurvivingPeersCollider()
+    {
+        Set("motionMode", DoorController.DoorMotionMode.Destroy); door.RequestOpen();
+        Assert.That(left == null, Is.True); Assert.That(right != null && right.GetComponent<Collider>().enabled, Is.True);
+        CallOther("UpdateDoorMotion"); Assert.That(other.IsOpen, Is.True);
+    }
+    [Test]
+    public void PermanentSignalOpeningOnEitherPeerLocksThePairOpen()
+    {
+        SetOther("startupState", DoorController.DoorStartupState.StartsLocked); SetOther("lockMode", DoorController.DoorLockMode.SignalSource); SetOther("stayOpenAfterFirstSignalOpen", true); Capture();
+        Assert.That(door.RequestUnlockAndOpen(), Is.True); TickBoth();
+        Assert.That(door.RequestClose(), Is.False); Assert.That(other.RequestClose(), Is.False);
+        Assert.That(door.TryGetInteractionPrompt(default, out _), Is.False); Assert.That(other.TryGetInteractionPrompt(default, out _), Is.False);
+        Assert.That(door.IsOpen && other.IsOpen, Is.True);
+    }
+    [Test]
+    public void EqualPositiveAnglesOnOppositeHingesStillOpenToTheSameWorldSide()
+    {
+        SetOther("openLocalEulerAngles", Vector3.up * 90); Capture();
+        door.RequestOpen(); TickBoth();
+        Assert.That(left.position.z, Is.GreaterThan(1)); Assert.That(right.position.z, Is.GreaterThan(1));
+        Assert.That(door.CurrentOpenRotationDirection, Is.EqualTo(1)); Assert.That(other.CurrentOpenRotationDirection, Is.EqualTo(-1));
+    }
+    [Test]
+    public void EitherPeerConvertsItsOwnSwingWithoutAssigningAPrimary()
+    {
+        SetOther("openLocalEulerAngles", Vector3.up * 90); Capture();
+        other.RequestOpen(); TickBoth(); Assert.That(left.position.z, Is.LessThan(-1)); Assert.That(right.position.z, Is.LessThan(-1));
+        door.RequestClose(); TickBoth(); Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+        door.RequestOpen(); TickBoth(); Assert.That(left.position.z, Is.GreaterThan(1)); Assert.That(right.position.z, Is.GreaterThan(1));
+    }
+    [Test]
+    public void OpenAwayUsesPanelGeometryWhenTheTransformOriginIsTheHinge()
+    {
+        left.localPosition = Vector3.right * 1.5f; right.localPosition = Vector3.left * 1.5f;
+        leftPivot.localPosition = rightPivot.localPosition = Vector3.zero;
+        left.GetComponent<BoxCollider>().center = new Vector3(-1, 1, 0); right.GetComponent<BoxCollider>().center = new Vector3(1, 1, 0);
+        Set("openAwayFromInteractor", true); SetOther("openAwayFromInteractor", true); Capture();
+        door.RequestOpenAwayFrom(Vector3.forward * 3); TickBoth();
+        Assert.That(left.TransformPoint(left.GetComponent<BoxCollider>().center).z, Is.LessThan(-0.9f));
+        Assert.That(right.TransformPoint(right.GetComponent<BoxCollider>().center).z, Is.LessThan(-0.9f));
+        Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+        other.RequestClose(); TickBoth(); other.RequestOpenAwayFrom(Vector3.back * 3); TickBoth();
+        Assert.That(left.TransformPoint(left.GetComponent<BoxCollider>().center).z, Is.GreaterThan(0.9f));
+        Assert.That(right.TransformPoint(right.GetComponent<BoxCollider>().center).z, Is.GreaterThan(0.9f));
+    }
+    [Test]
+    public void ApplyingEachPeersOwnNetworkDirectionDoesNotFlipThePair()
+    {
+        SetOther("openLocalEulerAngles", Vector3.up * 90); Capture();
+        Call("ApplyRoomSyncedState", true, false, false, 1); TickBoth();
+        CallOther("ApplyRoomSyncedState", true, false, false, -1); TickBoth();
+        Assert.That(left.position.z, Is.GreaterThan(1)); Assert.That(right.position.z, Is.GreaterThan(1));
+        Assert.That(door.CurrentOpenRotationDirection, Is.EqualTo(1)); Assert.That(other.CurrentOpenRotationDirection, Is.EqualTo(-1));
+        CallOther("ApplyRoomSyncedState", false, false, false, -1); TickBoth(); Near(left.localPosition, leftPosition); Near(right.localPosition, rightPosition);
+    }
+}

@@ -288,6 +288,7 @@ MonoBehaviour:
   relockWhenSignalTurnsOff: 1
   motionMode: 0
   rotatePivot: {fileID: 9160900573352107792}
+  pairedDoor: {fileID: 0}
   openAwayFromInteractor: 1
   openLocalEulerAngles: {x: 0, y: -90, z: 0}
   openLocalPositionOffset: {x: 0, y: 0, z: 0}

@@ -1,0 +1,196 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Photon.Pun;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class PlatformAudioValidationSession
+{
+    private const string Request = "Temp/PlatformAudio.request";
+    private const string Result = ".codex/diagnostics/platform-audio-stages-20261108.txt";
+    private const string Backup = ".codex/backups/platform-audio-stages-20261108/";
+    private const string Preview = "Assets/Tests/PlatformAudioValidation.unity";
+    private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    private static PlatformController platform;
+    private static DoorSignalSource signal;
+    private static AudioSource start, moving, stop;
+    private static AudioCue startCue, movingCue, stopCue;
+    private static double began;
+    private static int stage;
+    private static int sample;
+    static PlatformAudioValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("PlatformAudio.Play", false))
+            {
+                foreach (var manager in UnityEngine.Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include))
+                { manager.StopAllCoroutines(); manager.enabled = false; manager.gameObject.SetActive(false); }
+                if (PhotonNetwork.IsConnected) PhotonNetwork.Disconnect();
+            }
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("PlatformAudio.Restore", false)) return;
+            SessionState.SetBool("PlatformAudio.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("PlatformAudio.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            if (original.IsValid() && SessionState.GetBool("PlatformAudio.Dirty", false)) EditorSceneManager.MarkSceneDirty(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview); Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+    private static void Update()
+    {
+        if (SessionState.GetBool("PlatformAudio.Play", false) && EditorApplication.isPlaying)
+        {
+            try { Tick(); } catch (Exception error) { Log("PLAY FAILED " + error); End(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        var command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try { if (command == "inspect") Inspect(false); else if (command == "prepare") Inspect(true); else if (command == "tests") Tests(); else if (command == "play") Begin(); }
+        catch (Exception error) { Log("FAILED " + error); }
+    }
+    private static void Log(string text) => File.AppendAllText(Result, text + "\n");
+    private static T[] Find<T>(Scene scene) where T : Component => scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<T>(true)).ToArray();
+    private static void Inspect(bool prepare)
+    {
+        var scene = SceneManager.GetActiveScene(); bool dirty = scene.isDirty;
+        if (!prepare) { SessionState.SetBool("PlatformAudio.AuthorDirty", dirty); EditorSceneManager.SaveScene(scene, Backup + "Map3.live-before.unity", true); if (dirty) EditorSceneManager.MarkSceneDirty(scene); }
+        foreach (var item in Find<PlatformController>(scene))
+        {
+            if (prepare) PlatformControllerEditor.PrepareAudioSources(item);
+            Log((prepare ? "PREPARED " : "BEFORE ") + item.name + " dirty=" + dirty + " data=" + EditorJsonUtility.ToJson(item));
+        }
+        if (prepare)
+        {
+            EditorSceneManager.SaveScene(scene, Backup + "Map3.live-after.unity", true);
+            if (!SessionState.GetBool("PlatformAudio.AuthorDirty", true)) EditorSceneManager.SaveScene(scene);
+            else EditorSceneManager.MarkSceneDirty(scene);
+            Log("AUTHORING COMPLETE dirty=" + scene.isDirty);
+        }
+    }
+    private static void Tests()
+    {
+        var original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive); int passed = 0, failed = 0;
+        try
+        {
+            foreach (var type in new[] { typeof(PlatformControllerTests), typeof(InteractionTriggerRoutingTests), typeof(InteractionTriggerSystemTests), typeof(TimedInteractionTests), typeof(PlayerPickupInteractorFocusTests), typeof(StatuePuzzleTests), typeof(FlamethrowerTrapTests) })
+                foreach (var method in type.GetMethods().Where(m => m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute), false).Length > 0))
+                {
+                    var fixture = Activator.CreateInstance(type);
+                    try { type.GetMethod("SetUp").Invoke(fixture, null); method.Invoke(fixture, null); passed++; }
+                    catch (Exception error) { failed++; Log("TEST FAILED " + type.Name + "." + method.Name + " " + error); }
+                    finally { type.GetMethod("TearDown").Invoke(fixture, null); }
+                }
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(scene, true); if (dirty) EditorSceneManager.MarkSceneDirty(original); }
+        Log("TESTS passed=" + passed + " failed=" + failed + " originalDirty=" + original.isDirty);
+    }
+    private static void Begin()
+    {
+        var original = SceneManager.GetActiveScene(); SessionState.SetString("PlatformAudio.Original", original.path); SessionState.SetBool("PlatformAudio.Dirty", original.isDirty);
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var root = new GameObject("Platform Audio Probe"); root.AddComponent<PlatformController>(); root.AddComponent<DoorSignalSource>();
+        PlatformControllerEditor.PrepareAudioSources(root.GetComponent<PlatformController>());
+        EditorSceneManager.SaveScene(scene, Preview); SessionState.SetBool("PlatformAudio.Play", true); EditorApplication.isPlaying = true;
+    }
+    private static object Call(string name, params object[] args) => typeof(PlatformController).GetMethod(name, Private).Invoke(platform, args);
+    private static void Set(object target, string name, object value) => target.GetType().GetField(name, Private).SetValue(target, value);
+    private static AudioSource Source(string name) => (AudioSource)typeof(PlatformController).GetField(name, Private).GetValue(platform);
+    private static void Check(bool condition, string text) { if (!condition) throw new InvalidOperationException(text); Log("PASS " + text); }
+    private static AudioCue Cue(string name, bool loop)
+    {
+        var cue = ScriptableObject.CreateInstance<AudioCue>(); cue.name = name;
+        Set(cue, "clips", new[] { AudioClip.Create(name, 44100 * 5, 1, 44100, false) }); Set(cue, "loop", loop); Set(cue, "baseVolume", 0f);
+        return cue;
+    }
+    private static void Next() { stage++; began = Time.timeAsDouble; }
+    private static void Tick()
+    {
+        if (platform == null)
+        {
+            var scene = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++) if (SceneManager.GetSceneAt(i) != scene)
+                foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(scene); platform = Find<PlatformController>(scene).Single(); signal = platform.GetComponent<DoorSignalSource>();
+            Set(signal, "prototypeLocalOnly", true); Set(platform, "prototypeLocalOnly", true);
+            Set(platform, "activationMode", PlatformController.PlatformActivationMode.SignalSource); Set(platform, "activationSignals", new[] { signal });
+            Set(platform, "motionMode", PlatformController.PlatformMotionMode.TwoPosition);
+            Set(platform, "movementPoints", new System.Collections.Generic.List<PlatformController.PlatformMovementPoint> { new PlatformController.PlatformMovementPoint { axis = PlatformController.PlatformAxis.Y, distance = 2, speed = 2 } });
+            startCue = Cue("Start Probe", true); movingCue = Cue("Moving Probe", false); stopCue = Cue("Stop Probe", true);
+            Set(platform, "startAudioCue", startCue); Set(platform, "movementAudioCue", movingCue); Set(platform, "stopAudioCue", stopCue);
+            Call("Awake"); Call("SyncMovementAudio", Time.timeAsDouble, true);
+            start = Source("startAudioSource"); moving = Source("movementAudioSource"); stop = Source("stopAudioSource");
+            Check(platform.GetComponentsInChildren<AudioSource>().Length == 3, "Three sources prepared before departure");
+            signal.Activate(); stage = 0; began = Time.timeAsDouble;
+        }
+        double elapsed = Time.timeAsDouble - began;
+        if (elapsed > 12) throw new TimeoutException("Audio stage " + stage + " did not complete.");
+        switch (stage)
+        {
+            case 0:
+                if (elapsed < 0.25) return;
+                Check(platform.IsMoving && start.isPlaying && !start.loop && moving.isPlaying && moving.loop && !stop.isPlaying, "Start is one-shot and Moving loops despite opposite cue flags");
+                sample = start.timeSamples; Next(); break;
+            case 1:
+                if (elapsed < 0.15) return;
+                Check(start.timeSamples > sample, "Steady movement does not replay Start"); sample = start.timeSamples;
+                signal.Deactivate(); Next(); break;
+            case 2:
+                if (elapsed < 0.1) return;
+                Check(platform.IsMoving && moving.isPlaying && start.timeSamples > sample && !stop.isPlaying, "Mid-trip reversal keeps audio continuous");
+                Next(); break;
+            case 3:
+                if (platform.IsMoving || elapsed < 0.1) return;
+                Check(!moving.isPlaying && moving.clip == null && !start.isPlaying && stop.isPlaying && !stop.loop, "Arrival at A cuts motion and plays Stop once");
+                sample = stop.timeSamples; Next(); break;
+            case 4:
+                if (elapsed < 0.15) return;
+                Check(stop.timeSamples > sample, "Rest does not replay Stop"); signal.Activate(); Next(); break;
+            case 5:
+                if (elapsed < 0.15) return;
+                Check(start.isPlaying && moving.isPlaying && !stop.isPlaying, "Next departure reuses sources and cuts previous Stop"); Next(); break;
+            case 6:
+                if (platform.IsMoving || elapsed < 0.1) return;
+                Check(stop.isPlaying && !moving.isPlaying, "Arrival at B plays Stop"); signal.Deactivate(); Next(); break;
+            case 7:
+                if (elapsed < 0.15) return;
+                platform.enabled = false;
+                Check(!start.isPlaying && !moving.isPlaying && !stop.isPlaying, "Disable silences all stages"); platform.enabled = true; Next(); break;
+            case 8:
+                if (elapsed < 0.1) return;
+                Check(moving.isPlaying && start.clip == null && stop.clip == null, "Re-enable restores loop without replaying departure");
+                Call("BreakPlatform", Time.timeAsDouble);
+                Check(!start.isPlaying && !moving.isPlaying && !stop.isPlaying, "Break silences all stages without arrival");
+                Call("RespawnPlatform", Time.timeAsDouble); Set(platform, "movementAudioCue", null); signal.Activate(); Next(); break;
+            case 9:
+                if (elapsed < 0.15) return;
+                Check(start.isPlaying && moving.clip == null, "Start works with no Moving cue"); Next(); break;
+            case 10:
+                if (platform.IsMoving || elapsed < 0.1) return;
+                Check(stop.isPlaying, "Stop works with no Moving cue");
+                Set(platform, "startAudioCue", null); Set(platform, "stopAudioCue", null); Set(platform, "movementAudioCue", movingCue); signal.Deactivate(); Next(); break;
+            case 11:
+                if (elapsed < 0.15) return;
+                Check(start.clip == null && moving.isPlaying && stop.clip == null, "Empty edge stages do not prevent the Moving loop"); Next(); break;
+            case 12:
+                if (platform.IsMoving || elapsed < 0.1) return;
+                Check(stop.clip == null && moving.clip == null, "Arrival is silent when Stop is empty");
+                Set(platform, "startAudioCue", startCue); Set(platform, "stopAudioCue", stopCue);
+                double now = Time.timeAsDouble;
+                var args = new object[] { "10|0.2|" + now.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "|1|0|0|INF|INF|1", null };
+                Call("TryDecodeStateSnapshot", args); Call("ApplyRoomSyncedState", args[1]);
+                Check(moving.isPlaying && start.clip == null && stop.clip == null, "Initial moving snapshot restores loop without past Start or Stop");
+                Check(platform.GetComponentsInChildren<AudioSource>().Length == 3, "Source count remains three across all trips and states");
+                Log("PLAY PASSED all stages"); End(); break;
+        }
+    }
+    private static void End() { SessionState.SetBool("PlatformAudio.Play", false); SessionState.SetBool("PlatformAudio.Restore", true); EditorApplication.isPlaying = false; }
+}

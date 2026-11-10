@@ -90,7 +90,7 @@ public class MouseLook : MonoBehaviour
         if (!HasLocalAuthority() || Mouse.current == null)
             return;
 
-        if (lookInputBlocked || InGameSettingsMenuController.IsAnyMenuOpen)
+        if (lookInputBlocked || InGameSettingsMenuController.IsAnyMenuOpen || PlayerInteractionControl.IsLockedFor(this))
         {
             mouseDelta = Vector2.zero;
             smoothMouse = Vector2.zero;

@@ -931,8 +931,7 @@ public sealed class EnemyTraversalController : MonoBehaviour
         if (capsule == null || !capsule.enabled || activeDoor == null)
             return;
 
-        Transform colliderRoot = activeDoor.MovingPart != null ? activeDoor.MovingPart : activeDoor.transform;
-        Collider[] doorColliders = colliderRoot.GetComponentsInChildren<Collider>(true);
+        Collider[] doorColliders = activeDoor.GetMovingPartColliders();
         for (int i = 0; i < doorColliders.Length; i++)
         {
             Collider doorCollider = doorColliders[i];

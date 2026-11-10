@@ -1,0 +1,247 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Photon.Pun;
+using UnityEngine.AI;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class DoubleDoorValidationSession
+{
+    private const string Request = "Temp/DoubleDoor.request";
+    private const string Result = ".codex/diagnostics/double-door-arch-20261109.txt";
+    private const string Backup = ".codex/backups/double-door-arch-20261109/";
+    private const string Preview = "Assets/Tests/DoubleDoorValidation.unity";
+    private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    private static DoorController door;
+    private static Transform left, right, leftPivot, rightPivot;
+    private static Quaternion leftRest, rightRest;
+    private static Vector3 leftPosition, rightPosition, leftAnchor, rightAnchor;
+    private static PlayerPickupInteractor interactor;
+    private static int stage, opened, closed, squeaking;
+    private static double began;
+    static DoubleDoorValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("DoubleDoor.Play", false))
+            {
+                foreach (var manager in UnityEngine.Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include)) { manager.StopAllCoroutines(); manager.enabled = false; manager.gameObject.SetActive(false); }
+                if (PhotonNetwork.IsConnected) PhotonNetwork.Disconnect();
+            }
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("DoubleDoor.Restore", false)) return;
+            SessionState.SetBool("DoubleDoor.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("DoubleDoor.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            if (original.IsValid() && SessionState.GetBool("DoubleDoor.Dirty", false)) EditorSceneManager.MarkSceneDirty(original);
+            var preview = SceneManager.GetSceneByPath(Preview); if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview); Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+    private static void Update()
+    {
+        if (SessionState.GetBool("DoubleDoor.Play", false) && EditorApplication.isPlaying)
+        {
+            try { Tick(); } catch (Exception error) { Log("PLAY FAILED " + error); End(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try { if (command == "inspect") Inspect(true); else if (command == "hierarchy") Inspect(false); else if (command == "configure") Configure(); else if (command == "tests") Tests(); else if (command == "play") Begin(); }
+        catch (Exception error) { Log("FAILED " + error); }
+    }
+    private static void Log(string value) => File.AppendAllText(Result, value + "\n");
+    private static string PathOf(Transform value) => value.parent == null ? value.name : PathOf(value.parent) + "/" + value.name;
+    private static T[] Find<T>(Scene scene) where T : Component => scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<T>(true)).ToArray();
+    private static Transform Arch(Scene scene) => Find<Transform>(scene).Single(t => t.name == "Door_Arch_B" && t.Find("Door_L_Arch_B") != null);
+    private static void Set(object target, string name, object value) => target.GetType().GetField(name, Private).SetValue(target, value);
+    private static void Configure()
+    {
+        var scene = SceneManager.GetActiveScene(); var arch = Arch(scene);
+        var l = arch.Find("Door_L_Arch_B"); var r = arch.Find("Door_R_Arch_B");
+        if (l.Find("Pivot") == null || r.Find("Pivot") == null) throw new InvalidOperationException("Preserve and assign both authored pivots.");
+        var reference = Find<DoorController>(scene).First(d => d.name == "Door_01");
+        Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup(); Undo.SetCurrentGroupName("Configure Arch Double Door");
+        var controller = arch.GetComponent<DoorController>(); if (controller == null) controller = Undo.AddComponent<DoorController>(arch.gameObject);
+        Undo.RecordObject(controller, "Configure Double Door");
+        var data = new SerializedObject(controller); var original = new SerializedObject(reference);
+        data.FindProperty("doorName").stringValue = "Arch Double Door";
+        data.FindProperty("movingPart").objectReferenceValue = l;
+        data.FindProperty("rotatePivot").objectReferenceValue = l.Find("Pivot");
+        data.FindProperty("interactionPromptPivot").objectReferenceValue = l.Find("Prompt_Pivot");
+        data.FindProperty("startupState").enumValueIndex = (int)DoorController.DoorStartupState.StartsClosed;
+        data.FindProperty("motionMode").enumValueIndex = (int)DoorController.DoorMotionMode.Rotate;
+        data.FindProperty("openAwayFromInteractor").boolValue = true;
+        data.FindProperty("openLocalEulerAngles").vector3Value = Vector3.up * 90;
+        data.FindProperty("moveDuration").floatValue = original.FindProperty("moveDuration").floatValue;
+        data.FindProperty("interactionCooldown").floatValue = original.FindProperty("interactionCooldown").floatValue;
+        data.FindProperty("moveCurve").animationCurveValue = original.FindProperty("moveCurve").animationCurveValue;
+        var leaves = data.FindProperty("additionalLeaves"); leaves.arraySize = 1;
+        var leaf = leaves.GetArrayElementAtIndex(0); leaf.FindPropertyRelative("movingPart").objectReferenceValue = r;
+        leaf.FindPropertyRelative("rotatePivot").objectReferenceValue = r.Find("Pivot");
+        leaf.FindPropertyRelative("openLocalEulerAngles").vector3Value = Vector3.up * 90;
+        leaf.FindPropertyRelative("openLocalPositionOffset").vector3Value = Vector3.zero; data.ApplyModifiedProperties();
+        foreach (var part in new[] { l, r })
+        {
+            var collider = part.GetComponent<BoxCollider>(); if (collider == null) collider = Undo.AddComponent<BoxCollider>(part.gameObject);
+            Undo.RecordObject(collider, "Fit Door Leaf Collider"); var bounds = part.GetComponent<MeshFilter>().sharedMesh.bounds; collider.center = bounds.center; collider.size = bounds.size; collider.isTrigger = false;
+            var nav = part.GetComponent<NavMeshObstacle>(); if (nav == null) nav = Undo.AddComponent<NavMeshObstacle>(part.gameObject);
+            var carving = part.GetComponent<DoorNavMeshObstacleController>(); if (carving == null) carving = Undo.AddComponent<DoorNavMeshObstacleController>(part.gameObject);
+            var navData = new SerializedObject(carving); navData.FindProperty("doorController").objectReferenceValue = controller; navData.FindProperty("obstacle").objectReferenceValue = nav; navData.FindProperty("obstacleHost").objectReferenceValue = part; navData.ApplyModifiedProperties();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(collider); PrefabUtility.RecordPrefabInstancePropertyModifications(nav); PrefabUtility.RecordPrefabInstancePropertyModifications(carving);
+        }
+        ReactionSignalSetupUtility.SetupDoor(arch.gameObject);
+        var sourceEntries = new SerializedObject(reference.GetComponent<ReactionSignalReceiver>()).FindProperty("signalEntries");
+        var receiver = arch.GetComponent<ReactionSignalReceiver>(); var receiverData = new SerializedObject(receiver); var entries = receiverData.FindProperty("signalEntries");
+        for (int i = 0; i < entries.arraySize; i++)
+            for (int j = 0; j < sourceEntries.arraySize; j++)
+                if (entries.GetArrayElementAtIndex(i).FindPropertyRelative("signalId").stringValue == sourceEntries.GetArrayElementAtIndex(j).FindPropertyRelative("signalId").stringValue)
+                    entries.GetArrayElementAtIndex(i).FindPropertyRelative("audioCue").objectReferenceValue = sourceEntries.GetArrayElementAtIndex(j).FindPropertyRelative("audioCue").objectReferenceValue;
+        receiverData.ApplyModifiedProperties(); PrefabUtility.RecordPrefabInstancePropertyModifications(receiver); PrefabUtility.RecordPrefabInstancePropertyModifications(controller);
+        Undo.CollapseUndoOperations(group); EditorSceneManager.MarkSceneDirty(scene); Selection.activeGameObject = arch.gameObject;
+        EditorSceneManager.SaveScene(scene, Backup + "Map3.live-after.unity", true);
+        if (!SessionState.GetBool("DoubleDoor.AuthorDirty", true)) EditorSceneManager.SaveScene(scene); else EditorSceneManager.MarkSceneDirty(scene);
+        Log("CONFIGURED " + PathOf(arch) + " oneController=" + arch.GetComponentsInChildren<DoorController>(true).Length + " colliders=" + controller.GetMovingPartColliders().Length + " dirty=" + scene.isDirty);
+    }
+    private static void Tests()
+    {
+        var original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive); int passed = 0, failed = 0;
+        try
+        {
+            foreach (var type in new[] { typeof(DoubleLeafDoorTests), typeof(EnemyTraversalTests), typeof(PlatformControllerTests), typeof(InteractionTriggerRoutingTests), typeof(InteractionTriggerSystemTests), typeof(TimedInteractionTests), typeof(PlayerPickupInteractorFocusTests), typeof(StatuePuzzleTests), typeof(FlamethrowerTrapTests) })
+                foreach (var method in type.GetMethods().Where(m => m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute), false).Length > 0))
+                {
+                    if (type == typeof(EnemyTraversalTests) && method.Name != "Route_KeepsTheChosenDirection" && method.Name != "DoorProbe_IgnoresTheLeafBehindTheEnemyButFindsItAhead") continue;
+                    var fixture = Activator.CreateInstance(type);
+                    try { type.GetMethod("SetUp")?.Invoke(fixture, null); method.Invoke(fixture, null); passed++; }
+                    catch (Exception error) { failed++; Log("TEST FAILED " + type.Name + "." + method.Name + " " + error); }
+                    finally { type.GetMethod("TearDown")?.Invoke(fixture, null); }
+                }
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(scene, true); if (dirty) EditorSceneManager.MarkSceneDirty(original); }
+        Log("TESTS passed=" + passed + " failed=" + failed + " originalDirty=" + original.isDirty);
+    }
+    private static void Begin()
+    {
+        var original = SceneManager.GetActiveScene(); var arch = Arch(original);
+        SessionState.SetString("DoubleDoor.Original", original.path); SessionState.SetBool("DoubleDoor.Dirty", original.isDirty);
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var clone = UnityEngine.Object.Instantiate(arch.gameObject); clone.name = arch.name; Set(clone.GetComponent<DoorController>(), "prototypeLocalOnly", true);
+        var probe = new GameObject("Interaction Probe", typeof(Camera), typeof(PlayerPickupInteractor)); probe.GetComponent<Camera>().enabled = false;
+        Set(probe.GetComponent<PlayerPickupInteractor>(), "interactionCamera", probe.GetComponent<Camera>());
+        Set(probe.GetComponent<PlayerPickupInteractor>(), "showInteractionPrompt", false); Set(probe.GetComponent<PlayerPickupInteractor>(), "highlightPickupUnderAim", false);
+        var light = new GameObject("Preview Light", typeof(Light)); light.GetComponent<Light>().type = LightType.Directional; light.transform.rotation = Quaternion.Euler(50, -30, 0);
+        EditorSceneManager.SaveScene(scene, Preview); SessionState.SetBool("DoubleDoor.Play", true); EditorApplication.isPlaying = true;
+    }
+    private static void Check(bool condition, string text) { if (!condition) throw new InvalidOperationException(text); Log("PASS " + text); }
+    private static void Next() { stage++; began = Time.timeAsDouble; }
+    private static float Angle(Transform part, Quaternion rest) => Quaternion.Angle(rest, part.localRotation);
+    private static void Anchors()
+    {
+        Check(Vector3.Distance(leftPivot.position, leftAnchor) < 0.002f && Vector3.Distance(rightPivot.position, rightAnchor) < 0.002f, "Both authored hinge positions remain fixed");
+    }
+    private static void Aim(Transform leaf, int sign)
+    {
+        var target = leaf.Find("Prompt_Pivot").position; var normal = leaf.TransformVector(Vector3.forward).normalized;
+        foreach (int direction in new[] { sign, -sign })
+        {
+            var origin = target + normal * direction * 2;
+            if (!Physics.Raycast(origin, (target - origin).normalized, out var hit, 2.5f) || hit.collider.transform != leaf) continue;
+            interactor.transform.SetPositionAndRotation(origin, Quaternion.LookRotation(target - origin));
+            var focus = typeof(PlayerPickupInteractor).GetMethod("ResolveInteractionFocus", Private).Invoke(interactor, null);
+            Check(focus.GetType().GetProperty("Interactable").GetValue(focus) == (object)door, "Aiming at " + leaf.name + " resolves the shared Door Controller"); return;
+        }
+        throw new InvalidOperationException("Cannot aim at " + leaf.name);
+    }
+    private static void Tick()
+    {
+        if (door == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++) if (SceneManager.GetSceneAt(i) != preview)
+                foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview); var arch = Arch(preview); door = arch.GetComponent<DoorController>();
+            left = arch.Find("Door_L_Arch_B"); right = arch.Find("Door_R_Arch_B"); leftPivot = left.Find("Pivot"); rightPivot = right.Find("Pivot");
+            leftRest = left.localRotation; rightRest = right.localRotation; leftPosition = left.localPosition; rightPosition = right.localPosition; leftAnchor = leftPivot.position; rightAnchor = rightPivot.position;
+            interactor = Find<PlayerPickupInteractor>(preview).Single(); typeof(PhotonView).GetProperty("IsMine").SetValue(interactor.GetComponent<PhotonView>(), true);
+            Set(interactor, "interactionCamera", interactor.GetComponent<Camera>());
+            var entries = (System.Collections.Generic.List<ReactionSignalReceiver.ReactionSignalEntry>)typeof(ReactionSignalReceiver).GetField("signalEntries", Private).GetValue(arch.GetComponent<ReactionSignalReceiver>());
+            foreach (var entry in entries) entry.audioCue = null;
+            opened = closed = squeaking = 0; door.Opened += _ => opened++; door.Closed += _ => closed++; door.Squeaking += _ => squeaking++;
+            Physics.SyncTransforms(); Aim(left, 1); Check(interactor.TryInteract(), "One player interaction begins opening both leaves");
+            Check(!interactor.TryInteract() && door.IsOpen, "Shared cooldown prevents a second toggle"); stage = 0; began = Time.timeAsDouble;
+        }
+        if (Time.timeAsDouble - began > 20) throw new TimeoutException("Door stage " + stage);
+        switch (stage)
+        {
+            case 0:
+                if (Angle(left, leftRest) < 3) return;
+                Check(Mathf.Abs(Angle(left, leftRest) - Angle(right, rightRest)) < 0.05f && Angle(right, rightRest) < 89, "Both leaves move together during partial opening"); Anchors(); Next(); break;
+            case 1:
+                if (door.IsMoving) return;
+                Check(Angle(left, leftRest) > 89.9f && Angle(right, rightRest) > 89.9f && opened == 1, "One open command reaches 90 degrees on both leaves"); Anchors(); Capture("open");
+                Aim(right, 1); Check(interactor.TryInteract() && !door.IsOpen, "Interaction on the right leaf closes the whole door"); Next(); break;
+            case 2:
+                if (door.IsMoving) return;
+                Check(Vector3.Distance(left.localPosition, leftPosition) < 0.002f && Vector3.Distance(right.localPosition, rightPosition) < 0.002f && closed == 1, "Both leaves return exactly to their authored closed poses"); Anchors(); Capture("closed");
+                Aim(right, -1); Check(interactor.TryInteract() && door.IsOpen, "The right leaf also opens both leaves from the opposite side"); Next(); break;
+            case 3:
+                if (Time.timeAsDouble - began < 1.05) return;
+                Check(door.IsMoving && Mathf.Abs(Angle(left, leftRest) - Angle(right, rightRest)) < 0.05f, "Both leaves remain synchronized from the opposite side");
+                Aim(left, 1); Check(interactor.TryInteract() && !door.IsOpen, "A player interaction can reverse both leaves during travel"); Next(); break;
+            case 4:
+                if (door.IsMoving) return;
+                Anchors(); Check(Angle(left, leftRest) < 0.01f && Angle(right, rightRest) < 0.01f && opened == 2 && closed == 2 && squeaking == 4, "Open/close/reversal emits one shared set of door reactions");
+                Log("PLAY PASSED"); End(); break;
+        }
+    }
+    private static void Capture(string suffix)
+    {
+        var go = new GameObject("Door Preview Camera", typeof(Camera)); var camera = go.GetComponent<Camera>();
+        go.transform.position = door.transform.position + new Vector3(0, 4.5f, 11); go.transform.LookAt(door.transform.position + Vector3.up * 4.5f);
+        camera.orthographic = true; camera.orthographicSize = 5.3f; camera.nearClipPlane = 0.01f; camera.farClipPlane = 50;
+        var texture = RenderTexture.GetTemporary(1000, 1000, 24); var previous = RenderTexture.active;
+        try
+        {
+            camera.targetTexture = texture; camera.Render(); RenderTexture.active = texture;
+            var image = new Texture2D(1000, 1000, TextureFormat.RGB24, false); image.ReadPixels(new Rect(0, 0, 1000, 1000), 0, 0); image.Apply();
+            File.WriteAllBytes(".codex/diagnostics/double-door-" + suffix + ".png", image.EncodeToPNG()); UnityEngine.Object.DestroyImmediate(image);
+        }
+        finally { camera.targetTexture = null; RenderTexture.active = previous; RenderTexture.ReleaseTemporary(texture); UnityEngine.Object.DestroyImmediate(go); }
+    }
+    private static void End() { SessionState.SetBool("DoubleDoor.Play", false); SessionState.SetBool("DoubleDoor.Restore", true); EditorApplication.isPlaying = false; }
+    private static void Inspect(bool snapshot)
+    {
+        var scene = SceneManager.GetActiveScene(); bool dirty = scene.isDirty;
+        if (snapshot)
+        {
+            SessionState.SetBool("DoubleDoor.AuthorDirty", dirty);
+            EditorSceneManager.SaveScene(scene, Backup + "Map3.live-before.unity", true);
+            if (dirty) EditorSceneManager.MarkSceneDirty(scene);
+        }
+        Log("SCENE " + scene.path + " dirty=" + dirty);
+        var transforms = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
+        foreach (var door in transforms.Select(t => t.GetComponent<DoorController>()).Where(d => snapshot && d != null))
+        {
+            Log("EXISTING " + PathOf(door.transform) + " " + EditorJsonUtility.ToJson(door));
+            Log("STACK " + string.Join(",", door.GetComponents<Component>().Select(c => c == null ? "Missing" : c.GetType().Name)));
+        }
+        foreach (var candidate in transforms.Where(t => t.name == "Door_Arch_B")) Log("CANDIDATE " + PathOf(candidate) + " descendants=" + candidate.GetComponentsInChildren<Transform>(true).Length);
+        var arch = transforms.Single(t => t.name == "Door_Arch_B" && t.GetComponentsInChildren<Transform>(true).Any(c => c.name == "Door_L_Arch_B"));
+        foreach (var item in arch.GetComponentsInChildren<Transform>(true))
+        {
+            Log("OBJECT " + PathOf(item) + " position=" + item.position.ToString("F5") + " localPosition=" + item.localPosition.ToString("F5") + " localRotation=" + item.localEulerAngles.ToString("F5") + " scale=" + item.lossyScale.ToString("F5"));
+            foreach (var component in item.GetComponents<Component>())
+            {
+                if (component is Renderer renderer) Log("RENDERER " + renderer.bounds);
+                else if (component is not Transform) Log("COMPONENT " + component.GetType().Name + " " + EditorJsonUtility.ToJson(component));
+            }
+        }
+    }
+}

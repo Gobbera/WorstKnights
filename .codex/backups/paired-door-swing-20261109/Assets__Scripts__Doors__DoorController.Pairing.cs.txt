@@ -1,0 +1,44 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public partial class DoorController
+{
+    private int lastPairedMotionFrame = -1;
+    public DoorController PairedDoor => GetPairedDoor();
+
+    private DoorController GetPairedDoor()
+    {
+        return pairedDoor != null && pairedDoor != this && pairedDoor.pairedDoor == this
+            && pairedDoor.gameObject.scene == gameObject.scene ? pairedDoor : null;
+    }
+
+    private void UpdatePairedDoorMotion()
+    {
+        var peer = GetPairedDoor();
+        if (peer == null || !peer.isActiveAndEnabled) { UpdateDoorMotion(); return; }
+        // Whichever peer updates first advances both once in this frame. There is no fixed driver.
+        if (lastPairedMotionFrame == Time.frameCount && peer.lastPairedMotionFrame == Time.frameCount) return;
+        lastPairedMotionFrame = peer.lastPairedMotionFrame = Time.frameCount;
+        UpdateDoorMotion();
+        if (peer != null) peer.UpdateDoorMotion();
+    }
+
+    // Door traversal and obstruction checks consider both equivalent peers, excluding their frame.
+    public Collider[] GetMovingPartColliders()
+    {
+        var own = GetLocalMovingPartColliders();
+        var peer = GetPairedDoor();
+        if (peer == null) return own;
+        var result = new List<Collider>(own);
+        foreach (var collider in peer.GetLocalMovingPartColliders())
+            if (!result.Contains(collider)) result.Add(collider);
+        return result.ToArray();
+    }
+
+    private Collider[] GetLocalMovingPartColliders()
+    {
+        var root = movingPart != null ? movingPart : transform;
+        var colliders = root.GetComponentsInChildren<Collider>(true);
+        return colliders.Length > 0 || root == transform ? colliders : GetComponentsInChildren<Collider>(true);
+    }
+}

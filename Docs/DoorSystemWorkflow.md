@@ -1,5 +1,9 @@
 # Door System Workflow
 
+## Double-leaf doors
+
+Keep a `DoorController` on each door root and assign reciprocal **Paired Door** references. Both doors are equivalent: interacting with either sends an explicit state to both without recursive toggles. Each root owns its Moving Part, hinge, prompt, curve and reactions. Configure matching startup, lock and timing settings for synchronized double doors; use hinge-local angles for mirrored imports. See [DoubleLeafDoors.md](DoubleLeafDoors.md) for Map3's `Door_L_Arch_B` / `Door_R_Arch_B` configuration and validation.
+
 ## Components
 - `DoorController`: marca o objeto como porta e controla abrir, fechar, travar e destravar.
 - `DoorSignalSource`: representa um sinal reutilizavel para alavancas e triggers.

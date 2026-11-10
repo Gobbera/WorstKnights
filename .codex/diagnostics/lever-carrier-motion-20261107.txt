@@ -1,0 +1,118 @@
+
+SCENE Interaction Trigger System_Elevator_02 parent= mode=Momentary armBody=kinematic=True interpolation=Interpolate constraints=None settings={"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::InteractionTriggerMechanism","mechanismType":0,"movingPart":{"instanceID":0},"rotationAxis":{"x":1.0,"y":0.0,"z":0.0},"localPressDirection":{"x":0.0,"y":-1.0,"z":0.0},"pressureSurface":{"instanceID":0},"pressDistance":0.03999999910593033,"leverAngle":-90.0,"movementSpeed":0.25,"rotationSpeed":180.0,"activationAudioCue":{"fileID":11400000,"guid":"f671354483f4e7b42be3b63449254d61","type":2},"deactivationAudioCue":{"fileID":11400000,"guid":"f671354483f4e7b42be3b63449254d61","type":2},"audioSource":{"instanceID":0}}}
+SCENE Interaction Trigger System_Elevator_01 parent=Stair_Circle (1) (UnityEngine.Transform) mode=Momentary armBody=kinematic=True interpolation=Interpolate constraints=None settings={"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::InteractionTriggerMechanism","mechanismType":0,"movingPart":{"instanceID":0},"rotationAxis":{"x":1.0,"y":0.0,"z":0.0},"localPressDirection":{"x":0.0,"y":-1.0,"z":0.0},"pressureSurface":{"instanceID":0},"pressDistance":0.03999999910593033,"leverAngle":-90.0,"movementSpeed":0.25,"rotationSpeed":180.0,"activationAudioCue":{"fileID":11400000,"guid":"f671354483f4e7b42be3b63449254d61","type":2},"deactivationAudioCue":{"fileID":11400000,"guid":"f671354483f4e7b42be3b63449254d61","type":2},"audioSource":{"instanceID":0}}}
+PLATFORM Stair_Circle (1) rootBody=null
+BEFORE during lever=0 t=0,600508489229025 localAngle=89,85727 anchorError=0 carrierY=2
+BEFORE during lever=1 t=0,600508489229025 localAngle=0 anchorError=1,192093E-07 carrierY=0,5000005
+BEFORE after lever=0 t=7,00399598922902 localAngle=89,85727 anchorError=0 carrierY=2
+BEFORE after lever=1 t=7,00399598922902 localAngle=89,85727 anchorError=0 carrierY=-13,8
+Restored Assets/Scenes/Map3.unity dirty=True
+AFTER during lever=0 t=0,602489994331066 localAngle=89,85686 anchorError=0 carrierY=2
+AFTER during lever=1 t=0,602489994331066 localAngle=90 anchorError=5,960464E-08 carrierY=0,5000005
+AFTER during lever=2 t=0,602489994331066 localAngle=0 anchorError=0,04000002 carrierY=0,5000005
+AFTER return while moving lever=0 t=1,70288679138322 localAngle=0 anchorError=0 carrierY=2
+AFTER return while moving lever=1 t=1,70288679138322 localAngle=0 anchorError=0 carrierY=-2,249998
+AFTER return while moving lever=2 t=1,70288679138322 localAngle=0 anchorError=0 carrierY=-2,249998
+AFTER after lever=0 t=7,00063539540816 localAngle=89,85686 anchorError=0 carrierY=2
+AFTER after lever=1 t=7,00063539540816 localAngle=90 anchorError=0 carrierY=-13,8
+AFTER after lever=2 t=7,00063539540816 localAngle=0 anchorError=0,03999996 carrierY=-13,8
+Restored Assets/Scenes/Map3.unity dirty=True
+TEST FAILED TimedInteractionTests.AcceptedInteractionBlocksGameplayAndExpiresWithOneCompletion System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.AcceptedInteractionBlocksGameplayAndExpiresWithOneCompletion () [0x00000] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:96 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TEST FAILED TimedInteractionTests.LockIsOptionalAndZeroDurationDoesNotTrapThePlayer System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.LockIsOptionalAndZeroDurationDoesNotTrapThePlayer () [0x00016] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:115 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TEST FAILED TimedInteractionTests.DisablingTheInteractableReleasesItsPlayerWithoutDisablingPlayerComponents System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.DisablingTheInteractableReleasesItsPlayerWithoutDisablingPlayerComponents () [0x00000] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:125 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TEST FAILED TimedInteractionTests.PhysicsStopsPlanarMomentumOnceAndPreservesVerticalVelocityAndExternalPushes System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.PhysicsStopsPlanarMomentumOnceAndPreservesVerticalVelocityAndExternalPushes () [0x00000] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:145 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TEST FAILED TimedInteractionTests.ExpiryDoesNotRemoveAnExistingDamageMovementLock System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.ExpiryDoesNotRemoveAnExistingDamageMovementLock () [0x00000] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:155 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TEST FAILED TimedInteractionTests.AcceptedSequenceCannotReplayPlayerFeedbackOrLockTwice System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.AcceptedSequenceCannotReplayPlayerFeedbackOrLockTwice () [0x00000] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:164 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TEST FAILED TimedInteractionTests.PlayerDeathReleasesTheInteractionLock System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.PlayerDeathReleasesTheInteractionLock () [0x00000] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:183 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TEST FAILED TimedInteractionTests.DifferentPlayersKeepIndependentLocksAndSourceDisableReleasesBoth System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at TimedInteractionTests.DifferentPlayersKeepIndependentLocksAndSourceDisableReleasesBoth () [0x00091] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\TimedInteractionTests.cs:197 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+   --- End of inner exception stack trace ---
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+  at LeverCarrierValidationSession.Tests () [0x000eb] in C:\Git\Unity\WorstKnights\Assets\Editor\Mechanisms\LeverCarrierValidationSession.cs:190 
+TESTS passed=123 failed=8 originalDirty=True
+TESTS passed=131 failed=0 originalDirty=True
+FINAL: Native Play regression passed for lever B/A/B and button travel on moving carriers. All 131 Editor cases passed. Map3 remained loaded and dirty. Temporary validator archived outside Assets and removed. No scene or prefab migration; no two-client Photon validation.

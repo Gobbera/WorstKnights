@@ -111,7 +111,7 @@ public sealed class FirstPersonSway : MonoBehaviour
 
     private Vector2 ResolveMouseDelta()
     {
-        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        if (InGameSettingsMenuController.IsAnyMenuOpen || PlayerInteractionControl.IsLockedFor(this))
             return Vector2.zero;
 
         if (requireLockedCursor && Cursor.lockState != CursorLockMode.Locked)

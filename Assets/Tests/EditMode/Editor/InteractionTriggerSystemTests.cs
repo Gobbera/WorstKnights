@@ -286,6 +286,82 @@ public sealed class InteractionTriggerSystemTests
         Set(system, "triggerType", InteractionTriggerType.Lever); Set(system, "linkedSystem", Create("Wrong target").AddComponent<DoorSignalSource>());
         Assert.That(system.TryUse(null), Is.False);
     }
+    [Test]
+    public void MovingCarrierDoesNotResetLeverProgressWhenBodyFeedbackIsStale()
+    {
+        Build(InteractionTriggerType.Lever, InteractionTriggerMode.Toggle);
+        Set(system.Mechanism, "leverAngle", -90f); Set(system.Mechanism, "rotationSpeed", 180f);
+        var part = system.Mechanism.MovingPart; var rest = part.localRotation;
+        var parent = Create("Moving carrier"); system.transform.SetParent(parent.transform, true);
+        system.TryUse(null);
+        for (int i = 0; i < 10; i++)
+        {
+            parent.transform.position += Vector3.down * 0.05f;
+            part.localRotation = rest; // Reproduce the stale interpolation feedback observed in native Play.
+            Tick(0.02f);
+        }
+        Assert.That(Quaternion.Angle(rest, part.localRotation), Is.EqualTo(36f).Within(0.03f));
+    }
+
+    [Test]
+    public void CarrierTranslationRotationAndScalePreserveTheLeverLocalAnchor()
+    {
+        Build(InteractionTriggerType.Lever, InteractionTriggerMode.Toggle);
+        Set(system.Mechanism, "leverAngle", -90f);
+        Set(system.Mechanism, "rotationSpeed", 180f);
+        var part = system.Mechanism.MovingPart; var restPosition = part.localPosition; var restRotation = part.localRotation;
+        var parent = Create("Rotating scaled carrier"); system.transform.SetParent(parent.transform, true);
+        system.TryUse(null);
+        parent.transform.position += new Vector3(2, -3, 4); parent.transform.rotation = Quaternion.Euler(20, 40, 10); parent.transform.localScale = new Vector3(2, 3, 4);
+        Tick(0.1f);
+        Assert.That(Vector3.Distance(part.localPosition, restPosition), Is.LessThan(0.001f));
+        Assert.That(Quaternion.Angle(restRotation, part.localRotation), Is.EqualTo(18f).Within(0.03f));
+    }
+
+    [Test]
+    public void ButtonTravelAccumulatesIndependentlyOfCarrierMotionAndStaleFeedback()
+    {
+        Build(InteractionTriggerType.Button, InteractionTriggerMode.Toggle);
+        Set(system.Mechanism, "localPressDirection", Vector3.down);
+        Set(system.Mechanism, "pressDistance", 0.04f); Set(system.Mechanism, "movementSpeed", 0.1f);
+        var part = system.Mechanism.MovingPart; var rest = part.localPosition;
+        var parent = Create("Button carrier"); system.transform.SetParent(parent.transform, true); parent.transform.localScale = new Vector3(2, 3, 4);
+        system.TryUse(null);
+        for (int i = 0; i < 4; i++)
+        {
+            parent.transform.position += Vector3.up * 0.2f; part.localPosition = rest; Tick(0.1f);
+        }
+        var expected = part.parent.TransformPoint(rest) + part.parent.TransformDirection(Vector3.down).normalized * 0.04f;
+        Assert.That(Vector3.Distance(part.position, expected), Is.LessThan(0.001f));
+    }
+
+    [Test]
+    public void ImmediateStateAndRestoreResetTheLogicalPresentationPose()
+    {
+        Build(InteractionTriggerType.Lever, InteractionTriggerMode.Toggle);
+        Set(system.Mechanism, "leverAngle", -90f); Set(system.Mechanism, "rotationSpeed", 180f);
+        var part = system.Mechanism.MovingPart; var rest = part.localRotation;
+        system.Mechanism.SetState(true, false, true); Tick(0.1f);
+        Assert.That(Quaternion.Angle(rest, part.localRotation), Is.EqualTo(90f).Within(0.03f));
+        system.Mechanism.RestorePose(); system.Mechanism.SetState(false, false, false); Tick(0.1f);
+        Assert.That(Quaternion.Angle(rest, part.localRotation), Is.LessThan(0.03f));
+        system.Mechanism.SetState(true, false, false); Tick(0.1f);
+        Assert.That(Quaternion.Angle(rest, part.localRotation), Is.EqualTo(18f).Within(0.03f));
+    }
+
+    [Test]
+    public void ReversalDuringCarrierTravelKeepsTheAuthoredAngularSpeed()
+    {
+        Build(InteractionTriggerType.Lever, InteractionTriggerMode.Toggle);
+        Set(system.Mechanism, "leverAngle", -90f); Set(system.Mechanism, "rotationSpeed", 180f);
+        var part = system.Mechanism.MovingPart; var rest = part.localRotation;
+        var parent = Create("Reversing carrier"); system.transform.SetParent(parent.transform, true);
+        system.TryUse(null); parent.transform.position += Vector3.down; Tick(0.2f);
+        Assert.That(Quaternion.Angle(rest, part.localRotation), Is.EqualTo(36f).Within(0.03f));
+        system.TryUse(null); parent.transform.position += Vector3.down; Tick(0.1f);
+        Assert.That(Quaternion.Angle(rest, part.localRotation), Is.EqualTo(18f).Within(0.03f));
+    }
+
     private void Build(InteractionTriggerType type, InteractionTriggerMode mode = InteractionTriggerMode.Momentary)
     {
         var root = Create("Interaction Trigger System"); root.SetActive(false);

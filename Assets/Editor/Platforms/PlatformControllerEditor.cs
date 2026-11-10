@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using UnityEditor.SceneManagement;
 
 [CustomEditor(typeof(PlatformController))]
 public class PlatformControllerEditor : Editor
@@ -14,6 +15,9 @@ public class PlatformControllerEditor : Editor
     private SerializedProperty signalRequirementProperty;
     private SerializedProperty movementAudioCueProperty;
     private SerializedProperty movementAudioSourceProperty;
+    private SerializedProperty startAudioCueProperty, stopAudioCueProperty;
+    private SerializedProperty startAudioSourceProperty, stopAudioSourceProperty;
+    private bool audioSourcesExpanded;
     private SerializedProperty breakableProperty;
     private SerializedProperty breakDelayProperty;
     private SerializedProperty topTriggerHeightProperty;
@@ -33,6 +37,10 @@ public class PlatformControllerEditor : Editor
         signalRequirementProperty = serializedObject.FindProperty("signalRequirement");
         movementAudioCueProperty = serializedObject.FindProperty("movementAudioCue");
         movementAudioSourceProperty = serializedObject.FindProperty("movementAudioSource");
+        startAudioCueProperty = serializedObject.FindProperty("startAudioCue");
+        stopAudioCueProperty = serializedObject.FindProperty("stopAudioCue");
+        startAudioSourceProperty = serializedObject.FindProperty("startAudioSource");
+        stopAudioSourceProperty = serializedObject.FindProperty("stopAudioSource");
         breakableProperty = serializedObject.FindProperty("breakable");
         breakDelayProperty = serializedObject.FindProperty("breakDelay");
         topTriggerHeightProperty = serializedObject.FindProperty("topTriggerHeight");
@@ -52,9 +60,25 @@ public class PlatformControllerEditor : Editor
         DrawActivationSection();
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("4. Movement Audio", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(movementAudioCueProperty, new GUIContent("Movement Audio Cue"));
-        EditorGUILayout.PropertyField(movementAudioSourceProperty, new GUIContent("Movement Audio Source"));
-        EditorGUILayout.HelpBox("The cue loops only while the platform moves. It stops at either endpoint, on break or disable. The dedicated source is prepared before activation and follows Moving Part.", MessageType.None);
+        EditorGUILayout.PropertyField(startAudioCueProperty, new GUIContent("Start Audio Cue"));
+        EditorGUILayout.PropertyField(movementAudioCueProperty, new GUIContent("Moving Audio Cue"));
+        EditorGUILayout.PropertyField(stopAudioCueProperty, new GUIContent("Stop Audio Cue"));
+        EditorGUILayout.HelpBox("Start plays once on departure. Moving loops throughout travel. Stop plays once on arrival at A or B. Start and Moving begin together; continuous reversal keeps the loop. Empty stages are silent.", MessageType.None);
+        audioSourcesExpanded = EditorGUILayout.Foldout(audioSourcesExpanded, "Audio Sources", true);
+        if (audioSourcesExpanded)
+        {
+            EditorGUILayout.PropertyField(startAudioSourceProperty, new GUIContent("Start Audio Source"));
+            EditorGUILayout.PropertyField(movementAudioSourceProperty, new GUIContent("Moving Audio Source"));
+            EditorGUILayout.PropertyField(stopAudioSourceProperty, new GUIContent("Stop Audio Source"));
+            EditorGUILayout.HelpBox("Use three dedicated sources. Prepare them before Play; older controllers prepare missing sources in Awake.", MessageType.None);
+        }
+        using (new EditorGUI.DisabledScope(Application.isPlaying))
+            if (GUILayout.Button("Prepare Audio Sources"))
+            {
+                serializedObject.ApplyModifiedProperties();
+                PrepareAudioSources((PlatformController)target);
+                serializedObject.Update();
+            }
         EditorGUILayout.Space();
         DrawBreakableSection();
 
@@ -244,6 +268,42 @@ public class PlatformControllerEditor : Editor
     private PlatformController.PlatformMotionMode GetMotionMode()
     {
         return (PlatformController.PlatformMotionMode)motionModeProperty.enumValueIndex;
+    }
+
+    public static void PrepareAudioSources(PlatformController platform)
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode || platform == null) return;
+        Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup(); Undo.SetCurrentGroupName("Prepare Platform Audio Sources");
+        var data = new SerializedObject(platform);
+        var moving = PrepareSource(platform, data.FindProperty("movementAudioSource"), PlatformController.MovementAudioObjectName, true, null, null);
+        var start = PrepareSource(platform, data.FindProperty("startAudioSource"), PlatformController.StartAudioObjectName, false, moving, null);
+        PrepareSource(platform, data.FindProperty("stopAudioSource"), PlatformController.StopAudioObjectName, false, moving, start);
+        data.ApplyModifiedProperties();
+        PrefabUtility.RecordPrefabInstancePropertyModifications(platform);
+        if (platform.gameObject.scene.IsValid()) EditorSceneManager.MarkSceneDirty(platform.gameObject.scene);
+        Undo.CollapseUndoOperations(group);
+    }
+
+    private static AudioSource PrepareSource(PlatformController platform, SerializedProperty property, string name, bool loop, AudioSource other, AudioSource another)
+    {
+        var source = property.objectReferenceValue as AudioSource;
+        if (source == null || source == other || source == another)
+        {
+            var anchor = platform.transform.Find(name);
+            if (anchor == null)
+            {
+                var root = new GameObject(name); Undo.RegisterCreatedObjectUndo(root, "Create Platform Audio Source");
+                Undo.SetTransformParent(root.transform, platform.transform, "Parent Platform Audio Source");
+                root.transform.localPosition = Vector3.zero; anchor = root.transform;
+            }
+            source = anchor.GetComponent<AudioSource>();
+            if (source == null || source == other || source == another) source = Undo.AddComponent<AudioSource>(anchor.gameObject);
+            property.objectReferenceValue = source;
+        }
+        Undo.RecordObject(source, "Prepare Platform Audio Source");
+        source.playOnAwake = false; source.loop = loop; source.dopplerLevel = 0f;
+        PrefabUtility.RecordPrefabInstancePropertyModifications(source);
+        return source;
     }
 
     private PlatformController.PlatformActivationMode GetActivationMode()

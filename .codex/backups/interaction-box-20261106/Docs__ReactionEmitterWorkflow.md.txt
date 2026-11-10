@@ -1,0 +1,696 @@
+# Reaction Signal Workflow
+
+Este documento e a referencia central do sistema de reactions.
+
+Sempre que uma nova interacao criar uma nova bridge, este workflow deve ser atualizado no mesmo change-set.
+
+## Visao geral
+
+O sistema foi separado em duas partes:
+
+- `ReactionSignalReceiver`: define o que acontece quando um sinal chega
+- emissores e bridges: definem quando esse sinal acontece
+
+Com isso, a reacao deixa de ficar presa a um caso especifico como melee, destruicao ou porta.
+
+## Arquitetura em camadas
+
+### 1. Receiver
+
+`ReactionSignalReceiver` e o ponto central de configuracao da reacao.
+Ele recebe um `Signal Id` e pode tocar som, spawnar particula e disparar evento.
+
+### 2. Emitter
+
+`ReactionSignalEmitter` e o emissor generico.
+Ele pega um `Signal Id` e envia para um receiver alvo.
+
+### 3. Bridge ou source component
+
+A bridge escuta uma mecanica concreta e a converte em sinal.
+
+Exemplos:
+
+- `DoorReactionSignalBridge`: converte movimento, inicio de abertura, fechamento concluido, tentativa trancada, trancar e destrancar em sinais
+- `DestructibleReactionSignalBridge`: converte dano e destruicao em sinais
+- `ImpactReactionSignalBridge`: converte impacto melee em sinal
+- `TriggerVolumeReactionSignalBridge`: converte trigger em sinais
+- `CollisionReactionSignalBridge`: converte colisao fisica em sinais
+- `PlayerInteractionReactionSignalBridge`: converte interacao do jogador em sinal
+
+## Ferramenta
+
+### Onde abrir
+
+Abra em `Tools > Reactions > Reaction Signal Setup Tool`.
+
+Se o objeto ja tiver `ReactionSignalReceiver`, o inspector dele tambem mostra o botao `Open Reaction Signal Setup Tool`.
+
+### O que a ferramenta faz
+
+A ferramenta ajuda a:
+
+- adicionar `ReactionSignalReceiver`
+- adicionar os componentes fonte mais comuns
+- criar `Signal Entries` padrao
+- mostrar quais sinais ja foram detectados no objeto
+
+### Como usar
+
+1. Selecione um prefab ou GameObject na Hierarchy.
+2. Abra a ferramenta.
+3. Confira a secao `Receiver`.
+4. Use o setup compativel com aquele objeto.
+5. Ajuste os parametros dos componentes adicionados.
+6. Volte ao `ReactionSignalReceiver` para configurar audio, particulas e eventos de cada sinal.
+
+### Secoes da ferramenta
+
+#### Receiver
+
+- mostra se o objeto ja possui `ReactionSignalReceiver`
+- se nao possuir, o botao `Add ReactionSignalReceiver` adiciona o componente
+
+#### Quick Setup
+
+Cada botao adiciona a combinacao base de componentes para um caso de uso.
+
+#### Detected Signals
+
+Mostra os sinais que a ferramenta conseguiu identificar no objeto naquele momento.
+Isso ajuda a lembrar quais `Signal Entries` devem ser configuradas no receiver.
+
+## Componente principal
+
+### ReactionSignalReceiver
+
+Esse componente guarda as reacoes.
+Ele nao sabe de onde veio o evento, apenas reage ao `Signal Id`.
+
+#### Parametros gerais
+
+- `Receiver Name`: nome de organizacao do receiver. Se ficar vazio, o sistema usa o nome do GameObject.
+- `Signal Entries`: lista das reacoes configuradas.
+
+#### Parametros de cada Signal Entry
+
+- `Signal Id`: nome do sinal que sera escutado, por exemplo `Hit`, `Opened`, `Destroyed` ou `Entered`.
+- `Feedback Origin`: transform opcional que tem prioridade para definir de onde o feedback daquele signal entry deve sair. Se ele estiver preenchido, audio 3D e efeitos usam esse ponto. Se estiver vazio, o sistema usa a posicao recebida do evento e depois o `transform` padrao do objeto.
+- `Audio Cue`: som opcional disparado quando esse sinal chega.
+- `Effect Prefab`: prefab opcional instanciado quando esse sinal chega.
+- `Effect Lifetime`: tempo em segundos para destruir o efeito spawnado. Se for `0`, o sistema nao destroi automaticamente.
+- `On Signal Received`: `UnityEvent` disparado quando o sinal chega. Serve para ligar qualquer outra acao no inspector.
+
+## Complementos do receiver
+
+### ReactionSignalEmitter
+
+Use esse componente quando um script ou bridge precisar emitir sinais de forma generica.
+
+#### O que ele faz
+
+- resolve qual receiver deve receber o sinal
+- pode ser reutilizado por qualquer outro sistema
+
+#### Parametros
+
+- `Signal Receiver`: receiver alvo explicito. Se nao for preenchido, o emissor tenta encontrar um `ReactionSignalReceiver` no proprio objeto, depois no parent e depois nos children.
+
+#### Quando usar
+
+- quando um script ja sabe qual sinal precisa emitir
+- quando uma bridge quer reaproveitar um emissor padrao
+- quando voce quer apontar para um receiver diferente do receiver encontrado automaticamente
+
+### VisualEffectGroundCollisionBinder
+
+Use esse componente em prefabs de VFX que precisam alinhar uma collision shape do VFX Graph com o chao real da cena.
+Ele faz um raycast para baixo, normalmente na layer `Ground`, e envia o ponto/normal/tamanho encontrados para parametros expostos no `VisualEffect`.
+
+#### Quando usar
+
+- sangue, poeira ou fragmentos que precisam bater no piso de qualquer mapa
+- VFX Graphs que usam `Collision Shape` com altura fixa, mas o cenario tem pisos em alturas diferentes
+- efeitos spawnados pelo `ReactionSignalReceiver` em pontos de impacto acima do chao
+
+#### Setup no prefab
+
+1. Adicione `VisualEffectGroundCollisionBinder` no prefab do efeito.
+2. Deixe `Ground Mask` apontando para a layer `Ground`.
+3. Ajuste `Raycast Start Height` e `Raycast Distance` para cobrir a distancia entre o impacto e o piso.
+4. Ajuste `Collision Size` e `Collision Thickness` para cobrir a area em que as particulas podem cair.
+
+#### Setup no VFX Graph
+
+Exponha no Blackboard os parametros que o binder deve preencher e conecte-os ao bloco `Collision Shape`.
+Os nomes recomendados sao:
+
+- `Ground Collision Center`: `Vector3`, ligado ao centro da collision box ou ponto do plane
+- `Ground Collision Normal`: `Vector3`, ligado ao normal do plane quando o graph usar collision por plano
+- `Ground Collision Size`: `Vector3`, ligado ao tamanho da collision box
+- `Ground Collision Angles`: `Vector3`, ligado aos angulos da collision box quando precisar seguir o normal do chao
+- `Ground Collision Height`: `Float`, alternativa simples quando o graph so precisa do Y do chao
+
+O binder tambem reconhece variantes sem espaco, como `GroundCollisionCenter`.
+Depois de aplicar parametros, ele pode chamar `Reinit` e `Play` automaticamente para garantir que o VFX nasca com a collision ja atualizada.
+
+### TriggerVolumeReactionSignalBridge
+
+Use para sinais disparados por trigger volume.
+
+#### O que ele faz
+
+- escuta `OnTriggerEnter`, `OnTriggerStay` e `OnTriggerExit`
+- pode disparar o receiver do proprio objeto ou do outro objeto que entrou no trigger
+
+#### Parametros
+
+- `Target Mode`: define quem recebe o sinal.
+- `Entered Signal Id`: sinal disparado no `OnTriggerEnter`.
+- `Stayed Signal Id`: sinal disparado no `OnTriggerStay`.
+- `Exited Signal Id`: sinal disparado no `OnTriggerExit`.
+- `Stay Emit Interval`: intervalo minimo entre disparos do `Stayed`. Se for `0`, pode emitir a cada passo de fisica.
+- `Detection Mask`: layers que podem ativar o trigger.
+
+#### Target Mode
+
+- `Self Receiver`: o trigger dispara o `ReactionSignalReceiver` do proprio objeto
+- `Other Receiver`: o trigger tenta disparar o receiver do objeto que entrou no volume
+
+#### Observacoes
+
+- o setup marca o collider principal do objeto como `Is Trigger`
+- `Entered` e `Exited` sao consolidados por ator para evitar disparo duplicado quando o alvo possui mais de um collider
+- para eventos de trigger funcionarem, o Unity ainda precisa das condicoes normais de fisica para trigger
+
+### CollisionReactionSignalBridge
+
+Use para sinais disparados por colisao fisica.
+
+#### O que ele faz
+
+- escuta `OnCollisionEnter`, `OnCollisionStay` e `OnCollisionExit`
+- calcula ponto e direcao aproximados da colisao
+- pode reagir no proprio objeto ou no outro objeto atingido
+
+#### Parametros
+
+- `Target Mode`: define se o sinal vai para o proprio receiver ou para o receiver do outro objeto
+- `Collision Enter Signal Id`: sinal disparado ao iniciar a colisao
+- `Collision Stay Signal Id`: sinal disparado enquanto a colisao continua
+- `Collision Exit Signal Id`: sinal disparado ao sair da colisao
+- `Minimum Relative Speed`: velocidade relativa minima para emitir os sinais de enter e stay
+- `Stay Emit Interval`: intervalo minimo entre disparos do `Collision Stay`
+- `Collision Mask`: layers que podem gerar a colisao de reaction
+
+#### Observacoes
+
+- com `Target Mode = Self Receiver`, o proprio objeto reage ao impacto
+- com `Target Mode = Other Receiver`, o objeto tenta disparar o receiver do alvo atingido
+- para `OnCollision...` funcionar, o Unity ainda precisa das condicoes normais de fisica para colisao
+
+### PlayerInteractionReactionSignalBridge
+
+Use para sinais disparados pelo sistema de interacao do jogador, normalmente quando `PlayerPickupInteractor` encontra um `IPlayerInteractable` e o jogador aperta a tecla de interacao (`E` por padrao). Tambem funciona como proxy para interacoes contextuais de item equipado quando o alvo implementa `IPlayerHeldItemInteractionProvider`.
+
+#### O que ele faz
+
+- implementa `IPlayerInteractable`, entao pode ser escolhido pelo raycast de interacao do jogador
+- pode encaminhar a interacao para outro `IPlayerInteractable` do mesmo objeto, parent ou children
+- pode encaminhar a acao de um item equipado para outro `IPlayerHeldItemInteractionProvider`, como chave em porta ou tocha em tocha de parede
+- pode reaproveitar o pivot de prompt do alvo quando ele implementa `IPlayerInteractionPromptPlacementProvider`
+- emite o signal configurado depois que o alvo encaminhado aceita a interacao
+
+#### Parametros
+
+- `Interaction Priority`: prioridade usada pelo `PlayerPickupInteractor` para escolher este interactable. Mantenha acima do interactable alvo quando a bridge deve funcionar como proxy.
+- `Forward To Target Interactable`: quando ativo, a bridge chama outro `IPlayerInteractable` antes de emitir o signal.
+- `Target Interactable`: interactable alvo explicito. Se vazio, a bridge tenta resolver automaticamente outro `IPlayerInteractable` no objeto, parents ou children.
+- `Require Successful Target Interaction`: quando ativo, o signal so e emitido se o interactable alvo retornar sucesso.
+- `Emit Without Target Interactable`: permite usar a bridge como um interactable simples que apenas emite reaction.
+- `Interaction Prompt`: texto opcional mostrado abaixo da mira quando este objeto esta selecionado para interacao. Use `{key}` para inserir a tecla configurada no `PlayerPickupInteractor`. Se vazio, o prompt padrao e usado.
+- `Interacted Signal Id`: signal enviado ao `ReactionSignalReceiver`.
+- `Feedback Origin`: origem opcional usada como posicao do signal.
+- `Direction From Interactor`: quando ativo, a direcao do signal aponta do jogador para a origem do feedback.
+
+#### Observacoes
+
+- Para sons como `Torch_Woosh`, use um signal como `Lit` e encaminhe para o interactable que realmente acende a tocha.
+- Quando `Forward To Target Interactable` aponta para outro interactable que tambem fornece prompt, a bridge reaproveita o prompt desse alvo. Isso inclui prompts de item equipado, nos quais `{key}` resolve para a acao da mao que segura o item ativo, e tambem o pivot de prompt no mundo quando o alvo tiver um configurado.
+- Se a reacao precisa acontecer somente em mudanca real de estado, faca o interactable alvo retornar sucesso apenas quando aquela mudanca aconteceu.
+- Esta bridge nao substitui uma bridge especifica de estado quando a mecanica precisa reagir a eventos que nao nasceram da interacao direta do jogador.
+
+## Setup por tipo
+
+### Setup Destructible
+
+#### Quando usar
+
+Use em barris, caixas ou qualquer objeto que tenha `DestructibleObjectController`.
+
+#### O que o setup adiciona
+
+- `ReactionSignalReceiver` se ainda nao existir
+- `ReactionSignalEmitter`
+- `DestructibleReactionSignalBridge`
+- `Signal Entry` para `Damaged`
+- `Signal Entry` para `Destroyed`
+
+#### Workflow
+
+1. Selecione o objeto destrutivel.
+2. Abra a ferramenta.
+3. Clique em `Setup Destructible`.
+4. No `ReactionSignalReceiver`, configure `Damaged` e `Destroyed`.
+5. Ajuste audio, particulas e eventos conforme o prefab precisar.
+
+Se o dano veio de `PlayerMeleeAttack`, `DestructibleReactionSignalBridge` repassa o mesmo contexto de `Impact Vfx Attack Angle` para os VFX do signal. Isso permite que barris/caixas usem o mesmo `VFX_Hit_Impact` com `Triangle A` positivo e `Triangle B` negativo.
+
+#### Parametros importantes da bridge
+
+`DestructibleReactionSignalBridge`:
+
+- `Damaged Signal Id`: sinal emitido quando o objeto recebe dano
+- `Destroyed Signal Id`: sinal emitido quando o objeto e destruido
+
+Os campos internos de referencia sao resolvidos automaticamente e ficam ocultos no inspector.
+
+### Setup Door
+
+#### Quando usar
+
+Use em objetos que tenham `DoorController` e que precisem reagir quando a porta se move, comeca a abrir a partir de fechada, termina de fechar, trava ou destrava.
+
+#### O que o setup adiciona
+
+- `ReactionSignalReceiver` se ainda nao existir
+- `ReactionSignalEmitter`
+- `DoorReactionSignalBridge`
+- `Signal Entry` para `Squeaking`
+- `Signal Entry` para `Opened`
+- `Signal Entry` para `Closed`
+- `Signal Entry` para `LockedAttempt`
+- `Signal Entry` para `Locked`
+- `Signal Entry` para `Unlocked`
+
+#### Workflow
+
+1. Selecione a porta.
+2. Abra a ferramenta.
+3. Clique em `Setup Door`.
+4. No `ReactionSignalReceiver`, configure os sinais que voce quer usar.
+5. Se quiser controlar o local exato do som ou efeito, ajuste o `Feedback Origin` diretamente no `Signal Entry` do `ReactionSignalReceiver`.
+
+No `Chest_Drawers_01`, `Chest_Drawers_Door_01.L` e `Chest_Drawers_Door_01.R` tem, cada uma, `DoorController`, collider, receiver, emitter e bridge no proprio objeto da folha. As entries `Squeaking`, `Opened` e `Closed` reutilizam os cues de porta, com `Feedback Origin` no pivo da respectiva folha. Assim cada lado abre, fecha e sincroniza seu estado independentemente; para trocar o timbre do armario, substitua os `Audio Cue` dessas entries no prefab.
+
+No `Chest_Drawer_02`, cada uma das quatro gavetas usa o mesmo conjunto de componentes, com `DoorController.Motion Mode = Slide` e deslocamento local no eixo `-Z`. Mantenha `Moving Part`, `Interaction Prompt Pivot` e `Feedback Origin` ligados a transforms da propria gaveta: copiar componentes de outro armario pode preservar referencias externas. A instancia do Map3 usa o prefab `Chest_Drawer_02`, portanto ajustes no prefab se propagam para a cena, salvo campos sobrescritos na instancia.
+
+#### Parametros importantes da bridge
+
+`DoorReactionSignalBridge`:
+
+- `Squeaking Signal Id`: sinal emitido quando a porta comeca um movimento real entre aberta e fechada
+- `Opened Signal Id`: sinal emitido quando a porta comeca a abrir a partir do ponto totalmente fechado
+- `Closed Signal Id`: sinal emitido quando a porta termina de fechar
+- `Locked Attempt Signal Id`: sinal emitido quando o jogador tenta interagir com uma porta trancada sem conseguir liberar a trava
+- `Locked Signal Id`: sinal emitido quando a porta entra em estado trancado
+- `Unlocked Signal Id`: sinal emitido quando a porta sai do estado trancado
+
+Os campos internos de referencia sao resolvidos automaticamente e ficam ocultos no inspector.
+A origem do evento da porta e calculada automaticamente a partir do `MovingPart` da porta, ou do `transform` da raiz como fallback.
+
+`Opened` e `Closed` nao sao simetricos: `Opened` dispara no inicio da abertura, mas somente se a porta estava totalmente fechada; `Closed` dispara quando a porta alcanca o ponto totalmente fechado. Use `Squeaking` para som de rangido durante o movimento de abrir ou fechar.
+
+`LockedAttempt` e feedback de interacao negada. Ele dispara, por exemplo, quando a porta esta em `KeyItem` e o jogador tenta usar a porta sem possuir a chave exigida. Ele tambem respeita o `Interaction Cooldown` da porta para evitar spam de som.
+
+#### Diferenca importante
+
+- `Setup Door` reage ao estado da porta
+- `Setup Trigger Volume` reage a entrada, permanencia ou saida de um volume
+
+Se voce quer som de movimento ou chegada da porta, use `Setup Door`, nao `Setup Trigger Volume`.
+
+### Setup Impact
+
+#### Quando usar
+
+Use em paredes, colunas, barris ou outros objetos que devem reagir quando recebem impacto melee do fluxo atual do jogador.
+
+#### O que o setup adiciona
+
+- `ReactionSignalReceiver` se ainda nao existir
+- `ReactionSignalEmitter`
+- `ImpactReactionSignalBridge`
+- `Signal Entry` para `Hit`
+
+#### Workflow
+
+1. Selecione o objeto com collider.
+2. Abra a ferramenta.
+3. Clique em `Setup Impact`.
+4. Configure a entry `Hit` no receiver.
+5. Bata no objeto com o ataque melee para validar som e particula.
+
+Quando o impacto vem de `PlayerMeleeAttack`, o sinal tambem carrega o valor `Impact Vfx Attack Angle` configurado no elemento de ataque usado pelo combo. O `ReactionSignalReceiver` aplica esse valor em `VisualEffect` se o prefab tiver floats expostos com nomes como `Attack Angule`/`Attack Angle`; parametros de `Triangle A` recebem o valor positivo e parametros de `Triangle B` recebem o valor negativo.
+
+Quando o impacto vem de `EnemyAttack` contra o player, o dano passa por `PlayerHealth`.
+Depois que o dano e confirmado localmente, `PlayerHealth` aciona o `IMeleeImpactReceiver` encontrado no player, normalmente o `ImpactReactionSignalBridge`.
+Assim o player pode reutilizar as entries `Hit` do proprio `ReactionSignalReceiver` para sangue, audio e outros efeitos de impacto.
+
+#### Parametros importantes da bridge
+
+`ImpactReactionSignalBridge`:
+
+- `Signal Id`: nome do sinal emitido quando o impacto melee chega
+- `Broadcast In Multiplayer`: quando ativo, o bridge usa o `PhotonView` do mesmo GameObject para enviar um RPC leve para os outros clientes repetirem a mesma reaction localmente
+
+Os campos internos de referencia ficam ocultos no inspector.
+Para o broadcast funcionar, o `ImpactReactionSignalBridge` precisa estar no mesmo GameObject que o `PhotonView`.
+
+#### Observacao
+
+`ImpactReactionSignalRelay` e `MeleeImpactReactionReceiver` ainda existem apenas como wrappers de compatibilidade.
+Para novos objetos, use `ImpactReactionSignalBridge`.
+
+### Setup Trigger Volume
+
+#### Quando usar
+
+Use em portais, volumes de area, sensores, checkpoints, zonas de puzzle ou qualquer interacao baseada em trigger.
+
+#### O que o setup adiciona
+
+- `ReactionSignalReceiver` se ainda nao existir
+- `ReactionSignalEmitter`
+- `TriggerVolumeReactionSignalBridge`
+- `Signal Entry` para `Entered`
+- `Signal Entry` para `Exited`
+- marca o collider principal como `Is Trigger`
+
+#### Workflow
+
+1. Selecione o objeto com collider.
+2. Abra a ferramenta.
+3. Clique em `Setup Trigger Volume`.
+4. Ajuste `Target Mode`.
+5. Se quiser reacao continua, preencha tambem `Stayed Signal Id`.
+6. Configure os sinais no receiver.
+
+#### Parametros que normalmente precisam revisao
+
+- `Target Mode`
+- `Entered Signal Id`
+- `Stayed Signal Id`
+- `Exited Signal Id`
+- `Stay Emit Interval`
+- `Detection Mask`
+
+### Setup Collision
+
+#### Quando usar
+
+Use em itens fisicos, flechas, projeteis, objetos arremessados ou qualquer objeto que deve reagir quando bate em algo.
+
+`Tools/Inventory/Item Authoring Tool` ja cria esse stack em itens novos: o collider fisico fica no root do prefab, enquanto `PickupTrigger` continua separado apenas para interacao/outline. Para itens criados pela ferramenta, volte ao `ReactionSignalReceiver` somente para configurar as entries, audio e efeitos que cada colisao deve disparar.
+
+#### O que o setup adiciona
+
+- `ReactionSignalReceiver` se ainda nao existir
+- `ReactionSignalEmitter`
+- `CollisionReactionSignalBridge`
+- `Signal Entry` para `Impact`
+
+#### Workflow
+
+1. Selecione o objeto com collider fisico.
+2. Abra a ferramenta.
+3. Clique em `Setup Collision`.
+4. Ajuste `Target Mode`, `Minimum Relative Speed` e os signal ids.
+5. Configure a entry `Impact` ou os nomes customizados que voce usar.
+
+#### Parametros que normalmente precisam revisao
+
+- `Target Mode`
+- `Collision Enter Signal Id`
+- `Collision Stay Signal Id`
+- `Collision Exit Signal Id`
+- `Minimum Relative Speed`
+- `Stay Emit Interval`
+- `Collision Mask`
+
+### Setup Player Interaction
+
+#### Quando usar
+
+Use em objetos interagiveis pelo `PlayerPickupInteractor`, como tochas de parede, alavancas simples, props que disparam feedback ao pressionar `E`, ou qualquer objeto que precise converter uma interacao aceita em som, particula ou evento.
+
+#### O que o setup adiciona
+
+- `ReactionSignalReceiver` se ainda nao existir
+- `ReactionSignalEmitter`
+- `PlayerInteractionReactionSignalBridge`
+- `Signal Entry` para `Interacted`
+
+#### Workflow
+
+1. Selecione o objeto interagivel.
+2. Abra a ferramenta.
+3. Clique em `Setup Player Interaction`.
+4. Se o objeto ja tiver outro `IPlayerInteractable`, mantenha `Forward To Target Interactable` ativo e confira se `Target Interactable` aponta para ele.
+5. Ajuste `Interacted Signal Id` para o nome desejado, como `Lit` em uma tocha.
+6. Configure a entry correspondente no `ReactionSignalReceiver`.
+
+#### Parametros que normalmente precisam revisao
+
+- `Interaction Priority`
+- `Target Interactable`
+- `Require Successful Target Interaction`
+- `Emit Without Target Interactable`
+- `Interaction Prompt`
+- `Interacted Signal Id`
+- `Feedback Origin`
+
+## Comparacao entre Setup Impact e Setup Collision
+
+### Diferenca principal
+
+- `Setup Impact` reage a um hit de gameplay, hoje ligado ao fluxo de golpe melee do jogador
+- `Setup Collision` reage a colisao fisica do Unity
+
+### Como o Setup Impact funciona
+
+`Setup Impact` usa `ImpactReactionSignalBridge`.
+Hoje ele recebe o evento a partir do sistema de melee do jogador.
+Quando o ataque acerta um collider valido, o fluxo de combate monta um `DamageInfo` e a bridge emite o sinal configurado, normalmente `Hit`.
+
+Isso significa que:
+
+- ele nao depende de uma colisao fisica tradicional entre rigidbodies
+- ele depende do objeto ser atingido pelo sistema de ataque melee atual
+- ele tambem dispara em alvos que recebem dano por `EnemyHealth` ou `PlayerHealth`, desde que o collider atingido consiga resolver um `IMeleeImpactReceiver` no parent
+- ele e ideal para reacoes a golpe, pancada ou acerto de combate
+
+### Usabilidades comuns de Setup Impact
+
+- parede que toca som de espada batendo
+- coluna, estatua ou objeto de cenario que reage a golpe
+- barril que precisa responder ao ataque do jogador mesmo sem uma fisica de impacto elaborada
+
+### Como o Setup Collision funciona
+
+`Setup Collision` usa `CollisionReactionSignalBridge`.
+Ele escuta `OnCollisionEnter`, `OnCollisionStay` e `OnCollisionExit` do Unity.
+Quando a colisao acontece, a bridge calcula um ponto e uma direcao aproximada do impacto e emite o sinal configurado, normalmente `Impact`.
+
+Isso significa que:
+
+- ele depende das regras normais de colisao fisica do Unity
+- ele pode ignorar batidas fracas com `Minimum Relative Speed`
+- ele e ideal para objetos arremessados, quedas, choques fisicos e contato entre rigidbodies
+
+### Usabilidades comuns de Setup Collision
+
+- barril caindo no chao e tocando som ao bater
+- flecha fisica batendo numa parede
+- caixa arremessada colidindo com o ambiente
+- pedra rolando e produzindo feedback quando impacta algo
+
+### Regra pratica
+
+- espada acertando parede: `Setup Impact`
+- barril caindo no chao: `Setup Collision`
+- projétil fisico batendo no mundo: `Setup Collision`
+- objeto de cenario reagindo a golpe do jogador: `Setup Impact`
+
+## Multiplayer
+
+### Regra geral
+
+O sistema de reactions em si nao possui replicacao de rede propria.
+
+Isso significa que:
+
+- `ReactionSignalReceiver` nao faz RPC nem serializacao de estado
+- `ReactionSignalEmitter` nao faz RPC nem serializacao de estado
+- audio e efeitos spawnados pelo receiver sao locais ao cliente que recebeu o sinal
+
+Em outras palavras, uma reaction so aparece em um cliente se o sinal tambem for emitido nesse mesmo cliente.
+
+### O que ja esta sincronizado
+
+Algumas mecanicas que disparam sinais ja possuem networking proprio.
+Nesses casos, a reaction tende a acontecer em todos os clientes porque o estado base tambem acontece em todos os clientes.
+
+#### Portas
+
+`DoorController` sincroniza mudancas de estado por RPC para todos os clientes.
+Por isso, quando a porta se move, comeca a abrir a partir de fechada, termina de fechar, tranca ou destranca, o `DoorReactionSignalBridge` tende a emitir os sinais em todos os clientes.
+`LockedAttempt` nasce de uma tentativa local de interacao sem mudanca de estado, entao e emitido no cliente que tentou interagir.
+
+#### Destrutiveis
+
+`DestructibleObjectController` sincroniza dano e destruicao por RPC para todos os clientes.
+Por isso, `Damaged` e `Destroyed` tendem a disparar em todos os clientes.
+
+### O que hoje e local ou tem broadcast proprio
+
+Algumas fontes de reaction ainda sao locais por natureza.
+
+#### Impact
+
+O fluxo de melee atual ainda nasce localmente no cliente que detecta/aplica o impacto.
+Porem, `ImpactReactionSignalBridge` possui broadcast proprio para multiplayer quando `Broadcast In Multiplayer` esta ativo e existe um `PhotonView` valido no mesmo GameObject.
+
+Na pratica:
+
+- o cliente que detectou o impacto emite o `Hit` localmente
+- o bridge envia `Signal Id`, posicao, direcao e contexto de VFX por RPC para `Others`
+- os outros clientes recebem o RPC e chamam o `ReactionSignalReceiver` local do mesmo objeto, sem rebroadcast
+
+Esse broadcast e cosmetico e nao substitui sincronizacao de dano, vida ou estado de gameplay.
+Ele depende de todos os clientes terem o mesmo `PhotonView`/prefab ou objeto de cena resolvido para aquele impacto.
+
+#### Trigger Volume
+
+`TriggerVolumeReactionSignalBridge` nao faz networking por conta propria.
+Ele reage aos eventos locais de trigger do Unity naquele cliente.
+
+Na pratica:
+
+- ele pode ser suficiente para prototipo local
+- em multiplayer, ele so sera consistente entre clientes se a mecanica que usa esse trigger tambem sincronizar seu efeito por outro caminho
+
+#### Collision
+
+`CollisionReactionSignalBridge` tambem nao faz networking por conta propria.
+Ele reage a colisoes fisicas locais do Unity.
+
+Na pratica:
+
+- pode funcionar bem para feedback local
+- nao deve ser tratado como fonte autoritativa de evento compartilhado entre clientes
+
+#### Player Interaction
+
+`PlayerInteractionReactionSignalBridge` nao faz networking por conta propria.
+Ele reage ao cliente que executou a interacao pelo `PlayerPickupInteractor`.
+
+Na pratica:
+
+- funciona bem para feedback local imediato de uso
+- em multiplayer, outros clientes so vao ouvir/ver a reaction se a propria mecanica sincronizada tambem emitir um signal local neles ou se uma bridge especifica/broadcast for adicionada depois
+
+### Audio e VFX em multiplayer
+
+O `ReactionSignalReceiver` toca audio via `GameAudioService` e instancia efeitos localmente.
+Essas acoes nao sao replicadas automaticamente por Photon.
+
+Entao:
+
+- se um cliente nao receber o sinal, ele nao vai tocar o som
+- se um cliente nao receber o sinal, ele nao vai spawnar a particula
+- `ImpactReactionSignalBridge` e a excecao atual: ele pode enviar o sinal para os outros clientes por RPC, e cada cliente instancia o efeito localmente
+
+### Como pensar o uso em multiplayer
+
+Use reactions diretamente quando:
+
+- o feedback pode ser local
+- o evento e apenas cosmetico para quem acionou
+- o comportamento nao precisa ser perfeitamente compartilhado
+
+Use reactions ligadas a uma mecanica sincronizada ou a um bridge com broadcast quando:
+
+- todos os clientes precisam ver ou ouvir o mesmo resultado
+- o evento depende de estado compartilhado, como porta, destrutivel ou outro sistema com RPC/estado replicado
+
+Se no futuro voce quiser que `Trigger Volume` ou `Collision` sejam compartilhados entre clientes, o caminho correto e criar uma bridge ou fonte sincronizada de rede para emitir o sinal em todos os clientes.
+
+## Registry de bridges atuais
+
+Esta secao existe para centralizar as bridges ativas do sistema.
+Sempre que uma nova bridge nascer, ela deve ser adicionada aqui.
+
+### ImpactReactionSignalBridge
+
+- origem: impacto melee do fluxo atual de combate
+- sinais comuns: `Hit`
+- Player melee contact is filtered before this bridge receives the impact. The Player prefab uses a positive arc half height of 0.18 m around the aimed plane, preventing horizontal swings from invoking floor Hit reactions. Looking down still permits real floor impacts. `Half Height = 0` disables the height bound and can reintroduce those horizontal floor reactions; do not hide that geometry issue by disabling the floor's receiver. See [PlayerMeleeFloorContact.md](PlayerMeleeFloorContact.md).
+
+### DestructibleReactionSignalBridge
+
+- origem: eventos do `DestructibleObjectController`
+- sinais comuns: `Damaged`, `Destroyed`
+
+### DoorReactionSignalBridge
+
+- origem: eventos do `DoorController`
+- sinais comuns: `Squeaking`, `Opened`, `Closed`, `LockedAttempt`, `Locked`, `Unlocked`
+- o prefab `Chest` usa o mesmo fluxo para a tampa: `movingPart` aponta para `Chest_Door`, `rotatePivot` para `Pivot`, e a rotacao local positiva no eixo X levanta a frente da tampa sem mover a base
+- no `Chest`, o `DoorController` e os componentes de reacao ficam na propria `Chest_Door`; o componente de saque permanece no root e referencia essa tampa
+
+### TriggerVolumeReactionSignalBridge
+
+- origem: trigger volume
+- sinais comuns: `Entered`, `Stayed`, `Exited`
+
+### CollisionReactionSignalBridge
+
+- origem: colisao fisica
+- sinais comuns: `Impact`
+
+### PlayerInteractionReactionSignalBridge
+
+- origem: interacao do jogador pelo `PlayerPickupInteractor`
+- sinais comuns: `Interacted`, ou um signal de dominio como `Lit` quando usado como proxy de um interactable existente
+- para tochas, use o sinal `Lit` para feedback discreto de acendimento, como `Torch_Woosh`; a bridge encaminha a acao da tocha equipada para `WallTorchInteractable`, e o loop continuo da chama fica em `TorchFlameController.litLoopAudioCue`, ligado ao estado `IsLit`
+- `Candlestick_01` e `Candlestick_02` reutilizam a mesma bridge, interactable e estado da tocha. Em cada prefab, um unico `VFX` agrupa tres pares de chama/fumaca e uma luz; uma interacao acende o conjunto, enquanto `WallTorchStateController` sincroniza o estado em multiplayer.
+- `Brazier` reutiliza `TorchFlameController`, `WallTorchStateController`, `WallTorchInteractable` e a mesma bridge com o sinal `Lit`. Inicia apagado e exige uma tocha acesa na mao usada na interacao. O `VFX`, a luz, o `Audio Source`, o `Prompt_Pivot` e os colliders ja preparados no prefab sao mantidos. O sinal `Lit` toca o som de acendimento; o loop `Burning_Torch` acompanha o estado da chama e para ao apagar ou desativar o objeto. O estado usa a sincronizacao existente das tochas, sem exigir PhotonView manual no braseiro.
+- A integracao do `Brazier` foi validada em Play Mode: mao vazia e tocha apagada nao acendem; a tocha acesa mostra o prompt e dispara `Lit` uma vez; fogo e luz aparecem, o AudioSource existente toca o loop, e apagar/desativar interrompe o som. A validacao inclui reacendimento e captura renderizada do prefab. Nao exige scripts exclusivos para o braseiro.
+
+## Interaction Trigger System
+
+`InteractionTriggerSystem` selects Lever, Pressure Button or Button from a category under `Assets/Prefabs/Mechanisms/Triggers/`. The controller owns activation modes, filters, timing, target and outputs. The prefab's `InteractionTriggerMechanism` owns all movement settings (angle, speed, travel distance, axis/direction), moving-part references and AudioCues. Lever/Button use `InteractionTriggerInteractable` through the existing `PlayerPickupInteractor`; Pressure Button uses filtered occupancy without click interaction.
+
+The Master invokes `IInteractionTriggerTarget` and UnityEvents once per accepted transition/use. The target owns its gameplay and replication. Mechanism audio uses `Activation Audio Cue`/`Deactivation Audio Cue` and the prefab's prepared source. Each client presents movement/audio from room-synchronized mechanism state; late join restores pose without replaying feedback or gameplay. Avoid adding a second interaction/audio bridge unless it serves a distinct signal, to prevent duplicate activation.
+
+In Map3, Lever activates `StatuePuzzleController`, which checks plates and triggers the three traps only through `OnPuzzleFailed`; success does not emit fire. `Activation Cooldown Sources` belongs to the puzzle. Continuous flame audio remains tied to trap state. `DoorInteractionTriggerTarget` supports open/close, toggle and unlock/lock through the existing door controller and feedback. Other systems may implement the same target contract or receive UnityEvents.
+
+`InteractionTriggerRouter` sits between the Map3 lever and its gameplay destinations. Route 0 checks the statues in Momentary mode; `On Puzzle Solved` calls `SelectRouteAndActivate(1)` to immediately start the elevator and change control to Alternate AB. The next lever use selects A and returns the platform; later uses continue alternating. Plain `SelectRoute` remains deferred, and replicated restoration never replays activation. The signal adapter uses Follow State on the existing `DoorSignalSource`; the platform uses TwoPosition motion with its authored path/speed. Its dedicated Movement Audio Cue loops only during travel and stops at endpoints, break or disable, using prepared audio and existing motion replication. No additional interaction/reaction bridge is needed. See [PlatformTwoPosition.md](PlatformTwoPosition.md).
+
+The lower `Elevator_02` uses `InteractionTriggerStateTarget` (Set B) to command the main Elevator_01 trigger, including its pose, state outputs and replication. Its own Momentary press/release drives only the call lever's existing prefab feedback; release does not undo the command. It cannot activate the main trigger during the Momentary puzzle stage. This uses the existing mechanism/audio path without a second reaction bridge. See [ElevatorCallControl.md](ElevatorCallControl.md).
+
+`InteractionTriggerInteractable` can now limit camera-to-collider reach and optionally lock the activating player's gameplay controls for a duration after accepted use. **Player Animation Trigger** targets matching Trigger parameters on active player Animators; local **On Interaction Started / Finished** events carry the player GameObject. Source disable, player disable/death or timeout releases the owned lock without clearing other control locks. Accepted-use state includes the actor's PhotonView ID so remote owners start only after acceptance; initial restore never replays locks/animation. No additional interaction reaction bridge is needed. The `Lever_Interaction_01` variant demonstrates 1.5 m reach and a one-second lock, while original prefabs retain unlocked defaults. See [TimedInteraction.md](TimedInteraction.md).
+
+Create with **GameObject > Mechanisms > Interaction Trigger System**. Use **Apply Prefab** to build the selected category, and **Edit Prefab (Movement and Audio)** to edit its own motion/feedback. Prepare initial assets with **Tools > Mechanisms > Prepare Interaction Trigger Prefabs**; reconnect Map3 with **Tools > Mechanisms > Connect Statue Puzzle To Lever**. The older Pressure Button menu uses the same modular system. All authoring labels/prompts for this workflow are English. See [InteractionTriggerSystem.md](InteractionTriggerSystem.md).
+
+## Regra para novas integracoes
+
+Quando surgir uma nova mecanica, siga esta ordem:
+
+1. Se ela ja sabe exatamente quando um sinal deve acontecer, use `ReactionSignalEmitter`.
+2. Se ela nasce da tecla de interacao do jogador, use `PlayerInteractionReactionSignalBridge`.
+3. Se ela nasce de trigger, use `TriggerVolumeReactionSignalBridge`.
+4. Se ela nasce de colisao, use `CollisionReactionSignalBridge`.
+5. Se ela depende de um sistema especifico, crie uma bridge pequena so para converter o evento em sinal.
+6. Atualize este documento com o novo setup ou com a nova bridge.

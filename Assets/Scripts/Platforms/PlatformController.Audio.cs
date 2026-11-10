@@ -2,46 +2,99 @@ using UnityEngine;
 
 public partial class PlatformController
 {
+    public const string StartAudioObjectName = "Platform Start Audio";
     public const string MovementAudioObjectName = "Platform Movement Audio";
-    private AudioCue preparedMovementCue;
-    private AudioSource preparedMovementSource;
+    public const string StopAudioObjectName = "Platform Stop Audio";
+    private AudioCue preparedStartCue, preparedMovementCue, preparedStopCue;
     private AudioCue activeMovementCue;
+    private bool audioWasMoving, restoreMovementAudio;
 
     private void PrepareMovementAudio()
     {
         if (!Application.IsPlaying(gameObject)) return;
-        if (movementAudioSource == null)
-        {
-            var anchor = transform.Find(MovementAudioObjectName);
-            if (anchor == null)
-            {
-                anchor = new GameObject(MovementAudioObjectName).transform;
-                anchor.SetParent(transform, false);
-            }
-            movementAudioSource = anchor.GetComponent<AudioSource>();
-            if (movementAudioSource == null) movementAudioSource = anchor.gameObject.AddComponent<AudioSource>();
-        }
-        movementAudioSource.playOnAwake = false;
-        movementAudioSource.dopplerLevel = 0f;
-        if (preparedMovementCue == movementAudioCue && preparedMovementSource == movementAudioSource) return;
-        if (movementAudioCue != null && movementAudioCue.Clips != null)
-            foreach (var clip in movementAudioCue.Clips)
-                if (clip != null && clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
-        preparedMovementCue = movementAudioCue;
-        preparedMovementSource = movementAudioSource;
+        PrepareAudioSource(ref movementAudioSource, MovementAudioObjectName, null, null);
+        PrepareAudioSource(ref startAudioSource, StartAudioObjectName, movementAudioSource, null);
+        PrepareAudioSource(ref stopAudioSource, StopAudioObjectName, movementAudioSource, startAudioSource);
+        PrepareAudioCue(startAudioCue, ref preparedStartCue);
+        PrepareAudioCue(movementAudioCue, ref preparedMovementCue);
+        PrepareAudioCue(stopAudioCue, ref preparedStopCue);
     }
 
-    private void SyncMovementAudio(double now)
+    private void PrepareAudioSource(ref AudioSource source, string objectName, AudioSource other, AudioSource another)
+    {
+        if (source == null || source == other || source == another)
+        {
+            var anchor = transform.Find(objectName);
+            if (anchor == null)
+            {
+                anchor = new GameObject(objectName).transform;
+                anchor.SetParent(transform, false);
+            }
+            source = anchor.GetComponent<AudioSource>();
+            if (source == null || source == other || source == another) source = anchor.gameObject.AddComponent<AudioSource>();
+        }
+        source.playOnAwake = false;
+        source.dopplerLevel = 0f;
+    }
+
+    private static void PrepareAudioCue(AudioCue cue, ref AudioCue prepared)
+    {
+        if (prepared == cue) return;
+        if (cue != null && cue.Clips != null)
+            foreach (var clip in cue.Clips)
+                if (clip != null && clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
+        prepared = cue;
+    }
+
+    private void SyncMovementAudio(double now, bool suppressOneShots = false)
     {
         if (!Application.IsPlaying(gameObject)) return;
-        if (!IsMovingAtTime(now) || movementAudioCue == null || movementAudioSource == null)
+        if (movingPart != null)
         {
-            StopMovementAudio();
-            return;
+            FollowAudioSource(startAudioSource);
+            FollowAudioSource(movementAudioSource);
+            FollowAudioSource(stopAudioSource);
         }
-        if (movingPart != null) movementAudioSource.transform.position = movingPart.position;
+        suppressOneShots |= restoreMovementAudio;
+        restoreMovementAudio = false;
+        if (isBroken) { StopMovementAudio(); return; }
+        bool moving = IsMovingAtTime(now);
+        if (moving && !audioWasMoving && !suppressOneShots)
+        {
+            StopAudioSource(stopAudioSource);
+            PlayStageAudio(startAudioCue, startAudioSource);
+        }
+        else if (!moving && audioWasMoving)
+        {
+            StopAudioSource(startAudioSource);
+            StopMovementLoop();
+            if (!suppressOneShots && HasReachedAudioEndpoint(now)) PlayStageAudio(stopAudioCue, stopAudioSource);
+        }
+        audioWasMoving = moving;
+        if (moving) SyncMovementLoop();
+        else StopMovementLoop();
+    }
+
+    private bool HasReachedAudioEndpoint(double now)
+    {
+        if (isBroken || !HasValidMovementPath()) return false;
+        double elapsed = GetCurrentMovementElapsedTime(now);
+        if (motionMode == PlatformMotionMode.TwoPosition)
+            return movingTowardEnd ? elapsed >= totalForwardDuration - TimeEpsilon : elapsed <= TimeEpsilon;
+        return motionMode == PlatformMotionMode.OneWay && elapsed >= totalForwardDuration - TimeEpsilon;
+    }
+
+    private void FollowAudioSource(AudioSource source)
+    {
+        if (source != null && source.transform != movingPart && !movingPart.IsChildOf(source.transform))
+            source.transform.position = movingPart.position;
+    }
+
+    private void SyncMovementLoop()
+    {
+        if (movementAudioCue == null || movementAudioSource == null) { StopMovementLoop(); return; }
         if (activeMovementCue == movementAudioCue && movementAudioSource.isPlaying) return;
-        StopMovementAudio();
+        StopMovementLoop();
         var clip = movementAudioCue.GetRandomClip();
         if (clip == null) return;
         movementAudioCue.ConfigureAudioSource(movementAudioSource, clip, forceLoop: true);
@@ -49,13 +102,34 @@ public partial class PlatformController
         activeMovementCue = movementAudioCue;
     }
 
+    private static void PlayStageAudio(AudioCue cue, AudioSource source)
+    {
+        if (cue == null || source == null) return;
+        var clip = cue.GetRandomClip();
+        if (clip == null) return;
+        cue.ConfigureAudioSource(source, clip);
+        source.loop = false;
+        source.Play();
+    }
+
+    private void StopMovementLoop()
+    {
+        StopAudioSource(movementAudioSource);
+        activeMovementCue = null;
+    }
+
+    private static void StopAudioSource(AudioSource source)
+    {
+        if (source == null || source.clip == null) return;
+        source.Stop();
+        source.clip = null;
+    }
+
     private void StopMovementAudio()
     {
-        if (movementAudioSource != null && (activeMovementCue != null || movementAudioSource.clip != null))
-        {
-            movementAudioSource.Stop();
-            movementAudioSource.clip = null;
-        }
-        activeMovementCue = null;
+        StopAudioSource(startAudioSource);
+        StopMovementLoop();
+        StopAudioSource(stopAudioSource);
+        audioWasMoving = false;
     }
 }

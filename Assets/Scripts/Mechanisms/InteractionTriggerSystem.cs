@@ -100,10 +100,16 @@ public sealed partial class InteractionTriggerSystem : MonoBehaviourPunCallbacks
     {
         Initialize();
         if (!CanInteract) return false;
+        var interactor = activator != null ? activator.GetComponent<PlayerPickupInteractor>() : null;
+        var interactable = mechanism != null ? mechanism.GetComponent<InteractionTriggerInteractable>() : null;
+        if (interactor != null && (PlayerInteractionControl.IsLockedFor(interactor)
+            || (interactable != null && !interactable.IsInInteractionRange(interactor)))) return false;
         if (Online && !PhotonNetwork.IsMasterClient) return RequestMasterUse(activator);
         var player = activator != null ? activator.GetComponentInParent<PlayerHealth>() : null;
         if (player != null && !player.IsAlive) return false;
+        lastUseActivatorViewId = activator != null && activator.TryGetComponent<PhotonView>(out var actorView) ? actorView.ViewID : 0;
         ChangeState(Mode == InteractionTriggerMode.Momentary || Mode == InteractionTriggerMode.Once || !IsActive, activator, true);
+        if (interactor != null) interactable?.NotifyAccepted(interactor, stateSequence);
         return true;
     }
     [ContextMenu("Use Trigger")]
@@ -120,6 +126,7 @@ public sealed partial class InteractionTriggerSystem : MonoBehaviourPunCallbacks
         if (!HasAuthority || !CanSetState(active)) return false;
         var player = activator != null ? activator.GetComponentInParent<PlayerHealth>() : null;
         if (player != null && !player.IsAlive) return false;
+        lastUseActivatorViewId = 0;
         ChangeState(active, activator, true);
         return true;
     }

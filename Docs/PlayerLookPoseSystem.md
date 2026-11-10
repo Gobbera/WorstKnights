@@ -76,7 +76,13 @@
 - Bone path fallbacks are exposed so the setup can be retargeted if the model hierarchy changes.
 - If `Spine` or `Chest` bends sideways on up/down look, change `spinePitchAxis` or `chestPitchAxis` before changing limits. The default torso axis now assumes local `Z` is the forward/back bend axis.
 
+## Remote Look Smoothing
+- `remoteLookSmoothTime` under Network Sync filters received yaw/pitch continuously between packets. The shared Player prefab uses 0.08 seconds; zero disables this filter.
+- Head look and attack aim consume the same filtered direction, including the complementary pitch during attack release. Local camera and input angles retain their existing response.
+- Pose acquisition continues until the target is reached, rather than snapping on the second allowed frame. Walking/crouch/action safety rules and the authored release time still apply.
+- The first received state and teleport corrections reset the filter to the received direction. Photon packet layout, send rate and body movement interpolation are unchanged.
+- See [RemotePlayerLookSmoothing.md](RemotePlayerLookSmoothing.md) for scope, checkpoint and validation.
+
 ## Notes
 - `TP_Camera` must not carry the `FP_Camera` marker. Marker-based camera lookups should identify only the real first-person camera.
-- This project snapshot could not be tied to a git commit because the workspace currently has no `.git` metadata.
 - The feature was kept script-driven and package-free on purpose so the full flow stays visible in vanilla Unity code.

@@ -23,6 +23,7 @@ public class DoorControllerEditor : Editor
     private SerializedProperty relockWhenSignalTurnsOffProperty;
     private SerializedProperty motionModeProperty;
     private SerializedProperty rotatePivotProperty;
+    private SerializedProperty pairedDoorProperty;
     private SerializedProperty openAwayFromInteractorProperty;
     private SerializedProperty openLocalEulerAnglesProperty;
     private SerializedProperty openLocalPositionOffsetProperty;
@@ -55,6 +56,7 @@ public class DoorControllerEditor : Editor
         relockWhenSignalTurnsOffProperty = serializedObject.FindProperty("relockWhenSignalTurnsOff");
         motionModeProperty = serializedObject.FindProperty("motionMode");
         rotatePivotProperty = serializedObject.FindProperty("rotatePivot");
+        pairedDoorProperty = serializedObject.FindProperty("pairedDoor");
         openAwayFromInteractorProperty = serializedObject.FindProperty("openAwayFromInteractor");
         openLocalEulerAnglesProperty = serializedObject.FindProperty("openLocalEulerAngles");
         openLocalPositionOffsetProperty = serializedObject.FindProperty("openLocalPositionOffset");
@@ -103,7 +105,7 @@ public class DoorControllerEditor : Editor
         EditorGUILayout.PropertyField(interactionPromptPivotProperty, new GUIContent("Prompt Pivot"));
         EditorGUILayout.PropertyField(interactionPromptLocalOffsetProperty, new GUIContent("Prompt Local Offset"));
         EditorGUILayout.HelpBox(
-            "Use {key} para inserir automaticamente a tecla correta. Se Prompt Pivot estiver preenchido, o texto aparece no mundo nesse ponto para o jogador local que esta mirando no objeto; se estiver vazio, usa o prompt abaixo da mira.",
+            "Use {key} for the configured interaction key. Prompt Pivot places the local player's prompt on the object; leave it empty to use the crosshair prompt.",
             MessageType.None);
     }
 
@@ -111,7 +113,7 @@ public class DoorControllerEditor : Editor
     {
         EditorGUILayout.LabelField("2. Startup State", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "Escolha como a porta comeca na cena. Ela pode iniciar aberta, fechada sem trava, ou trancada.",
+            "Choose whether the door starts open, closed without a lock, or locked.",
             MessageType.None);
 
         Rect buttonRowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
@@ -129,19 +131,19 @@ public class DoorControllerEditor : Editor
         {
             case DoorController.DoorStartupState.StartsLocked:
                 EditorGUILayout.HelpBox(
-                    "Com Starts Locked ativo, a porta entra fechada e as configuracoes de trava ficam disponiveis abaixo.",
+                    "Starts Locked closes the door and enables the lock settings below.",
                     MessageType.Info);
                 break;
 
             case DoorController.DoorStartupState.StartsClosed:
                 EditorGUILayout.HelpBox(
-                    "Com Starts Closed ativo, a porta inicia fechada, mas livre para abrir sem chave, senha ou sinal.",
+                    "Starts Closed keeps the door closed and available without a key, passcode or signal.",
                     MessageType.None);
                 break;
 
             default:
                 EditorGUILayout.HelpBox(
-                    "Com Starts Open ativo, a porta inicia aberta e as configuracoes de trava ficam ocultas para manter o authoring limpo.",
+                    "Starts Open opens this door and hides the unused lock settings. Use matching startup states on paired doors.",
                     MessageType.None);
                 break;
         }
@@ -163,7 +165,7 @@ public class DoorControllerEditor : Editor
                 EditorGUILayout.PropertyField(moveDurationProperty, new GUIContent("Move Duration"));
                 EditorGUILayout.PropertyField(moveCurveProperty, new GUIContent("Move Curve"));
                 EditorGUILayout.HelpBox(
-                    "Se um Rotate Pivot for informado, a porta vai orbitar ao redor desse ponto e usar a orientacao dele como referencia do giro.",
+                    "Rotate Pivot defines the hinge position and rotation axis in the closed pose.",
                     MessageType.None);
                 break;
 
@@ -176,9 +178,17 @@ public class DoorControllerEditor : Editor
             case DoorController.DoorMotionMode.Destroy:
                 EditorGUILayout.PropertyField(destroyDelayProperty, new GUIContent("Destroy Delay"));
                 EditorGUILayout.HelpBox(
-                    "No modo Destroy, o objeto apontado em Moving Part sera destruido quando a porta abrir.",
+                    "Destroy removes this door's Moving Part when opened. A paired door runs its own configured motion.",
                     MessageType.Warning);
                 break;
+        }
+        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(pairedDoorProperty, new GUIContent("Paired Door"));
+        EditorGUILayout.HelpBox("For a double door, place a Door Controller on each door root and assign them to each other. Either side controls the pair. Each door keeps its own Moving Part, hinge, prompt and reactions. Use matching startup, lock, duration and curve settings for synchronized motion.", MessageType.None);
+        if (pairedDoorProperty.objectReferenceValue is DoorController peer)
+        {
+            if (peer == target || new SerializedObject(peer).FindProperty("pairedDoor").objectReferenceValue != target)
+                EditorGUILayout.HelpBox("Pairing requires two distinct doors that reference each other. Assign this controller in the other door's Paired Door field.", MessageType.Warning);
         }
     }
 
@@ -209,14 +219,14 @@ public class DoorControllerEditor : Editor
                 if (stayOpenAfterFirstSignalOpenProperty.boolValue)
                 {
                     EditorGUILayout.HelpBox(
-                        "Quando ativo, assim que a porta por sinal abrir pela primeira vez, ela permanece aberta para sempre e ignora futuros fechamentos.",
+                        "After the first signal-driven opening, the door stays open and ignores later close commands.",
                         MessageType.Info);
                 }
                 break;
 
             default:
                 EditorGUILayout.HelpBox(
-                    "No modo None, a porta inicia trancada mas qualquer interacao valida destranca sem exigir chave, senha ou sinal.",
+                    "None starts locked but allows any valid interaction to unlock without a key, passcode or signal.",
                     MessageType.None);
                 break;
         }

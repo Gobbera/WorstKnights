@@ -1,0 +1,238 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using Unity.Collections;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class VivoxReverbValidationSession
+{
+    const string Request = "Temp/VivoxReverbValidation.request";
+    const string Result = ".codex/diagnostics/vivox-environment-reverb-20261109.txt";
+    const string Preview = "Assets/Tests/VivoxReverbValidation.unity";
+    static AudioSource playSource;
+    static AudioClip playClip;
+    static BoxReverbZoneManager playManager;
+    static BoxReverbZone playZone;
+    static int playStage, playFrame;
+    static double playEnergy, playPeak, dryEnergy, dryPeak;
+    static bool rendererStarted;
+    static int lastPlayFrame = -1, lastSampleCount;
+    static double playBegan;
+    static double stageBegan;
+    static readonly float[] playbackSamples = new float[4096];
+    static VivoxReverbValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += PlayModeChanged;
+    }
+    static void Update()
+    {
+        if (SessionState.GetBool("VivoxReverb.Play", false) && EditorApplication.isPlaying)
+        {
+            try { TickPlayAudio(); } catch (Exception error) { Log("PLAY AUDIO FAILED " + error); EndPlayAudio(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        if (command == "play-audio") { BeginPlayAudio(); return; }
+        var original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        var validation = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(validation);
+        try { Log("SCENE " + original.path + " dirty=" + dirty); if (command == "audio") AudioProbe(); else Tests(); }
+        catch (Exception error) { Log("VALIDATION FAILED " + error); }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(validation, true); if (dirty && !original.isDirty) EditorSceneManager.MarkSceneDirty(original); Log("RESTORED " + original.path + " dirty=" + original.isDirty); }
+    }
+    static void BeginPlayAudio()
+    {
+        var original = SceneManager.GetActiveScene();
+        SessionState.SetString("VivoxReverb.Original", original.path);
+        SessionState.SetBool("VivoxReverb.Dirty", original.isDirty);
+        SessionState.SetFloat("VivoxReverb.CaptureDelta", Time.captureDeltaTime);
+        SessionState.SetFloat("VivoxReverb.ListenerVolume", AudioListener.volume);
+        SessionState.SetBool("VivoxReverb.ListenerPause", AudioListener.pause);
+        var muteProperty = typeof(EditorUtility).GetProperty("audioMasterMute", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        if (muteProperty != null)
+        {
+            SessionState.SetBool("VivoxReverb.EditorMute", (bool)muteProperty.GetValue(null));
+            muteProperty.SetValue(null, false);
+        }
+        var preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(preview);
+        var root = new GameObject("Voice Reverb Playback Probe");
+        root.AddComponent<AudioSource>(); root.AddComponent<AudioListener>();
+        var camera = root.AddComponent<Camera>(); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.gray;
+        new GameObject("Voice Reverb Probe Zone").AddComponent<BoxReverbZone>();
+        EditorSceneManager.SaveScene(preview, Preview);
+        SessionState.SetBool("VivoxReverb.Play", true);
+        EditorApplication.isPlaying = true;
+    }
+    static void PlayModeChanged(PlayModeStateChange phase)
+    {
+        if (phase == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("VivoxReverb.Play", false))
+        {
+            foreach (var manager in UnityEngine.Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include)) { manager.StopAllCoroutines(); manager.enabled = false; }
+            foreach (var manager in UnityEngine.Object.FindObjectsByType<VivoxVoiceManager>(FindObjectsInactive.Include)) manager.enabled = false;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+                if (scene.path == Preview) continue;
+                foreach (var root in scene.GetRootGameObjects()) root.SetActive(false);
+            }
+            playStage = 0; playFrame = 0; lastPlayFrame = -1; playBegan = EditorApplication.timeSinceStartup;
+        }
+        if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("VivoxReverb.Restore", false)) return;
+        SessionState.SetBool("VivoxReverb.Restore", false);
+        var original = SceneManager.GetSceneByPath(SessionState.GetString("VivoxReverb.Original", ""));
+        if (original.IsValid())
+        {
+            SceneManager.SetActiveScene(original);
+            if (SessionState.GetBool("VivoxReverb.Dirty", false) && !original.isDirty) EditorSceneManager.MarkSceneDirty(original);
+        }
+        var preview = SceneManager.GetSceneByPath(Preview);
+        if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+        AssetDatabase.DeleteAsset(Preview);
+        Time.captureDeltaTime = SessionState.GetFloat("VivoxReverb.CaptureDelta", 0f);
+        AudioListener.volume = SessionState.GetFloat("VivoxReverb.ListenerVolume", 1f);
+        AudioListener.pause = SessionState.GetBool("VivoxReverb.ListenerPause", false);
+        var muteProperty = typeof(EditorUtility).GetProperty("audioMasterMute", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        if (muteProperty != null) muteProperty.SetValue(null, SessionState.GetBool("VivoxReverb.EditorMute", false));
+        Log("PLAY RESTORED " + original.path + " dirty=" + original.isDirty);
+    }
+    static void TickPlayAudio()
+    {
+        if (EditorApplication.timeSinceStartup - playBegan > 20d) throw new TimeoutException("Audio probe exceeded its runtime limit.");
+        if (Time.frameCount == lastPlayFrame) return;
+        lastPlayFrame = Time.frameCount;
+        if (playStage == 0)
+        {
+            playSource = GameObject.Find("Voice Reverb Playback Probe").GetComponent<AudioSource>();
+            var settings = ScriptableObject.CreateInstance<VivoxVoiceSettings>();
+            typeof(VivoxVoiceManager).GetMethod("ConfigureUnityVoiceSource", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { playSource, settings });
+            UnityEngine.Object.Destroy(settings);
+            playZone = GameObject.Find("Voice Reverb Probe Zone").GetComponent<BoxReverbZone>();
+            typeof(BoxReverbZone).GetField("transitionTime", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(playZone, 0f);
+            playManager = BoxReverbZoneManager.GetOrCreateForScene(playZone.gameObject); playManager.EnterZone(playZone);
+            int rate = AudioSettings.outputSampleRate;
+            playClip = AudioClip.Create("Synthetic received-voice impulse", rate, 1, rate, false);
+            var samples = new float[rate]; var random = new System.Random(17);
+            for (int i = 0; i < rate / 20; i++) samples[i] = (float)(random.NextDouble() * 0.4 - 0.2);
+            playClip.SetData(samples, 0); playSource.clip = playClip; playSource.loop = false;
+            AudioListener.volume = 1f; AudioListener.pause = false;
+            Time.captureDeltaTime = 0f; rendererStarted = false;
+            playEnergy = 0; playPeak = 0; playFrame = 0; playSource.bypassReverbZones = true; playSource.Play(); playStage = 1;
+            stageBegan = EditorApplication.timeSinceStartup;
+            Log("PLAY AUDIO started; synthetic source only, no microphone or voice login");
+            return;
+        }
+        double elapsed = EditorApplication.timeSinceStartup - stageBegan;
+        float playedSeconds = playSource.isPlaying ? playSource.timeSamples / (float)AudioSettings.outputSampleRate : 1f;
+        AudioListener.GetOutputData(playbackSamples, 0);
+        lastSampleCount = playbackSamples.Length;
+        for (int i = 0; i < playbackSamples.Length; i++)
+        {
+            playPeak = Math.Max(playPeak, Math.Abs(playbackSamples[i]));
+            if (playedSeconds >= 0.25f && playedSeconds < 0.9f) playEnergy += playbackSamples[i] * playbackSamples[i];
+        }
+        playFrame++;
+        if (elapsed < 1.2d) return;
+        Log("PLAY AUDIO stage=" + playStage + " unityFrame=" + Time.frameCount + " samplesPerFrame=" + lastSampleCount + " sourcePlaying=" + playSource.isPlaying + " timeSamples=" + playSource.timeSamples + " speakerMode=" + AudioSettings.speakerMode);
+        if (playStage == 1)
+        {
+            // Warm the DSP path before measuring the dry reference.
+            playSource.Stop(); playSource.Play();
+            playEnergy = 0; playPeak = 0; playFrame = 0; playStage = 2;
+            stageBegan = EditorApplication.timeSinceStartup;
+            return;
+        }
+        if (playStage == 2)
+        {
+            dryEnergy = playEnergy; dryPeak = playPeak;
+            playSource.Stop(); playSource.bypassReverbZones = false; playSource.Play();
+            playEnergy = 0; playPeak = 0; playFrame = 0; playStage = 3;
+            stageBegan = EditorApplication.timeSinceStartup;
+            return;
+        }
+        Log("PLAY AUDIO dryPeak=" + dryPeak.ToString("R") + " wetPeak=" + playPeak.ToString("R") + " dryTailEnergy=" + dryEnergy.ToString("R") + " wetTailEnergy=" + playEnergy.ToString("R"));
+        Log(dryPeak > 0.001d && playEnergy > dryEnergy * 10d && playEnergy > 0.000001d
+            ? "PASS Native BoxReverbZone produces a reverb tail on the configured 2D voice source"
+            : "PLAY AUDIO INCONCLUSIVE: recorded signal did not prove the expected reverb tail");
+        EndPlayAudio();
+    }
+    static void EndPlayAudio()
+    {
+        if (rendererStarted) AudioRenderer.Stop(); rendererStarted = false;
+        Time.captureDeltaTime = SessionState.GetFloat("VivoxReverb.CaptureDelta", 0f);
+        if (playSource != null) { playSource.Stop(); playSource.clip = null; }
+        if (playClip != null) UnityEngine.Object.Destroy(playClip);
+        SessionState.SetBool("VivoxReverb.Play", false); SessionState.SetBool("VivoxReverb.Restore", true);
+        EditorApplication.isPlaying = false;
+    }
+    static void Tests()
+    {
+        int passed = 0, failed = 0;
+        foreach (var method in typeof(VivoxVoiceOutputTests).GetMethods())
+        {
+            var cases = method.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().ToArray();
+            if (cases.Length == 0 && method.GetCustomAttributes(typeof(TestAttribute), false).Length == 0) continue;
+            var arguments = cases.Length > 0 ? cases.Select(c => c.Arguments) : new[] { Array.Empty<object>() };
+            foreach (var args in arguments)
+            {
+                var fixture = new VivoxVoiceOutputTests(); string name = method.Name + "(" + string.Join(",", args) + ")";
+                try { fixture.SetUp(); method.Invoke(fixture, args); passed++; Log("PASS " + name); }
+                catch (Exception error) { failed++; Log("FAIL " + name + " " + (error.InnerException ?? error)); }
+                finally { fixture.TearDown(); }
+            }
+        }
+        Log("TESTS passed=" + passed + " failed=" + failed);
+    }
+    static void AudioProbe()
+    {
+        float previousCaptureDeltaTime = Time.captureDeltaTime;
+        var root = new GameObject("Voice reverb DSP probe");
+        var settings = ScriptableObject.CreateInstance<VivoxVoiceSettings>();
+        AudioClip clip = null; bool started = false;
+        try
+        {
+            var listener = UnityEngine.Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Exclude).FirstOrDefault(a => a.enabled);
+            if (listener == null) listener = root.AddComponent<AudioListener>();
+            root.transform.position = listener.transform.position;
+            var zone = root.AddComponent<AudioReverbZone>(); zone.minDistance = 1f; zone.maxDistance = 2f; zone.reverbPreset = AudioReverbPreset.Stoneroom;
+            var source = root.AddComponent<AudioSource>();
+            typeof(VivoxVoiceManager).GetMethod("ConfigureUnityVoiceSource", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { source, settings });
+            int rate = AudioSettings.outputSampleRate;
+            clip = AudioClip.Create("Synthetic voice-route impulse", rate, 1, rate, false);
+            var samples = new float[rate]; var random = new System.Random(17);
+            for (int i = 0; i < rate / 100; i++) samples[i] = (float)(random.NextDouble() * 0.6 - 0.3);
+            clip.SetData(samples, 0); source.clip = clip; source.loop = false;
+            Time.captureDeltaTime = 1f / 60f; started = AudioRenderer.Start();
+            Log("AUDIO rendererStarted=" + started + " sampleRate=" + rate);
+            if (!started) return;
+            source.bypassReverbZones = true; source.Play(); double dry = RenderTail();
+            source.Stop(); source.bypassReverbZones = false; source.Play(); double wet = RenderTail();
+            Log("AUDIO dryTailEnergy=" + dry.ToString("R") + " wetTailEnergy=" + wet.ToString("R"));
+            Log(wet > dry * 10d && wet > 0.000001d ? "PASS Native 2D Unity voice route produces a reverb tail" : "AUDIO INCONCLUSIVE: offline Editor playback did not prove reverb DSP");
+        }
+        finally { if (started) AudioRenderer.Stop(); Time.captureDeltaTime = previousCaptureDeltaTime; if (clip != null) UnityEngine.Object.DestroyImmediate(clip); UnityEngine.Object.DestroyImmediate(root); UnityEngine.Object.DestroyImmediate(settings); }
+    }
+    static double RenderTail()
+    {
+        double energy = 0d; int channels = AudioSettings.speakerMode == AudioSpeakerMode.Mono ? 1 : 2;
+        for (int frame = 0; frame < 90; frame++)
+        {
+            int count = AudioRenderer.GetSampleCountForCaptureFrame(); if (count <= 0) continue;
+            using (var buffer = new NativeArray<float>(count * channels, Allocator.Temp))
+            {
+                if (!AudioRenderer.Render(buffer)) continue;
+                if (frame >= 6 && frame < 60) for (int i = 0; i < buffer.Length; i++) energy += buffer[i] * buffer[i];
+            }
+        }
+        return energy;
+    }
+    static void Log(string message) => File.AppendAllText(Result, message + "\n");
+}

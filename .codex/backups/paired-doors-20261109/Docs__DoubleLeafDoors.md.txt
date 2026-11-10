@@ -1,0 +1,37 @@
+# Double-Leaf Doors
+
+## Scope and checkpoint
+
+Checkpoint: `.codex/backups/double-door-arch-20261109/`.
+
+1. Inspect the placed Door_Arch_B and preserve the authored Door_L_Arch_B / Door_R_Arch_B pivots.
+2. Use one interaction/state owner for both leaves, sharing timing, lock, direction, reactions and networking while each leaf retains its hinge and mirrored rotation.
+3. Configure the scene instance and validate opening/closing from either leaf, pivot anchoring and existing single-door behavior.
+
+## Authoring
+
+Keep one `DoorController` on the common parent. Configure its existing **Moving Part**, **Rotate Pivot**, opening angle, startup state, duration, curve and lock as usual. Add the other panels under **Additional Leaves**, assigning each Moving Part, Rotate Pivot, opening angle and slide offset. Each leaf's closed pose and hinge are captured independently, including hinges nested below moving geometry.
+
+Every leaf uses the controller's one open progress, evaluated curve and direction. Either panel resolves to the parent interactable, sharing the prompt, cooldown, key/passcode/signal lock and room/RPC state. Reactions fire once for the logical door. Additional leaves have no separate controller, lock or network identity. Single doors retain an empty list and their existing behavior. Slide supports independent per-leaf offsets; Destroy removes all assigned leaves while retaining the frame.
+
+Choose angles in each hinge's axes. Opposite world hinges normally use opposite signs, but imported mirrored transforms can reverse their local axes. Do not compensate by moving or resetting authored pivots/scales.
+
+## Map3 configuration
+
+`Door_Arch_B` owns the single controller. Primary `Door_L_Arch_B` and additional `Door_R_Arch_B` retain the authored child **Pivot** transforms. The right panel is imported with negative scale and inverted hinge axes, so both configured Y angles are +90 degrees; the resulting world rotations are opposite. **Open Away From Player** changes both sides together. The door starts closed and unlocked and inherits the existing room doors' 1.5-second duration, curve and 1-second interaction cooldown.
+
+Both panels have fitted solid BoxColliders and their own NavMesh obstacle/controller bound to the common door state. Static arch/pillar/stair colliders remain separate. Enemy route probes, obstruction sensors and traversal collision exceptions collect colliders from every configured moving panel, excluding the static frame when leaf colliders exist. No new traversal volume or room connection is inferred.
+
+One shared reaction receiver/emitter/door bridge is configured on the parent. Its six standard door signals reuse the existing room door's AudioCue references, without copying scene-bound event listeners or feedback origins. The authored Prompt_Pivot on the primary panel anchors the one interaction prompt; both original prompt pivots remain intact.
+
+No Photon event, room-state encoding or RPC format change is required.
+
+## Validation
+
+The final focused run passed 154 Editor cases: 16 new double-door cases, 136 existing mechanism/platform/puzzle/interaction cases, and the two existing route/directional-door-probe cases. Double-door cases cover shared interaction/cooldown, one set of events, partial progress, fixed child hinges, the imported negative scale, reversal, opening away from either side, shared passcode, room-state application, collider deduplication, additional-leaf obstruction and enemy collision exceptions, single-door compatibility, slide, startup-open and destroy.
+
+The initial expanded run also attempted the full existing EnemyTraversal fixture. Eight AI/traversal assertions failed in that plain Edit Mode probe, including fixtures that use private methods before their component caches are initialized. Those fixtures and AI state logic were not changed. The full enemy suite is not reported as passing; the door-specific collision behavior has a new fixture with explicit initialization, and the complete failure output remains in the evidence.
+
+Native Play Mode used a temporary copy of the configured arch and the real PlayerPickupInteractor focus/use path. It verified that aiming at each leaf resolves the same controller, one interaction opens both to 90 degrees, one interaction on the other leaf closes both, a second opening from the opposite side is synchronized, and another accepted interaction reverses both during travel. Both hinge positions remain fixed, both leaves return to their authored closed poses, cooldown prevents an immediate second toggle, and two opening/closing cycles produce only two Opened, two Closed and four Squeaking events.
+
+Rendered open/closed captures were checked. The original scene remains loaded during additive validation and is restored afterward; temporary preview assets and the validation helper are removed. The four authored Pivot/Prompt_Pivot transforms are unchanged. The saved scene has one controller and two leaf colliders. Runtime and Editor builds succeeded; the first full dependency build retained existing Photon warnings. Evidence: `.codex/diagnostics/double-door-arch-20261109.txt`, `double-door-open.png` and `double-door-closed.png`. Two-client Photon validation was not performed.

@@ -1,0 +1,100 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class RemoteLookValidationSession
+{
+    private const string Request = "Temp/RemoteLookValidation.request";
+    private const string Result = ".codex/diagnostics/remote-player-look-20261109.txt";
+
+    static RemoteLookValidationSession() => EditorApplication.update += Update;
+
+    private static void Update()
+    {
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating
+            || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim();
+        File.Delete(Request);
+        var original = SceneManager.GetActiveScene();
+        if (command == "restore-clean-menu")
+        {
+            const string snapshot = ".codex/backups/remote-player-look-20261109/Menu.after-tests.unity";
+            const string current = ".codex/backups/remote-player-look-20261109/Menu.before-restore.unity";
+            if (original.path != "Assets/Scenes/Menu.unity") throw new InvalidOperationException("Original scene changed; restore canceled.");
+            EditorSceneManager.SaveScene(original, current, true);
+            if (File.ReadAllText(snapshot) != File.ReadAllText(current)) throw new InvalidOperationException("Live scene changed since inspection; restore canceled.");
+            // The scene was clean before validation. Reload only this verified scene;
+            // retain the inspected live copies and never save over its source asset.
+            var temporary = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            SceneManager.SetActiveScene(temporary);
+            EditorSceneManager.CloseScene(original, true);
+            var restored = EditorSceneManager.OpenScene("Assets/Scenes/Menu.unity", OpenSceneMode.Additive);
+            SceneManager.SetActiveScene(restored);
+            EditorSceneManager.CloseScene(temporary, true);
+            Log("RESTORED " + restored.path + " dirty=" + restored.isDirty);
+            return;
+        }
+        if (command == "inspect")
+        {
+            EditorSceneManager.SaveScene(original, ".codex/backups/remote-player-look-20261109/Menu.after-tests.unity", true);
+            Log("INSPECT " + original.path + " dirty=" + original.isDirty);
+            foreach (var method in typeof(EditorSceneManager).GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(m => m.Name.IndexOf("Dirty", StringComparison.OrdinalIgnoreCase) >= 0 || m.Name.IndexOf("Clean", StringComparison.OrdinalIgnoreCase) >= 0))
+                Log("SCENE API " + method);
+            return;
+        }
+        bool dirty = original.isDirty;
+        var validation = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(validation);
+        int passed = 0, failed = 0;
+        File.WriteAllText(Result, "SCENE " + original.path + " dirty=" + dirty + "\n");
+        try
+        {
+            foreach (var type in new[] { typeof(RemotePlayerLookPoseTests), typeof(PlayerMeleeArcAimTests) })
+            foreach (var method in type.GetMethods())
+            {
+                var cases = method.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().ToArray();
+                bool test = method.GetCustomAttributes(typeof(TestAttribute), false).Length > 0;
+                if (!test && cases.Length == 0) continue;
+                var arguments = cases.Length > 0 ? cases.Select(c => c.Arguments) : new[] { Array.Empty<object>() };
+                foreach (var args in arguments)
+                {
+                    var fixture = Activator.CreateInstance(type);
+                    string name = type.Name + "." + method.Name + "(" + string.Join(",", args) + ")";
+                    try
+                    {
+                        type.GetMethod("SetUp")?.Invoke(fixture, null);
+                        method.Invoke(fixture, args);
+                        passed++; Log("PASS " + name);
+                    }
+                    catch (Exception error)
+                    {
+                        failed++; Log("FAIL " + name + " " + (error.InnerException ?? error));
+                    }
+                    finally
+                    {
+                        try { type.GetMethod("TearDown")?.Invoke(fixture, null); }
+                        catch (Exception error) { failed++; Log("TEARDOWN FAILED " + name + " " + error); }
+                    }
+                }
+            }
+        }
+        catch (Exception error) { failed++; Log("RUNNER FAILED " + error); }
+        finally
+        {
+            SceneManager.SetActiveScene(original);
+            EditorSceneManager.CloseScene(validation, true);
+            if (dirty && !original.isDirty) EditorSceneManager.MarkSceneDirty(original);
+            Log("TESTS passed=" + passed + " failed=" + failed + " originalDirty=" + original.isDirty);
+        }
+    }
+
+    private static void Log(string message) => File.AppendAllText(Result, message + "\n");
+}

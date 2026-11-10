@@ -1,0 +1,71 @@
+SCENE Assets/Scenes/Map3.unity dirty=False playing=False
+DOOR Door_L_Arch_B angles=(0.00, 90.00, 0.00) rotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00, 1.00, 1.00) pivotRotation=(0.00000, 0.00000, 0.00000, 1.00000) center=(0.72, 3.28, 0.00)
+SAMPLE Door_L_Arch_B direction=1 closed=(153.71770, 4.09191, 3.00000) open=(154.50000, 4.09191, 3.78233) delta=(0.78233, 0.00000, 0.78233)
+SAMPLE Door_L_Arch_B direction=-1 closed=(153.71770, 4.09191, 3.00000) open=(154.50000, 4.09191, 2.21767) delta=(0.78233, 0.00000, -0.78233)
+DOOR Door_R_Arch_B angles=(0.00, 90.00, 0.00) rotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00, 1.00, 1.00) pivotRotation=(0.00000, 0.00000, 0.00000, 1.00000) center=(-0.72, 3.28, 0.00)
+SAMPLE Door_R_Arch_B direction=1 closed=(152.28230, 4.09191, 3.00000) open=(151.75000, 4.09191, 2.46767) delta=(-0.53233, 0.00000, -0.53233)
+SAMPLE Door_R_Arch_B direction=-1 closed=(152.28230, 4.09191, 3.00000) open=(151.75000, 4.09191, 3.53233) delta=(-0.53233, 0.00000, 0.53233)
+INSPECT COMPLETE
+SCENE Assets/Scenes/Map3.unity dirty=True playing=False
+DOOR Door_L_Arch_B angles=(0.00, 90.00, 0.00) rotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00, 1.00, 1.00) pivotRotation=(0.00000, 0.00000, 0.00000, 1.00000) center=(0.72, 3.28, 0.00)
+GEOMETRY Door_L_Arch_B mesh=Center: (0.72, 3.28, 0.00), Extents: (0.72, 3.28, 0.22) colliderCenter=(0.72, 3.28, 0.00) colliderSize=(1.44, 6.56, 0.43)
+SAMPLE Door_L_Arch_B direction=1 closed=(153.71770, 4.09191, 3.00000) open=(154.50000, 4.09191, 3.78233) delta=(0.78233, 0.00000, 0.78233)
+SAMPLE Door_L_Arch_B direction=-1 closed=(153.71770, 4.09191, 3.00000) open=(154.50000, 4.09191, 2.21767) delta=(0.78233, 0.00000, -0.78233)
+DOOR Door_R_Arch_B angles=(0.00, 90.00, 0.00) rotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00, 1.00, 1.00) pivotRotation=(0.00000, 0.00000, 0.00000, 1.00000) center=(-0.72, 3.28, 0.00)
+GEOMETRY Door_R_Arch_B mesh=Center: (-0.72, 3.28, 0.00), Extents: (0.72, 3.28, 0.22) colliderCenter=(-0.72, 3.28, 0.00) colliderSize=(1.44, 6.56, 0.43)
+SAMPLE Door_R_Arch_B direction=1 closed=(152.28230, 4.09191, 3.00000) open=(151.75000, 4.09191, 2.46767) delta=(-0.53233, 0.00000, -0.53233)
+SAMPLE Door_R_Arch_B direction=-1 closed=(152.28230, 4.09191, 3.00000) open=(151.75000, 4.09191, 3.53233) delta=(-0.53233, 0.00000, 0.53233)
+INSPECT COMPLETE
+TESTS passed=164 failed=0 originalDirty=True
+PASS Both roots own equivalent reciprocal controllers
+PASS Each controller retains its own authored prompt anchor
+PASS The static arch has no door reaction stack
+PASS Aiming at Door_L_Arch_B resolves its own root Door Controller
+PASS One player interaction begins opening both leaves
+PASS Shared cooldown prevents a second toggle
+PASS Both leaves move together during partial opening
+PASS Both authored hinge positions remain fixed
+PASS Both panel centers move to the same side away from the actor; left=-0,04106545 right=-0,0279429 expected=-1
+PASS One open command reaches 90 degrees on both leaves
+PASS Both authored hinge positions remain fixed
+PASS Both panel centers move to the same side away from the actor; left=-0,782336 right=-0,532336 expected=-1
+PASS Aiming at Door_R_Arch_B resolves its own root Door Controller
+PASS Interaction on the right leaf closes the whole door
+PASS Both leaves return exactly to their authored closed poses
+PASS Both authored hinge positions remain fixed
+PASS Aiming at Door_R_Arch_B resolves its own root Door Controller
+PASS The right leaf also opens both leaves from the opposite side
+PASS Both leaves remain synchronized from the opposite side
+PLAY FAILED System.InvalidOperationException: Both panel centers move to the same side away from the actor; left=-0,01435351 right=-0,009766817 expected=1
+  at DoorSwingValidationSession.Check (System.Boolean condition, System.String text) [0x0001a] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\DoorSwingValidationSession.cs:96 
+  at DoorSwingValidationSession.SamePhysicalSide () [0x0003e] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\DoorSwingValidationSession.cs:113 
+  at DoorSwingValidationSession.Tick () [0x006b3] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\DoorSwingValidationSession.cs:174 
+  at DoorSwingValidationSession.Update () [0x00014] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\DoorSwingValidationSession.cs:52 
+RESTORED Assets/Scenes/Map3.unity dirty=True
+PASS Both roots own equivalent reciprocal controllers
+PASS Each controller retains its own authored prompt anchor
+PASS The static arch has no door reaction stack
+PASS Aiming at Door_L_Arch_B resolves its own root Door Controller
+PASS One player interaction begins opening both leaves
+PASS Shared cooldown prevents a second toggle
+PASS Both leaves move together during partial opening
+PASS Both authored hinge positions remain fixed
+PASS Both panel centers move to the same side away from the actor; left=-0,04107094 right=-0,02794647 expected=-1
+PASS One open command reaches 90 degrees on both leaves
+PASS Both authored hinge positions remain fixed
+PASS Both panel centers move to the same side away from the actor; left=-0,782336 right=-0,532336 expected=-1
+PASS Aiming at Door_R_Arch_B resolves its own root Door Controller
+PASS Interaction on the right leaf closes the whole door
+PASS Both leaves return exactly to their authored closed poses
+PASS Both authored hinge positions remain fixed
+PASS Aiming at Door_R_Arch_B resolves its own root Door Controller
+PASS The right leaf also opens both leaves from the opposite side
+PASS Both leaves remain synchronized from the opposite side
+PASS Both panel centers move to the same side away from the actor; left=0,3536384 right=0,2406311 expected=1
+PASS Aiming at Door_L_Arch_B resolves its own root Door Controller
+PASS A player interaction can reverse both leaves during travel
+PASS Both authored hinge positions remain fixed
+PASS Each peer emits its own reactions once per transition
+PLAY PASSED
+RESTORED Assets/Scenes/Map3.unity dirty=True
+FINAL: 164 focused tests passed. Native Play confirmed both physical opening sides, unchanged hinges, close/reversal, own-root interaction/prompts and reaction counts. Geometry, colliders, transforms, timing and materials preserved. Original scene restored dirty. Temporary helper archived and removed. Runtime resolves per-peer hinge direction; no serialized scene edit or Photon format change required.

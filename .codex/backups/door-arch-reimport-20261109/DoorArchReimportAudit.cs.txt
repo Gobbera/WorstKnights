@@ -1,0 +1,58 @@
+using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class DoorArchReimportAudit
+{
+    private const string Request = "Temp/DoorArchReimport.request";
+    private const string Result = ".codex/diagnostics/door-arch-reimport-20261109.txt";
+    static DoorArchReimportAudit() => EditorApplication.update += Update;
+    private static string PathOf(Transform value) => value == null ? "null" : value.parent == null ? value.name : PathOf(value.parent) + "/" + value.name;
+    private static void Log(string value) => File.AppendAllText(Result, value + "\n");
+    private static void Update()
+    {
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        var command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try { if (command == "inspect") Inspect(); }
+        catch (Exception error) { Log("FAILED " + error); }
+    }
+    private static void Inspect()
+    {
+        var scene = SceneManager.GetActiveScene(); bool dirty = scene.isDirty;
+        EditorSceneManager.SaveScene(scene, ".codex/backups/door-arch-reimport-20261109/Map3.live-before.unity", true);
+        if (dirty) EditorSceneManager.MarkSceneDirty(scene);
+        var all = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
+        var arch = all.Single(t => t.name == "Door_Arch_B" && t.GetComponentsInChildren<Transform>(true).Any(child => child.name == "Door_L_Arch_B"));
+        Log("SCENE " + scene.path + " dirty=" + dirty + " model=" + PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(arch));
+        foreach (var item in arch.GetComponentsInChildren<Transform>(true))
+        {
+            Log("NODE " + PathOf(item) + " id=" + GlobalObjectId.GetGlobalObjectIdSlow(item).targetObjectId + " localPosition=" + item.localPosition.ToString("F5") + " localRotation=" + item.localRotation.ToString("F5") + " scale=" + item.localScale.ToString("F5"));
+            Log("STACK " + string.Join(",", item.GetComponents<Component>().Select(component => component == null ? "MissingScript" : component.GetType().Name)));
+            var door = item.GetComponent<DoorController>();
+            if (door != null)
+            {
+                var data = new SerializedObject(door);
+                Log("DOOR part=" + PathOf(door.MovingPart) + " peer=" + PathOf(door.PairedDoor != null ? door.PairedDoor.transform : null) + " hinge=" + PathOf(data.FindProperty("rotatePivot").objectReferenceValue as Transform) + " prompt=" + PathOf(data.FindProperty("interactionPromptPivot").objectReferenceValue as Transform));
+                Log("DOOR DATA " + EditorJsonUtility.ToJson(door));
+            }
+            foreach (var component in item.GetComponents<MonoBehaviour>())
+            {
+                if (component == null) continue;
+                var data = new SerializedObject(component); var property = data.GetIterator();
+                while (property.Next(true))
+                    if (property.propertyType == SerializedPropertyType.ObjectReference)
+                    {
+                        if (property.objectReferenceInstanceIDValue != 0 && property.objectReferenceValue == null) Log("MISSING REF " + PathOf(item) + ":" + component.GetType().Name + "." + property.propertyPath);
+                        if (property.name is "doorController" or "obstacleHost" or "door" or "signalReceiver" or "signalEmitter")
+                            Log("REF " + component.GetType().Name + "." + property.propertyPath + "=" + property.objectReferenceValue);
+                    }
+            }
+        }
+        Log("AUDIT COMPLETE dirty=" + scene.isDirty);
+    }
+}

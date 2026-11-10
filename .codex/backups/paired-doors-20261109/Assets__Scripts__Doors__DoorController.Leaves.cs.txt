@@ -1,0 +1,82 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public partial class DoorController
+{
+    [Serializable]
+    public sealed class DoorLeaf
+    {
+        public Transform movingPart;
+        [Tooltip("Authored hinge. Its closed pose is captured even when it is a child of the leaf.")]
+        public Transform rotatePivot;
+        [Tooltip("Rotation in this hinge's axes. Opposite hinges usually need opposite angles; mirrored imported axes may need the same value.")]
+        public Vector3 openLocalEulerAngles = new Vector3(0f, -90f, 0f);
+        public Vector3 openLocalPositionOffset;
+
+        private Vector3 closedPosition, pivotPosition;
+        private Quaternion closedRotation, pivotRotation;
+        private bool hasPivot, captured;
+
+        internal void CaptureClosedPose()
+        {
+            captured = movingPart != null;
+            if (!captured) return;
+            closedPosition = movingPart.localPosition;
+            closedRotation = movingPart.localRotation;
+            hasPivot = rotatePivot != null;
+            if (!hasPivot) return;
+            var parent = movingPart.parent;
+            pivotPosition = parent != null ? parent.InverseTransformPoint(rotatePivot.position) : rotatePivot.position;
+            pivotRotation = parent != null ? Quaternion.Inverse(parent.rotation) * rotatePivot.rotation : rotatePivot.rotation;
+        }
+
+        internal void ApplyPose(float progress, int direction, DoorMotionMode mode)
+        {
+            if (!captured || movingPart == null) return;
+            Vector3 position = closedPosition + openLocalPositionOffset * progress;
+            Quaternion rotation = closedRotation;
+            if (mode == DoorMotionMode.Rotate)
+            {
+                var delta = Quaternion.SlerpUnclamped(Quaternion.identity, Quaternion.Euler(openLocalEulerAngles * NormalizeOpenRotationDirection(direction)), progress);
+                if (hasPivot)
+                {
+                    var pivotDelta = pivotRotation * delta * Quaternion.Inverse(pivotRotation);
+                    position = pivotPosition + pivotDelta * (closedPosition - pivotPosition) + openLocalPositionOffset * progress;
+                    rotation = pivotDelta * closedRotation;
+                }
+                else rotation = closedRotation * delta;
+            }
+            movingPart.SetLocalPositionAndRotation(position, rotation);
+        }
+    }
+
+    // Both enemy obstruction checks and traversal collision exceptions must include every leaf.
+    public Collider[] GetMovingPartColliders()
+    {
+        var root = movingPart != null ? movingPart : transform;
+        var primary = root.GetComponentsInChildren<Collider>(true);
+        if (additionalLeaves == null || additionalLeaves.Length == 0)
+            return primary.Length > 0 || root == transform ? primary : GetComponentsInChildren<Collider>(true);
+        var result = new List<Collider>(primary);
+        foreach (var leaf in additionalLeaves)
+        {
+            if (leaf == null || leaf.movingPart == null || leaf.movingPart == movingPart) continue;
+            foreach (var collider in leaf.movingPart.GetComponentsInChildren<Collider>(true))
+                if (!result.Contains(collider)) result.Add(collider);
+        }
+        return result.Count > 0 ? result.ToArray() : GetComponentsInChildren<Collider>(true);
+    }
+
+    private void DestroyAdditionalLeaves()
+    {
+        if (additionalLeaves == null) return;
+        foreach (var leaf in additionalLeaves)
+        {
+            if (leaf == null || leaf.movingPart == null || leaf.movingPart == movingPart || leaf.movingPart == transform) continue;
+            if (movingPart != null && leaf.movingPart.IsChildOf(movingPart)) continue;
+            if (Application.isPlaying) Destroy(leaf.movingPart.gameObject);
+            else DestroyImmediate(leaf.movingPart.gameObject);
+        }
+    }
+}

@@ -43,6 +43,8 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
     [SerializeField] private float remotePositionLerpSpeed = 12f;
     [SerializeField] private float remoteRotationLerpSpeed = 16f;
     [SerializeField] private float remoteTeleportDistance = 4f;
+    [Tooltip("Response time in seconds for remote head and torso look angles. Zero disables the network angle filter; local camera input is unaffected.")]
+    [SerializeField] [Min(0f)] private float remoteLookSmoothTime = 0.08f;
     [Header("Jump State")]
     [SerializeField] [Min(0f)] private float jumpToAirStateDelay = 0.18f;
     [Header("Head Look")]
@@ -237,7 +239,8 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         ? rawInput.sqrMagnitude > InputDeadzone
         : networkInput.sqrMagnitude > InputDeadzone;
     public bool IsJumpQueued => jumpQueued;
-    public bool IsMovementControlLocked => HasAuthority() && Time.time < GetEffectiveMovementControlLockUntil();
+    public bool IsMovementControlLocked => HasAuthority() && (Time.time < GetEffectiveMovementControlLockUntil()
+        || PlayerInteractionControl.IsLockedFor(this));
     public bool IsKickActionActive => HasAuthority() && IsKickActionActiveAt(Time.time);
     public bool CanStartKick
     {
@@ -501,7 +504,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
     public bool TryAttack()
     {
-        if (!HasAuthority())
+        if (!HasAuthority() || PlayerInteractionControl.IsLockedFor(this))
             return false;
 
         UpdateAttackComboState();
@@ -725,6 +728,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
     private bool CanStartKickAt(float now, bool checkCrouchStand)
     {
+        if (PlayerInteractionControl.IsLockedFor(this)) return false;
         if (IsShieldGuarding || HasActiveAttackCombo(now) || IsNonCombatInventoryActionActive(now))
             return false;
 
@@ -777,12 +781,12 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
     public bool CanChangeInventorySlots()
     {
-        return !IsInventorySlotChangeLocked;
+        return !IsInventorySlotChangeLocked && !PlayerInteractionControl.IsLockedFor(this);
     }
 
     public bool CanBeginInventoryItemAction()
     {
-        if (!HasAuthority())
+        if (!HasAuthority() || PlayerInteractionControl.IsLockedFor(this))
             return false;
 
         UpdateAttackComboState();
@@ -926,6 +930,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
     public void Jump()
     {
+        if (PlayerInteractionControl.IsLockedFor(this)) return;
         RefreshSurfaceState();
 
         if (Time.time < nextJumpInputAllowedTime || !IsGrounded || jumpQueued || exitingSlope)
@@ -1589,7 +1594,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         if (HasAuthority())
             UpdateLocalLookPose();
         else
-            UpdateRemoteLookPose();
+            UpdateRemoteLookPose(Time.deltaTime);
     }
 
     private void UpdateLocalLookPose()
@@ -1621,7 +1626,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
 
             if (isHeadLookPoseAcquiring)
             {
-                SmoothAppliedLookPose(targetYawOffset, targetPitch, headLookAcquireSmoothTime);
+                SmoothAppliedLookPose(targetYawOffset, targetPitch, headLookAcquireSmoothTime, Time.deltaTime);
 
                 if (IsLookPoseNearTarget(targetYawOffset, targetPitch))
                 {
@@ -1643,7 +1648,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         }
         else
         {
-            ReleaseAppliedLookPose();
+            ReleaseAppliedLookPose(Time.deltaTime);
             yawOffset = appliedLookYawOffset;
             pitch = appliedLookPitch;
             bodyYaw = aimYaw - yawOffset;
@@ -1663,32 +1668,51 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             ApplyAttackAimPose(appliedAttackAimPitch);
     }
 
-    private void UpdateRemoteLookPose()
+    private void UpdateRemoteLookPose(float deltaTime)
     {
-        if (!enableHeadLook)
+        if (!enableHeadLook || !hasNetworkState)
             return;
 
         if (headBone == null && chestBone == null && spineBone == null)
             return;
 
-        float replicatedYawOffset = networkLookYawOffset;
-        float replicatedPitch = networkLookPitch;
+        SmoothRemoteLookTargets(deltaTime);
+        float replicatedYawOffset = smoothedRemoteLookYawOffset;
+        float replicatedPitch = smoothedRemoteLookPitch;
         bool allowPose = ShouldApplyHeadLookPose();
         bool allowAttackAimPose = ShouldApplyAttackAimPose();
-        UpdateReplicatedAttackAimPose(allowAttackAimPose, replicatedPitch);
+        UpdateReplicatedAttackAimPose(allowAttackAimPose, replicatedPitch, deltaTime);
+
+        if (allowPose && !wasHeadLookPoseAllowedLastFrame)
+            isHeadLookPoseAcquiring = true;
+        else if (!allowPose)
+            isHeadLookPoseAcquiring = false;
 
         if (allowPose)
         {
             float targetPitch = ResolveHeadLookPitchTargetForCurrentAttackAim(replicatedPitch);
-            float smoothTime = wasHeadLookPoseAllowedLastFrame ? 0f : headLookAcquireSmoothTime;
-            SmoothAppliedLookPose(replicatedYawOffset, targetPitch, smoothTime);
+            if (isHeadLookPoseAcquiring)
+            {
+                SmoothAppliedLookPose(replicatedYawOffset, targetPitch, headLookAcquireSmoothTime, deltaTime);
+                if (IsLookPoseNearTarget(replicatedYawOffset, targetPitch))
+                {
+                    SetAppliedLookPoseImmediate(replicatedYawOffset, targetPitch);
+                    isHeadLookPoseAcquiring = false;
+                }
+            }
+            else
+            {
+                // The received direction is already filtered every render frame.
+                SetAppliedLookPoseImmediate(replicatedYawOffset, targetPitch);
+            }
 
+            // Preserve complementary attack release using the same filtered pitch.
             if (HasVisibleAttackAimPose(appliedAttackAimPitch))
                 SetAppliedLookPitchImmediate(targetPitch);
         }
         else
         {
-            ReleaseAppliedLookPose();
+            ReleaseAppliedLookPose(deltaTime);
         }
 
         wasHeadLookPoseAllowedLastFrame = allowPose;
@@ -1800,10 +1824,10 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             : 0f;
 
         float smoothTime = allowPose ? attackAimAcquireSmoothTime : attackAimReleaseSmoothTime;
-        SmoothAppliedAttackAimPose(safeTargetPitch, smoothTime);
+        SmoothAppliedAttackAimPose(safeTargetPitch, smoothTime, Time.deltaTime);
     }
 
-    private void UpdateReplicatedAttackAimPose(bool allowPose, float replicatedPitch)
+    private void UpdateReplicatedAttackAimPose(bool allowPose, float replicatedPitch, float deltaTime)
     {
         float safeWeight = Mathf.Clamp01(attackAimPoseWeight);
         float safeTargetPitch = allowPose
@@ -1811,7 +1835,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             : 0f;
 
         float smoothTime = allowPose ? attackAimAcquireSmoothTime : attackAimReleaseSmoothTime;
-        SmoothAppliedAttackAimPose(safeTargetPitch, smoothTime);
+        SmoothAppliedAttackAimPose(safeTargetPitch, smoothTime, deltaTime);
     }
 
     private float ResolveHeadLookPitchTargetForCurrentAttackAim(float targetPitch)
@@ -1840,7 +1864,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         appliedAttackAimPitchVelocity = 0f;
     }
 
-    private void SmoothAppliedAttackAimPose(float targetPitch, float smoothTime)
+    private void SmoothAppliedAttackAimPose(float targetPitch, float smoothTime, float deltaTime)
     {
         float safeTargetPitch = Mathf.Clamp(targetPitch, -attackAimPitchLimit, attackAimPitchLimit);
         float safeSmoothTime = Mathf.Max(0f, smoothTime);
@@ -1850,7 +1874,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             return;
         }
 
-        float deltaTime = Mathf.Max(0.0001f, Time.deltaTime);
+        deltaTime = Mathf.Max(0.0001f, deltaTime);
         appliedAttackAimPitch = Mathf.SmoothDamp(
             appliedAttackAimPitch,
             safeTargetPitch,
@@ -1920,7 +1944,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
         appliedLookPitchVelocity = 0f;
     }
 
-    private void SmoothAppliedLookPose(float targetYawOffset, float targetPitch, float smoothTime)
+    private void SmoothAppliedLookPose(float targetYawOffset, float targetPitch, float smoothTime, float deltaTime)
     {
         float safeSmoothTime = Mathf.Max(0f, smoothTime);
         if (safeSmoothTime <= 0.0001f)
@@ -1929,7 +1953,7 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             return;
         }
 
-        float deltaTime = Mathf.Max(0.0001f, Time.deltaTime);
+        deltaTime = Mathf.Max(0.0001f, deltaTime);
         float safeTargetYawOffset = Mathf.DeltaAngle(0f, targetYawOffset);
         float safeTargetPitch = Mathf.Clamp(targetPitch, -89f, 89f);
 
@@ -1950,9 +1974,9 @@ public partial class PlayerMovement : MonoBehaviour, IPlayerMovement, IPunObserv
             deltaTime);
     }
 
-    private void ReleaseAppliedLookPose()
+    private void ReleaseAppliedLookPose(float deltaTime)
     {
-        SmoothAppliedLookPose(0f, 0f, headLookReleaseSmoothTime);
+        SmoothAppliedLookPose(0f, 0f, headLookReleaseSmoothTime, deltaTime);
 
         if (Mathf.Abs(appliedLookYawOffset) <= 0.01f)
         {

@@ -1,0 +1,95 @@
+BEFORE Assets/Scenes/Map3.unity dirty=False data={"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::DoorController","doorName":"Arch Double Door","movingPart":{"instanceID":0},"photonView":{"instanceID":0},"networkSceneId":"Map3:Door_Arch_B[214]","prototypeLocalOnly":false,"interactionCooldown":1.0,"enemyOpenPlayerInteractionLockDuration":4.0,"openInteractionPrompt":"Press [{key}] to open the door","closeInteractionPrompt":"Press [{key}] to close the door","unlockInteractionPrompt":"Press [{key}] to unlock the door","passcodeInteractionPrompt":"Press [{key}] to enter the passcode","interactionPromptPivot":{"instanceID":0},"interactionPromptLocalOffset":{"x":0.0,"y":0.0,"z":0.0},"startupState":1,"autoOpenOnUnlock":true,"closeWhenSignalTurnsOff":true,"relockWhenSignalTurnsOff":true,"motionMode":0,"rotatePivot":{"instanceID":0},"additionalLeaves":[{"movingPart":{"instanceID":0},"rotatePivot":{"instanceID":0},"openLocalEulerAngles":{"x":0.0,"y":90.0,"z":0.0},"openLocalPositionOffset":{"x":0.0,"y":0.0,"z":0.0}}],"openAwayFromInteractor":true,"openLocalEulerAngles":{"x":0.0,"y":90.0,"z":0.0},"openLocalPositionOffset":{"x":0.0,"y":0.0,"z":0.0},"moveDuration":1.5,"destroyDelay":0.0,"moveCurve":{"serializedVersion":"2","m_Curve":[{"serializedVersion":"3","time":0.0,"value":0.0,"inSlope":0.0,"outSlope":0.0,"tangentMode":0,"weightedMode":0,"inWeight":0.0,"outWeight":0.0},{"serializedVersion":"3","time":0.2745223939418793,"value":-0.012751244939863682,"inSlope":0.0343172661960125,"outSlope":0.0343172661960125,"tangentMode":0,"weightedMode":0,"inWeight":0.17142841219902039,"outWeight":0.16518311202526093},{"serializedVersion":"3","time":1.0,"value":1.0,"inSlope":3.972989320755005,"outSlope":3.972989320755005,"tangentMode":0,"weightedMode":0,"inWeight":0.06265062093734741,"outWeight":0.0}],"m_PreInfinity":2,"m_PostInfinity":2,"m_RotationOrder":4},"lockMode":0,"requiredKeyItem":{"instanceID":0},"requiredPasscode":"1234","requiredSignals":[],"signalRequirement":0,"stayOpenAfterFirstSignalOpen":false}}
+POSE Door_Arch_B localPosition=(153.00, 0.00, 3.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 1.00)
+POSE Door_Arch_B localPosition=(0.00, 0.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 1.00)
+POSE Door_L_Arch_B localPosition=(0.00, 0.81, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 0.06)
+POSE Pivot localPosition=(1.50, 0.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 1.00)
+POSE Prompt_Pivot localPosition=(0.25, 2.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 1.00)
+POSE Door_R_Arch_B localPosition=(0.00, 0.81, 0.00) localRotation=(1.00000, 0.00000, 0.00000, 0.00000) localScale=(-1.00, -1.00, -0.06)
+POSE Pivot localPosition=(1.50, 0.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 1.00)
+POSE Prompt_Pivot localPosition=(0.25, 2.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 1.00)
+POSE Pillar_01_Arch_B localPosition=(0.00, 0.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(0.72, 0.72, 0.72)
+POSE Pillar_02_Arch_B localPosition=(0.00, 0.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(0.72, 0.72, 0.72)
+POSE Stair_Arch_B localPosition=(0.00, 0.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(2.70, 0.18, 2.70)
+POSE Stair_Arch_B_Collider localPosition=(0.00, 0.00, 0.00) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) localScale=(1.00, 1.00, 1.00)
+FAILED System.InvalidOperationException: Preserve both authored door roots and pivots.
+  at PairedDoorValidationSession.Configure () [0x00601] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:126 
+  at PairedDoorValidationSession.Update () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:55 
+MIGRATION ROOT Door_L_Arch_B children=
+MIGRATION ROOT Door_R_Arch_B children=
+FAILED System.InvalidOperationException: Preserve both authored door roots and pivots.
+  at PairedDoorValidationSession.Configure () [0x00685] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:127 
+  at PairedDoorValidationSession.Update () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:55 
+MIGRATION ROOT Door_L_Arch_B children=
+MIGRATION ROOT Door_R_Arch_B children=
+LIVE HIERARCHY Door_Arch_B
+LIVE HIERARCHY Door_Arch_B/Door_Arch_B
+LIVE HIERARCHY Door_Arch_B/Door_L_Arch_B
+LIVE HIERARCHY Door_Arch_B/Door_R_Arch_B
+LIVE HIERARCHY Door_Arch_B/Pillar_01_Arch_B
+LIVE HIERARCHY Door_Arch_B/Pillar_02_Arch_B
+LIVE HIERARCHY Door_Arch_B/Stair_Arch_B
+LIVE HIERARCHY Door_Arch_B/Stair_Arch_B_Collider
+LIVE HIERARCHY Door_Arch_B/Pivot
+LIVE HIERARCHY Door_Arch_B/Prompt_Pivot
+LIVE HIERARCHY Door_Arch_B/Pivot
+LIVE HIERARCHY Door_Arch_B/Prompt_Pivot
+SOURCE PIVOT Door_Arch_B/Pivot
+FAILED System.InvalidOperationException: Preserve both authored door roots and pivots.
+  at PairedDoorValidationSession.Configure () [0x00701] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:130 
+  at PairedDoorValidationSession.Update () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:55 
+MIGRATION ROOT Door_L_Arch_B children=Pivot,Prompt_Pivot
+MIGRATION ROOT Door_R_Arch_B children=Pivot,Prompt_Pivot
+LIVE HIERARCHY Door_Arch_B
+LIVE HIERARCHY Door_Arch_B/Door_Arch_B
+LIVE HIERARCHY Door_Arch_B/Door_L_Arch_B
+LIVE HIERARCHY Door_Arch_B/Door_L_Arch_B/Pivot
+LIVE HIERARCHY Door_Arch_B/Door_L_Arch_B/Prompt_Pivot
+LIVE HIERARCHY Door_Arch_B/Door_R_Arch_B
+LIVE HIERARCHY Door_Arch_B/Door_R_Arch_B/Pivot
+LIVE HIERARCHY Door_Arch_B/Door_R_Arch_B/Prompt_Pivot
+LIVE HIERARCHY Door_Arch_B/Pillar_01_Arch_B
+LIVE HIERARCHY Door_Arch_B/Pillar_02_Arch_B
+LIVE HIERARCHY Door_Arch_B/Stair_Arch_B
+LIVE HIERARCHY Door_Arch_B/Stair_Arch_B_Collider
+SOURCE PIVOT Door_Arch_B/Door_L_Arch_B/Pivot
+ARCH STACK Transform id=9766822690554734571
+ARCH STACK DoorController id=261532770
+ARCH STACK ReactionSignalReceiver id=261532769
+ARCH STACK ReactionSignalEmitter id=261532768
+ARCH STACK DoorReactionSignalBridge id=261532767
+PASS One controller on each door root with reciprocal pairing and no arch controller
+CONFIGURED dirty=False
+TESTS passed=158 failed=0 originalDirty=True
+PASS Both roots own equivalent reciprocal controllers
+PLAY FAILED System.InvalidOperationException: Aiming at Door_L_Arch_B resolves its own root Door Controller
+  at PairedDoorValidationSession.Check (System.Boolean condition, System.String text) [0x0001a] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:184 
+  at PairedDoorValidationSession.Aim (UnityEngine.Transform leaf, System.Int32 sign) [0x000d6] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:200 
+  at PairedDoorValidationSession.Tick () [0x002f2] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:225 
+  at PairedDoorValidationSession.Update () [0x00014] in C:\Git\Unity\WorstKnights\Assets\Editor\Doors\PairedDoorValidationSession.cs:50 
+RESTORED Assets/Scenes/Map3.unity dirty=False
+PASS Both roots own equivalent reciprocal controllers
+PASS Each controller retains its own authored prompt anchor
+PASS The static arch has no door reaction stack
+PASS Aiming at Door_L_Arch_B resolves its own root Door Controller
+PASS One player interaction begins opening both leaves
+PASS Shared cooldown prevents a second toggle
+PASS Both leaves move together during partial opening
+PASS Both authored hinge positions remain fixed
+PASS One open command reaches 90 degrees on both leaves
+PASS Both authored hinge positions remain fixed
+PASS Aiming at Door_R_Arch_B resolves its own root Door Controller
+PASS Interaction on the right leaf closes the whole door
+PASS Both leaves return exactly to their authored closed poses
+PASS Both authored hinge positions remain fixed
+PASS Aiming at Door_R_Arch_B resolves its own root Door Controller
+PASS The right leaf also opens both leaves from the opposite side
+PASS Both leaves remain synchronized from the opposite side
+PASS Aiming at Door_L_Arch_B resolves its own root Door Controller
+PASS A player interaction can reverse both leaves during travel
+PASS Both authored hinge positions remain fixed
+PASS Each peer emits its own reactions once per transition
+PLAY PASSED
+RESTORED Assets/Scenes/Map3.unity dirty=False
+TESTS passed=159 failed=0 originalDirty=False
+TESTS passed=160 failed=0 originalDirty=False
+FINAL: 160 focused tests passed. Native Play confirmed separate reciprocal root controllers, per-root focus/prompts/reactions, paired opening/closing/reversal and fixed hinges. Latest authored prompt adjustments retained. Map3 migration saved; original scene restored; temporary helper archived and removed. No full enemy-suite or two-client Photon pass is claimed.

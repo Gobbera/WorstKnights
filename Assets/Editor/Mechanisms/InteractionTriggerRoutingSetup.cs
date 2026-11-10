@@ -108,23 +108,7 @@ public static class InteractionTriggerRoutingSetup
 
     private static void PreparePlatformAudio(PlatformController platform)
     {
-        var data = new SerializedObject(platform);
-        if (data.FindProperty("movementAudioSource").objectReferenceValue != null) return;
-        var anchor = platform.transform.Find(PlatformController.MovementAudioObjectName);
-        if (anchor == null)
-        {
-            var root = new GameObject(PlatformController.MovementAudioObjectName);
-            Undo.RegisterCreatedObjectUndo(root, "Create platform movement audio");
-            Undo.SetTransformParent(root.transform, platform.transform, "Parent platform audio");
-            root.transform.localPosition = Vector3.zero;
-            anchor = root.transform;
-        }
-        var source = anchor.GetComponent<AudioSource>();
-        if (source == null) source = Undo.AddComponent<AudioSource>(anchor.gameObject);
-        Undo.RecordObject(source, "Prepare platform movement audio");
-        source.playOnAwake = false; source.loop = true; source.spatialBlend = 1f; source.dopplerLevel = 0f;
-        data.FindProperty("movementAudioSource").objectReferenceValue = source;
-        data.ApplyModifiedProperties();
+        PlatformControllerEditor.PrepareAudioSources(platform);
     }
 
     private static int EnsureRoute(SerializedProperty routes, string name, MonoBehaviour target)

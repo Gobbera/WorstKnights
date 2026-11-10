@@ -1,0 +1,72 @@
+SCENE Assets/Scenes/Map3.unity dirty=False
+PASS UnityVoiceParticipatesInEnvironmentReverbWithoutADuplicateDistanceRolloff()
+PASS ReverbSendCanBeAdjustedOrDisabledWithoutMutingSpeech()
+PASS ReconfiguringReverbDoesNotOverrideTheCurrentProximityGainOrMute()
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(0,1)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-6,0,501187)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-20,0,1)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-50,0,00316228)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-80,0,00316228)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(10,1)
+PASS DistanceAndParticipantMutesSilenceBothDrySpeechAndItsReverbSend()
+PASS UnityRoutingIsLimitedToTheSupportedActiveVoiceModes(Disabled,False)
+PASS UnityRoutingIsLimitedToTheSupportedActiveVoiceModes(NonPositional2D,True)
+PASS UnityRoutingIsLimitedToTheSupportedActiveVoiceModes(Positional3D,True)
+PASS OptionalNativePositionalModeKeepsItsExistingDirectOutput()
+PASS SharedSettingsEnableReverbAndKeepTheAuthoredProximityPolicy()
+PASS ReverbSendIsClampedToTheUnityRange()
+TESTS passed=16 failed=0
+RESTORED Assets/Scenes/Map3.unity dirty=False
+SCENE Assets/Scenes/Map3.unity dirty=False
+AUDIO rendererStarted=True sampleRate=48000
+AUDIO dryTailEnergy=0 wetTailEnergy=0
+AUDIO INCONCLUSIVE: offline Editor playback did not prove reverb DSP
+RESTORED Assets/Scenes/Map3.unity dirty=False
+PLAY AUDIO started; synthetic source only, no microphone or voice login
+PLAY AUDIO dryPeak=0 wetPeak=0 dryTailEnergy=0 wetTailEnergy=0
+PLAY AUDIO INCONCLUSIVE: recorded signal did not prove the expected reverb tail
+PLAY RESTORED Assets/Scenes/Map3.unity dirty=False
+PLAY AUDIO started; synthetic source only, no microphone or voice login
+PLAY AUDIO stage=1 unityFrame=121 samplesPerFrame=0 sourcePlaying=True timeSamples=0 speakerMode=Stereo
+PLAY AUDIO stage=2 unityFrame=241 samplesPerFrame=0 sourcePlaying=True timeSamples=0 speakerMode=Stereo
+PLAY AUDIO dryPeak=0 wetPeak=0 dryTailEnergy=0 wetTailEnergy=0
+PLAY AUDIO INCONCLUSIVE: recorded signal did not prove the expected reverb tail
+PLAY RESTORED Assets/Scenes/Map3.unity dirty=False
+PLAY AUDIO started; synthetic source only, no microphone or voice login
+PLAY AUDIO stage=1 unityFrame=121 samplesPerFrame=800 sourcePlaying=True timeSamples=0 speakerMode=Stereo
+PLAY AUDIO stage=2 unityFrame=241 samplesPerFrame=800 sourcePlaying=True timeSamples=0 speakerMode=Stereo
+PLAY AUDIO dryPeak=0 wetPeak=0 dryTailEnergy=0 wetTailEnergy=0
+PLAY AUDIO INCONCLUSIVE: recorded signal did not prove the expected reverb tail
+PLAY RESTORED Assets/Scenes/Map3.unity dirty=False
+PLAY AUDIO started; synthetic source only, no microphone or voice login
+PLAY AUDIO stage=1 unityFrame=381 samplesPerFrame=4096 sourcePlaying=False timeSamples=0 speakerMode=Stereo
+PLAY AUDIO stage=2 unityFrame=847 samplesPerFrame=4096 sourcePlaying=False timeSamples=0 speakerMode=Stereo
+PLAY AUDIO dryPeak=0,14130130410194397 wetPeak=0,14395058155059814 dryTailEnergy=60,7234327601482 wetTailEnergy=1,3062099352757741
+PLAY AUDIO INCONCLUSIVE: recorded signal did not prove the expected reverb tail
+PLAY RESTORED Assets/Scenes/Map3.unity dirty=False
+PLAY AUDIO started; synthetic source only, no microphone or voice login
+PLAY AUDIO stage=1 unityFrame=344 samplesPerFrame=4096 sourcePlaying=False timeSamples=0 speakerMode=Stereo
+PLAY AUDIO stage=2 unityFrame=795 samplesPerFrame=4096 sourcePlaying=False timeSamples=0 speakerMode=Stereo
+PLAY AUDIO stage=3 unityFrame=1311 samplesPerFrame=4096 sourcePlaying=False timeSamples=0 speakerMode=Stereo
+PLAY AUDIO dryPeak=0,14130130410194397 wetPeak=0,14395058155059814 dryTailEnergy=1,8316103648153747E-30 wetTailEnergy=1,8977859402227639
+PASS Native BoxReverbZone produces a reverb tail on the configured 2D voice source
+PLAY RESTORED Assets/Scenes/Map3.unity dirty=False
+SCENE Assets/Scenes/Map3.unity dirty=False
+PASS UnityVoiceParticipatesInEnvironmentReverbWithoutADuplicateDistanceRolloff()
+PASS ReverbSendCanBeAdjustedOrDisabledWithoutMutingSpeech()
+PASS ReconfiguringReverbDoesNotOverrideTheCurrentProximityGainOrMute()
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(0,1)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-6,0,501187)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-20,0,1)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-50,0,00316228)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(-80,0,00316228)
+PASS ExistingParticipantVolumeIsConvertedToTheUnityAmplitude(10,1)
+PASS DistanceAndParticipantMutesSilenceBothDrySpeechAndItsReverbSend()
+PASS UnityRoutingIsLimitedToTheSupportedActiveVoiceModes(Disabled,False)
+PASS UnityRoutingIsLimitedToTheSupportedActiveVoiceModes(NonPositional2D,True)
+PASS UnityRoutingIsLimitedToTheSupportedActiveVoiceModes(Positional3D,True)
+PASS OptionalNativePositionalModeKeepsItsExistingDirectOutput()
+PASS SharedSettingsEnableReverbAndKeepTheAuthoredProximityPolicy()
+PASS ReverbSendIsClampedToTheUnityRange()
+TESTS passed=16 failed=0
+RESTORED Assets/Scenes/Map3.unity dirty=False

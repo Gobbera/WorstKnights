@@ -7,6 +7,18 @@ public interface IPlayerInteractable
     bool TryInteract(PlayerPickupInteractor interactor);
 }
 
+public interface IPlayerInteractionRangeProvider
+{
+    bool IsInInteractionRange(PlayerPickupInteractor interactor);
+}
+
+public interface IPlayerInteractionAreaProvider
+{
+    bool UsesInteractionArea { get; }
+    Collider InteractionAreaCollider { get; }
+    float GetAreaInteractionReach(PlayerPickupInteractor interactor);
+}
+
 public readonly struct PlayerInteractionPromptContext
 {
     public PlayerInteractionPromptContext(PlayerPickupInteractor interactor, KeyCode interactKey, string interactKeyText)

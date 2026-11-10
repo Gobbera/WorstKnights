@@ -36,6 +36,7 @@ GameObject:
   - component: {fileID: 250730399826881785}
   - component: {fileID: 4101602180630520369}
   - component: {fileID: 3184000000000000214}
+  - component: {fileID: 5200555855327019194}
   m_Layer: 13
   m_Name: Player
   m_TagString: Player
@@ -233,6 +234,7 @@ MonoBehaviour:
   remotePositionLerpSpeed: 12
   remoteRotationLerpSpeed: 16
   remoteTeleportDistance: 4
+  remoteLookSmoothTime: 0.08
   jumpToAirStateDelay: 1
   enableHeadLook: 1
   allowHeadLookWhileWalking: 0
@@ -1071,6 +1073,18 @@ MonoBehaviour:
   walkRadius: 7
   sprintRadius: 10
   minimumPlanarSpeed: 0.15
+--- !u!114 &5200555855327019194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 97267524914360842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 780820010106c464f894b5bd1f28188c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractionControl
 --- !u!1 &572334072533572996
 GameObject:
   m_ObjectHideFlags: 0

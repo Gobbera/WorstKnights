@@ -1,0 +1,158 @@
+using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class PillarAlignmentSession
+{
+    private const string Request = "Temp/PillarAlignment.request";
+    private const string Result = ".codex/diagnostics/pillar-statue-alignment-20261107.txt";
+    private const string Backup = ".codex/backups/pillar-statue-alignment-20261107/";
+    static PillarAlignmentSession() => EditorApplication.update += Update;
+    private static void Update()
+    {
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        var command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try { if (command == "inspect") Inspect(); else if (command == "surface") Surfaces(false); else if (command == "apply") Surfaces(true); else if (command == "save") Save(); }
+        catch (Exception error) { File.AppendAllText(Result, "\nFAILED " + error); }
+    }
+    private static string V(Vector3 value) => value.ToString("F6");
+    private static void Log(string value) => File.AppendAllText(Result, value + "\n");
+    private static string PathOf(Transform value) => value.parent == null ? value.name : PathOf(value.parent) + "/" + value.name;
+    private static void Save()
+    {
+        var scene = SceneManager.GetActiveScene();
+        if (scene.path != "Assets/Scenes/Map3.unity") throw new InvalidOperationException("Unexpected active scene.");
+        var slots = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<StatuePuzzleSlot>(true)).ToArray();
+        if (slots.Length != 4 || slots.Any(slot => slot.PlatePivot == null || slot.PlacementOffset != Vector3.zero)) throw new InvalidOperationException("Unexpected plate placement configuration.");
+        if (!EditorSceneManager.SaveScene(scene)) throw new IOException("Map3 could not be saved.");
+        Log("SAVED " + scene.path + " dirty=" + scene.isDirty + " slots=" + slots.Length);
+    }
+    private static void Inspect()
+    {
+        var scene = SceneManager.GetActiveScene(); bool dirty = scene.isDirty;
+        EditorSceneManager.SaveScene(scene, Backup + "Map3.live-before.unity", true);
+        if (dirty) EditorSceneManager.MarkSceneDirty(scene);
+        Log("Scene=" + scene.path + " dirty=" + dirty);
+        var transforms = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
+        foreach (var item in transforms.Where(t => t.name.StartsWith("Pillar_G", StringComparison.OrdinalIgnoreCase) || t.name.StartsWith("Statue_", StringComparison.OrdinalIgnoreCase) || t.name == "Plate_Pivot"))
+        {
+            Log("OBJECT " + PathOf(item) + " position=" + V(item.position) + " rotation=" + V(item.eulerAngles) + " scale=" + V(item.lossyScale) + " localPosition=" + V(item.localPosition) + " localRotation=" + V(item.localEulerAngles));
+            foreach (var renderer in item.GetComponents<Renderer>()) Log("RENDERER boundsCenter=" + V(renderer.bounds.center) + " size=" + V(renderer.bounds.size));
+            foreach (var collider in item.GetComponents<Collider>()) Log("COLLIDER " + collider.GetType().Name + " " + EditorJsonUtility.ToJson(collider));
+            var slot = item.GetComponent<StatuePuzzleSlot>();
+            if (slot != null)
+            {
+                Log("SLOT " + EditorJsonUtility.ToJson(slot));
+                Log("PLACEMENT worldPosition=" + V(slot.PlatePivot.TransformPoint(slot.PlacementOffset)) + " outward=" + V(slot.PlatePivot.right));
+            }
+        }
+        var pillar = transforms.First(t => t.name.StartsWith("Pillar_G", StringComparison.OrdinalIgnoreCase));
+        foreach (var filter in pillar.GetComponentsInChildren<MeshFilter>(true))
+        {
+            var mesh = filter.sharedMesh;
+            using (var data = MeshUtility.AcquireReadOnlyMeshData(mesh))
+            {
+                var vertices = new Unity.Collections.NativeArray<Vector3>(data[0].vertexCount, Unity.Collections.Allocator.Temp);
+                data[0].GetVertices(vertices);
+                var lines = vertices.Select(v => V(v)).ToArray();
+                File.WriteAllLines(Backup + "pillar-vertices.txt", lines);
+                vertices.Dispose();
+            }
+            Log("MESH " + PathOf(filter.transform) + " name=" + mesh.name + " bounds=" + mesh.bounds + " vertexCount=" + mesh.vertexCount);
+        }
+        Capture(transforms.First(t => t.GetComponent<StatuePuzzleSlot>() != null), "before");
+    }
+    private static void Capture(Transform pillar, string suffix)
+    {
+        var slot = pillar.GetComponent<StatuePuzzleSlot>();
+        var go = new GameObject("Alignment Preview Camera", typeof(Camera));
+        go.hideFlags = HideFlags.HideAndDontSave;
+        var camera = go.GetComponent<Camera>();
+        var center = pillar.position + Vector3.up * 1.3f;
+        go.transform.position = center + slot.PlatePivot.right * 4f + Vector3.up * 1.2f;
+        go.transform.LookAt(center);
+        camera.nearClipPlane = 0.01f; camera.farClipPlane = 25f;
+        var texture = RenderTexture.GetTemporary(1000, 1000, 24);
+        var prior = RenderTexture.active;
+        try
+        {
+            camera.targetTexture = texture; camera.Render(); RenderTexture.active = texture;
+            var image = new Texture2D(1000, 1000, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, 1000, 1000), 0, 0); image.Apply();
+            File.WriteAllBytes(".codex/diagnostics/pillar-alignment-" + suffix + ".png", image.EncodeToPNG());
+            UnityEngine.Object.DestroyImmediate(image);
+        }
+        finally { camera.targetTexture = null; RenderTexture.active = prior; RenderTexture.ReleaseTemporary(texture); UnityEngine.Object.DestroyImmediate(go); }
+    }
+    private static void Surfaces(bool apply)
+    {
+        var scene = SceneManager.GetActiveScene();
+        var slots = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<StatuePuzzleSlot>(true)).OrderBy(slot => slot.ExpectedIdentity).ToArray();
+        if (slots.Length != 4 || slots.Any(slot => !slot.name.StartsWith("Pillar_G", StringComparison.OrdinalIgnoreCase) || slot.PlatePivot == null)) throw new InvalidOperationException("Expected four Pillar_G slots with pivots.");
+        var points = new Vector3[4]; var normals = new Vector3[4];
+        for (int i = 0; i < slots.Length; i++)
+        {
+            var filter = slots[i].GetComponent<MeshFilter>();
+            var temporary = new GameObject("Pillar Surface Probe"); temporary.hideFlags = HideFlags.HideAndDontSave;
+            try
+            {
+                temporary.transform.SetPositionAndRotation(filter.transform.position, filter.transform.rotation);
+                temporary.transform.localScale = filter.transform.lossyScale;
+                var collider = temporary.AddComponent<MeshCollider>(); collider.sharedMesh = filter.sharedMesh;
+                Physics.SyncTransforms();
+                // Center of the new model's framed front panel, away from its decorative edges.
+                var center = filter.transform.TransformPoint(new Vector3(0f, (0.550122f + 1.406597f) * 0.5f, 4f));
+                var ray = new Ray(center, -filter.transform.forward);
+                if (!collider.Raycast(ray, out RaycastHit hit, 6f)) throw new InvalidOperationException("Front panel was not hit on " + slots[i].name);
+                points[i] = hit.point; normals[i] = hit.normal;
+                Log("SURFACE " + slots[i].name + " localPoint=" + V(filter.transform.InverseTransformPoint(hit.point)) + " localNormal=" + V(filter.transform.InverseTransformDirection(hit.normal)));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(temporary); }
+        }
+        if (!apply) return;
+        Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup(); Undo.SetCurrentGroupName("Align Statue Plate Slots To Pillar G");
+        for (int i = 0; i < slots.Length; i++)
+        {
+            var slot = slots[i]; var pivot = slot.PlatePivot;
+            Undo.RecordObjects(new UnityEngine.Object[] { pivot, slot }, "Align Statue Plate Slot");
+            var up = Vector3.ProjectOnPlane(Vector3.up, normals[i]).normalized;
+            pivot.SetPositionAndRotation(points[i] + normals[i] * 0.002f, Quaternion.LookRotation(Vector3.Cross(normals[i], up), up));
+            var data = new SerializedObject(slot);
+            data.FindProperty("placementOffset").vector3Value = Vector3.zero;
+            data.FindProperty("surfaceEulerAngles").vector3Value = Vector3.zero;
+            data.ApplyModifiedProperties();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(pivot); PrefabUtility.RecordPrefabInstancePropertyModifications(slot);
+            Log("ALIGNED " + slot.name + " identity=" + slot.ExpectedIdentity + " localPosition=" + V(pivot.localPosition) + " localRotation=" + V(pivot.localEulerAngles) + " normalError=" + Vector3.Angle(pivot.right, normals[i]));
+        }
+        EditorSceneManager.MarkSceneDirty(scene); Undo.CollapseUndoOperations(group);
+        PreviewPlates(slots);
+        Selection.objects = slots.Select(slot => (UnityEngine.Object)slot.PlatePivot.gameObject).ToArray();
+        EditorSceneManager.SaveScene(scene, Backup + "Map3.live-after.unity", true);
+        EditorSceneManager.MarkSceneDirty(scene);
+        Log("APPLY COMPLETE dirty=" + scene.isDirty);
+    }
+    private static void PreviewPlates(StatuePuzzleSlot[] slots)
+    {
+        string[] names = { "Plate Mothen Hedar", "Plate Balthor Sabrath", "Plate Angrad Veyr", "Plate Eldric Ferden" };
+        for (int i = 0; i < slots.Length; i++)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Items/" + names[(int)slots[i].ExpectedIdentity] + ".prefab");
+            var preview = UnityEngine.Object.Instantiate(prefab); preview.hideFlags = HideFlags.HideAndDontSave;
+            try
+            {
+                var plate = preview.GetComponent<StatuePuzzlePlate>();
+                preview.transform.SetPositionAndRotation(slots[i].PlatePivot.position, slots[i].PlatePivot.rotation * plate.PlacementRotation);
+                var body = preview.GetComponent<Rigidbody>(); if (body != null) body.isKinematic = true;
+                foreach (var collider in preview.GetComponentsInChildren<Collider>()) collider.enabled = false;
+                Log("PREVIEW " + slots[i].name + " plate=" + names[(int)slots[i].ExpectedIdentity] + " plateNormalError=" + Vector3.Angle(preview.transform.up, slots[i].PlatePivot.right));
+                Capture(slots[i].transform, "after-" + slots[i].ExpectedIdentity);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(preview); }
+        }
+    }
+}

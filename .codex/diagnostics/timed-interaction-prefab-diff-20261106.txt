@@ -1,0 +1,14 @@
+Player prefab added objects: ['5200555855327019194']
+Removed objects: []
+Changed object 97267524914360842
+--- before
+
++++ after
+
+@@ -35,4 +35,5 @@
+
+   - component: {fileID: 4101602180630520369}
+   - component: {fileID: 3184000000000000214}
++  - component: {fileID: 5200555855327019194}
+   m_Layer: 13
+   m_Name: Player

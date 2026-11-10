@@ -327,12 +327,7 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         if (resolvedDoorController == null)
             return false;
 
-        Transform colliderRoot = resolvedDoorController.MovingPart != null
-            ? resolvedDoorController.MovingPart
-            : resolvedDoorController.transform;
-        Collider[] doorColliders = colliderRoot.GetComponentsInChildren<Collider>(true);
-        if ((doorColliders == null || doorColliders.Length == 0) && colliderRoot != resolvedDoorController.transform)
-            doorColliders = resolvedDoorController.GetComponentsInChildren<Collider>(true);
+        Collider[] doorColliders = resolvedDoorController.GetMovingPartColliders();
 
         if (doorColliders == null || doorColliders.Length == 0)
             return true;
@@ -366,12 +361,7 @@ public sealed class EnemyTraversalVolume : MonoBehaviour
         if (resolvedDoorController == null || route == null || route.Count == 0)
             return false;
 
-        Transform colliderRoot = resolvedDoorController.MovingPart != null
-            ? resolvedDoorController.MovingPart
-            : resolvedDoorController.transform;
-        Collider[] doorColliders = colliderRoot.GetComponentsInChildren<Collider>(true);
-        if ((doorColliders == null || doorColliders.Length == 0) && colliderRoot != resolvedDoorController.transform)
-            doorColliders = resolvedDoorController.GetComponentsInChildren<Collider>(true);
+        Collider[] doorColliders = resolvedDoorController.GetMovingPartColliders();
 
         if (doorColliders == null || doorColliders.Length == 0)
             return false;

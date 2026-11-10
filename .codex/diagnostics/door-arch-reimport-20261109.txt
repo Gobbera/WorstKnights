@@ -1,0 +1,43 @@
+SCENE Assets/Scenes/Map3.unity dirty=False model=Assets/WK_Pack/Meshs/Door_Arch_B.fbx
+NODE Door_Arch_B id=9766822690554734571 localPosition=(153.00000, 0.00000, 3.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 1.00000)
+STACK Transform
+NODE Door_Arch_B/Door_Arch_B id=3014201731791000758 localPosition=(0.00000, 0.00000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 1.00000)
+STACK Transform,MeshFilter,MeshRenderer,MeshCollider
+NODE Door_Arch_B/Door_L_Arch_B id=703807043278073443 localPosition=(0.00000, 0.81350, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 0.05880)
+STACK Transform,MeshFilter,MeshRenderer,DoorController,BoxCollider,NavMeshObstacle,DoorNavMeshObstacleController,ReactionSignalReceiver,ReactionSignalEmitter,DoorReactionSignalBridge
+DOOR part=Door_Arch_B/Door_L_Arch_B peer=Door_Arch_B/Door_R_Arch_B hinge=Door_Arch_B/Door_L_Arch_B/Pivot prompt=Door_Arch_B/Door_L_Arch_B/Prompt_Pivot
+DOOR DATA {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::DoorController","doorName":"Left Arch Door","movingPart":{"instanceID":0},"photonView":{"instanceID":0},"networkSceneId":"Map3:Door_Arch_B[214]/Door_L_Arch_B[1]","prototypeLocalOnly":false,"interactionCooldown":1.0,"enemyOpenPlayerInteractionLockDuration":4.0,"openInteractionPrompt":"Press [{key}] to open the door","closeInteractionPrompt":"Press [{key}] to close the door","unlockInteractionPrompt":"Press [{key}] to unlock the door","passcodeInteractionPrompt":"Press [{key}] to enter the passcode","interactionPromptPivot":{"instanceID":0},"interactionPromptLocalOffset":{"x":0.0,"y":0.0,"z":0.0},"startupState":1,"autoOpenOnUnlock":true,"closeWhenSignalTurnsOff":true,"relockWhenSignalTurnsOff":true,"motionMode":0,"rotatePivot":{"instanceID":0},"pairedDoor":{"instanceID":0},"openAwayFromInteractor":true,"openLocalEulerAngles":{"x":0.0,"y":90.0,"z":0.0},"openLocalPositionOffset":{"x":0.0,"y":0.0,"z":0.0},"moveDuration":1.5,"destroyDelay":0.0,"moveCurve":{"serializedVersion":"2","m_Curve":[{"serializedVersion":"3","time":0.0,"value":0.0,"inSlope":0.0,"outSlope":0.0,"tangentMode":0,"weightedMode":0,"inWeight":0.0,"outWeight":0.0},{"serializedVersion":"3","time":0.2745223939418793,"value":-0.012751244939863682,"inSlope":0.0343172661960125,"outSlope":0.0343172661960125,"tangentMode":0,"weightedMode":0,"inWeight":0.17142841219902039,"outWeight":0.16518311202526093},{"serializedVersion":"3","time":1.0,"value":1.0,"inSlope":3.972989320755005,"outSlope":3.972989320755005,"tangentMode":0,"weightedMode":0,"inWeight":0.06265062093734741,"outWeight":0.0}],"m_PreInfinity":2,"m_PostInfinity":2,"m_RotationOrder":4},"lockMode":0,"requiredKeyItem":{"instanceID":0},"requiredPasscode":"1234","requiredSignals":[],"signalRequirement":0,"stayOpenAfterFirstSignalOpen":false}}
+REF DoorNavMeshObstacleController.doorController=Door_L_Arch_B (DoorController)
+REF DoorNavMeshObstacleController.obstacleHost=Door_L_Arch_B (UnityEngine.Transform)
+REF ReactionSignalEmitter.signalReceiver=Door_L_Arch_B (ReactionSignalReceiver)
+REF DoorReactionSignalBridge.door=Door_L_Arch_B (DoorController)
+REF DoorReactionSignalBridge.signalEmitter=Door_L_Arch_B (ReactionSignalEmitter)
+REF DoorReactionSignalBridge.signalReceiver=Door_L_Arch_B (ReactionSignalReceiver)
+NODE Door_Arch_B/Door_L_Arch_B/Pivot id=109205111 localPosition=(1.50000, 0.00000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 1.00000)
+STACK Transform
+NODE Door_Arch_B/Door_L_Arch_B/Prompt_Pivot id=2024104678 localPosition=(0.00000, 1.50000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 1.00000)
+STACK Transform
+NODE Door_Arch_B/Door_R_Arch_B id=1099809892425042937 localPosition=(0.00000, 0.81350, 0.00000) localRotation=(1.00000, 0.00000, 0.00000, 0.00000) scale=(-1.00000, -1.00000, -0.05880)
+STACK Transform,MeshFilter,MeshRenderer,DoorController,BoxCollider,NavMeshObstacle,DoorNavMeshObstacleController,ReactionSignalReceiver,ReactionSignalEmitter,DoorReactionSignalBridge
+DOOR part=Door_Arch_B/Door_R_Arch_B peer=Door_Arch_B/Door_L_Arch_B hinge=Door_Arch_B/Door_R_Arch_B/Pivot prompt=Door_Arch_B/Door_R_Arch_B/Prompt_Pivot
+DOOR DATA {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::DoorController","doorName":"Right Arch Door","movingPart":{"instanceID":0},"photonView":{"instanceID":0},"networkSceneId":"Map3:Door_Arch_B[214]/Door_R_Arch_B[2]","prototypeLocalOnly":false,"interactionCooldown":1.0,"enemyOpenPlayerInteractionLockDuration":4.0,"openInteractionPrompt":"Press [{key}] to open the door","closeInteractionPrompt":"Press [{key}] to close the door","unlockInteractionPrompt":"Press [{key}] to unlock the door","passcodeInteractionPrompt":"Press [{key}] to enter the passcode","interactionPromptPivot":{"instanceID":0},"interactionPromptLocalOffset":{"x":0.0,"y":0.0,"z":0.0},"startupState":1,"autoOpenOnUnlock":true,"closeWhenSignalTurnsOff":true,"relockWhenSignalTurnsOff":true,"motionMode":0,"rotatePivot":{"instanceID":0},"pairedDoor":{"instanceID":0},"openAwayFromInteractor":true,"openLocalEulerAngles":{"x":0.0,"y":90.0,"z":0.0},"openLocalPositionOffset":{"x":0.0,"y":0.0,"z":0.0},"moveDuration":1.5,"destroyDelay":0.0,"moveCurve":{"serializedVersion":"2","m_Curve":[{"serializedVersion":"3","time":0.0,"value":0.0,"inSlope":0.0,"outSlope":0.0,"tangentMode":0,"weightedMode":0,"inWeight":0.0,"outWeight":0.0},{"serializedVersion":"3","time":0.2745223939418793,"value":-0.012751244939863682,"inSlope":0.0343172661960125,"outSlope":0.0343172661960125,"tangentMode":0,"weightedMode":0,"inWeight":0.17142841219902039,"outWeight":0.16518311202526093},{"serializedVersion":"3","time":1.0,"value":1.0,"inSlope":3.972989320755005,"outSlope":3.972989320755005,"tangentMode":0,"weightedMode":0,"inWeight":0.06265062093734741,"outWeight":0.0}],"m_PreInfinity":2,"m_PostInfinity":2,"m_RotationOrder":4},"lockMode":0,"requiredKeyItem":{"instanceID":0},"requiredPasscode":"1234","requiredSignals":[],"signalRequirement":0,"stayOpenAfterFirstSignalOpen":false}}
+REF DoorNavMeshObstacleController.doorController=Door_R_Arch_B (DoorController)
+REF DoorNavMeshObstacleController.obstacleHost=Door_R_Arch_B (UnityEngine.Transform)
+REF ReactionSignalEmitter.signalReceiver=Door_R_Arch_B (ReactionSignalReceiver)
+REF DoorReactionSignalBridge.door=Door_R_Arch_B (DoorController)
+REF DoorReactionSignalBridge.signalEmitter=Door_R_Arch_B (ReactionSignalEmitter)
+REF DoorReactionSignalBridge.signalReceiver=Door_R_Arch_B (ReactionSignalReceiver)
+NODE Door_Arch_B/Door_R_Arch_B/Pivot id=2118194897 localPosition=(1.50000, 0.00000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 1.00000)
+STACK Transform
+NODE Door_Arch_B/Door_R_Arch_B/Prompt_Pivot id=1924883262 localPosition=(0.00000, 1.50000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 1.00000)
+STACK Transform
+NODE Door_Arch_B/Pillar_01_Arch_B id=11306421462656342607 localPosition=(0.00000, 0.00000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(0.72451, 0.72451, 0.72451)
+STACK Transform,MeshFilter,MeshRenderer,MeshCollider
+NODE Door_Arch_B/Pillar_02_Arch_B id=81547591142130746 localPosition=(0.00000, 0.00000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(0.72451, 0.72451, 0.72451)
+STACK Transform,MeshFilter,MeshRenderer,MeshCollider
+NODE Door_Arch_B/Stair_Arch_B id=4782148614693289023 localPosition=(0.00000, 0.00000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(2.70298, 0.17632, 2.70298)
+STACK Transform,MeshFilter,MeshRenderer
+NODE Door_Arch_B/Stair_Arch_B_Collider id=15919485177612409036 localPosition=(0.00000, 0.00000, 0.00000) localRotation=(0.00000, 0.00000, 0.00000, 1.00000) scale=(1.00000, 1.00000, 1.00000)
+STACK Transform,MeshFilter,MeshRenderer,MeshCollider
+AUDIT COMPLETE dirty=False
+FINAL: Live audit found the paired hierarchy intact. No scene, mesh, material or runtime code changes were needed. No missing scripts or broken object references. Temporary audit helper archived and removed.

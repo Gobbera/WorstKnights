@@ -33,7 +33,13 @@ To add a variant, save it in the matching category and add `InteractionTriggerMe
 
 Distances are world-space meters, linear speed is meters per second, angles are degrees and angular speed is degrees per second. The default travel is 0.04 m; the default lever angle is -50 degrees at 180 degrees per second. Movement preserves the authored resting pose and lever pivot. Pressure detection reads the mechanism's actual **Press Distance**, including custom travel values.
 
+`InteractionTriggerInteractable` also owns per-prefab **Interaction Distance**, optional **Lock Player Controls / Control Lock Duration**, a **Player Animation Trigger**, and local start/finish events. `Lever_Interaction_01` is a prepared variant with 1.5 m reach and a one-second lock. It is available in the Lever category without replacing existing scene controls. The player's global Interaction Distance caps the per-object value. See [TimedInteraction.md](TimedInteraction.md).
+
+**Range Mode > Box Collider** replaces numeric reach with player-body containment in a linked **Interaction Box**. Create a separate trigger box and edit its local center/size directly in the interactable Inspector. Eligible box interactions can be aimed beyond numeric reach, while pickups/ordinary objects keep their existing reach. Missing/disabled boxes deny use; entering grants eligibility for the normal interaction key. See [InteractionBox.md](InteractionBox.md).
+
 The system has no movement fields and sends only activation state to the mechanism. Changing a prefab's motion therefore applies when it is used by any system, without controller-specific overrides taking precedence.
+
+Mechanism animation now advances from its own local pose/press distance rather than child Rigidbody interpolation feedback. When mounted on a moving carrier, it follows the parent's full transport while continuing its authored rotation/press speed. This prevents Lever_Arm from waiting until an elevator stops. See [LeverCarrierMotion.md](LeverCarrierMotion.md).
 
 **Activation Audio Cue**, **Deactivation Audio Cue** and **Audio Source** also belong to the mechanism prefab. The source exists before interaction and clips are prepared during initialization. Playback is a one-shot, even when the cue has Loop enabled. Empty cues keep the corresponding transition silent. Disabling the mechanism/controller restores the resting pose and stops audio; re-enabling restores its remembered activation state.
 

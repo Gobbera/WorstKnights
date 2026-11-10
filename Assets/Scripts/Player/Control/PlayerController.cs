@@ -74,7 +74,7 @@ public class PlayerController : MonoBehaviourPun
             return;
         }
 
-        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        if (InGameSettingsMenuController.IsAnyMenuOpen || PlayerInteractionControl.IsLockedFor(this))
         {
             ClearQueuedCrouchKick();
             playerMovement.SetSprintHeld(false);

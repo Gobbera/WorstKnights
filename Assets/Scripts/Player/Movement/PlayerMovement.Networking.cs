@@ -3,6 +3,41 @@ using UnityEngine;
 
 public partial class PlayerMovement
 {
+    private float smoothedRemoteLookYawOffset;
+    private float smoothedRemoteLookPitch;
+    private float remoteLookYawVelocity;
+    private float remoteLookPitchVelocity;
+    private bool remoteLookTargetsInitialized;
+
+    private void ResetRemoteLookTargets()
+    {
+        smoothedRemoteLookYawOffset = Mathf.DeltaAngle(0f, networkLookYawOffset);
+        smoothedRemoteLookPitch = Mathf.Clamp(networkLookPitch, -89f, 89f);
+        remoteLookYawVelocity = 0f;
+        remoteLookPitchVelocity = 0f;
+        remoteLookTargetsInitialized = true;
+    }
+
+    private void SmoothRemoteLookTargets(float deltaTime)
+    {
+        if (!remoteLookTargetsInitialized || remoteLookSmoothTime <= 0.0001f)
+        {
+            ResetRemoteLookTargets();
+            return;
+        }
+
+        if (deltaTime <= 0f)
+            return;
+
+        // Network callbacks only update targets. Rendering follows them between packets.
+        smoothedRemoteLookYawOffset = Mathf.DeltaAngle(0f, Mathf.SmoothDampAngle(
+            smoothedRemoteLookYawOffset, Mathf.DeltaAngle(0f, networkLookYawOffset),
+            ref remoteLookYawVelocity, remoteLookSmoothTime, Mathf.Infinity, deltaTime));
+        smoothedRemoteLookPitch = Mathf.SmoothDamp(
+            smoothedRemoteLookPitch, Mathf.Clamp(networkLookPitch, -89f, 89f),
+            ref remoteLookPitchVelocity, remoteLookSmoothTime, Mathf.Infinity, deltaTime);
+    }
+
     private bool HasAuthority()
     {
         return photonView == null || photonView.IsMine;
@@ -67,6 +102,7 @@ public partial class PlayerMovement
         {
             rb.position = networkPosition;
             rb.rotation = networkRotation;
+            ResetRemoteLookTargets();
             return;
         }
 
@@ -162,6 +198,7 @@ public partial class PlayerMovement
         {
             hasNetworkState = true;
             transform.SetPositionAndRotation(networkPosition, networkRotation);
+            ResetRemoteLookTargets();
         }
 
         ApplyRemoteState();

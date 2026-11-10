@@ -1,0 +1,65 @@
+Scene=Assets/Scenes/Map3.unity dirty=False
+OBJECT Statue_Sword position=(140.760000, 1.828000, 30.760000) rotation=(0.000000, 225.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(140.760000, 1.828000, 30.760000) localRotation=(0.000000, 225.000000, 0.000000)
+RENDERER boundsCenter=(140.760000, 4.331396, 30.760000) size=(2.459384, 5.006791, 2.459384)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":1.543373703956604,"y":5.006791114807129,"z":1.934720516204834},"m_Center":{"x":1.7881397695873603e-7,"y":2.5033955574035646,"z":0.0}}}
+OBJECT Statue_Axe position=(148.150000, 1.828000, 34.740000) rotation=(0.000000, 255.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(148.150000, 1.828000, 34.740000) localRotation=(0.000000, 255.000000, 0.000000)
+RENDERER boundsCenter=(148.150000, 4.331396, 34.740000) size=(2.268251, 5.006791, 1.991527)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":1.543373703956604,"y":5.006791114807129,"z":1.934720516204834},"m_Center":{"x":1.7881397695873603e-7,"y":2.5033955574035646,"z":0.0}}}
+OBJECT Statue_Hammer position=(157.801000, 1.828000, 35.090000) rotation=(0.000000, 288.092400, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(157.801000, 1.828000, 35.090000) localRotation=(0.000000, 288.092400, 0.000000)
+RENDERER boundsCenter=(157.785300, 4.331396, 35.042060) size=(2.349683, 5.006791, 2.163777)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":1.6442452669143677,"y":5.006791114807129,"z":1.934720516204834},"m_Center":{"x":-0.05043564364314079,"y":2.5033955574035646,"z":0.0}}}
+OBJECT Statue_Spear position=(165.146000, 1.828000, 30.877000) rotation=(0.000000, 315.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(165.146000, 1.828000, 30.877000) localRotation=(0.000000, 315.000000, 0.000000)
+RENDERER boundsCenter=(165.146000, 4.331396, 30.877000) size=(2.459383, 5.006791, 2.459383)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":1.543373703956604,"y":5.006791114807129,"z":1.934720516204834},"m_Center":{"x":1.7881397695873603e-7,"y":2.5033955574035646,"z":0.0}}}
+OBJECT Plate Angrad Veyr/Model/Statue_Plate_Angrad_Veyr position=(147.935200, 0.000000, 26.640930) rotation=(0.000000, 0.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(0.000000, 0.000000, 0.000000) localRotation=(0.000000, 0.000000, 0.000000)
+RENDERER boundsCenter=(147.935200, 0.008713, 26.640890) size=(0.682714, 0.017087, 0.220053)
+OBJECT Plate Balthor Sabrath/Model/Statue_Plate_Balthor_Sabrath position=(148.897900, 0.000000, 26.610490) rotation=(0.000000, 0.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(0.000000, 0.000000, 0.000000) localRotation=(0.000000, 0.000000, 0.000000)
+RENDERER boundsCenter=(148.897900, 0.008712, 26.610440) size=(0.682714, 0.017087, 0.220053)
+OBJECT Plate Eldric Ferden/Model/Statue_Plate_Eldric_Ferden position=(149.961600, 0.000000, 26.732950) rotation=(0.000000, 0.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(0.000000, 0.000000, 0.000000) localRotation=(0.000000, 0.000000, 0.000000)
+RENDERER boundsCenter=(149.961600, 0.008712, 26.732910) size=(0.682714, 0.017087, 0.220053)
+OBJECT Plate Mothen Hedar/Model/Statue_Plate_Morthen_Hedar position=(151.099500, 0.000000, 27.185740) rotation=(0.000000, 0.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(0.000000, 0.000000, 0.000000) localRotation=(0.000000, 0.000000, 0.000000)
+RENDERER boundsCenter=(151.099500, 0.008713, 27.185700) size=(0.682714, 0.017087, 0.220053)
+OBJECT Pillar_G (1) position=(140.990000, 0.000000, 30.620000) rotation=(0.000000, 135.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(140.990000, 0.000000, 30.620000) localRotation=(0.000000, 135.000000, 0.000000)
+RENDERER boundsCenter=(140.940500, 0.924555, 30.669510) size=(4.209189, 1.849110, 4.209189)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":2.9748246669769289,"y":1.8491097688674927,"z":2.9778695106506349},"m_Center":{"x":0.0,"y":0.9245551228523254,"z":-0.07002206891775131}}}
+SLOT {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::StatuePuzzleSlot","expectedIdentity":3,"platePivot":{"instanceID":0},"puzzle":{"instanceID":0},"placementOffset":{"x":0.019090652465820314,"y":0.00047346949577331543,"z":-0.000015020370483398438},"surfaceEulerAngles":{"x":4.760908822731835e-8,"y":0.000009734400919114705,"z":13.689592361450196}}}
+PLACEMENT worldPosition=(141.683600, 0.954474, 29.899410) outward=(-0.707107, 0.000000, -0.707107)
+OBJECT Pillar_G (1)/Plate_Pivot position=(141.697100, 0.954000, 29.912890) rotation=(0.000000, 135.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(0.000003, 0.954000, 0.999997) localRotation=(0.000000, 0.000000, 0.000000)
+OBJECT Pillar_G (2) position=(148.237900, 0.000000, 34.685860) rotation=(0.000000, 165.000000, 0.000000) scale=(1.000001, 1.000000, 1.000001) localPosition=(148.237900, 0.000000, 34.685860) localRotation=(0.000000, 165.000000, 0.000000)
+RENDERER boundsCenter=(148.219700, 0.924555, 34.753500) size=(3.644188, 1.849110, 3.646342)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":2.9748246669769289,"y":1.8491097688674927,"z":2.9778695106506349},"m_Center":{"x":0.0,"y":0.9245551228523254,"z":-0.07002206891775131}}}
+SLOT {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::StatuePuzzleSlot","expectedIdentity":0,"platePivot":{"instanceID":0},"puzzle":{"instanceID":0},"placementOffset":{"x":0.019090652465820314,"y":0.00047346949577331543,"z":-0.000015020370483398438},"surfaceEulerAngles":{"x":4.760908822731835e-8,"y":0.000009734400919114705,"z":13.689592361450196}}}
+PLACEMENT worldPosition=(148.478200, 0.954474, 33.715010) outward=(-0.965926, 0.000000, -0.258819)
+OBJECT Pillar_G (2)/Plate_Pivot position=(148.496700, 0.954000, 33.719940) rotation=(0.000000, 165.000000, 0.000000) scale=(1.000001, 1.000000, 1.000001) localPosition=(0.000003, 0.954000, 0.999997) localRotation=(0.000000, 0.000000, 0.000000)
+OBJECT Pillar_G (3) position=(157.740000, 0.000000, 34.780000) rotation=(0.000000, 195.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(157.740000, 0.000000, 34.780000) localRotation=(0.000000, 195.000000, 0.000000)
+RENDERER boundsCenter=(157.758100, 0.924555, 34.847630) size=(3.644189, 1.849110, 3.646342)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":2.9748246669769289,"y":1.8491097688674927,"z":2.9778695106506349},"m_Center":{"x":0.0,"y":0.9245551228523254,"z":-0.07002206891775131}}}
+SLOT {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::StatuePuzzleSlot","expectedIdentity":1,"platePivot":{"instanceID":0},"puzzle":{"instanceID":0},"placementOffset":{"x":0.019090652465820314,"y":0.00047346949577331543,"z":-0.000015020370483398438},"surfaceEulerAngles":{"x":4.760908822731835e-8,"y":0.000009734400919114705,"z":13.689592361450196}}}
+PLACEMENT worldPosition=(157.462800, 0.954474, 33.819030) outward=(-0.965926, 0.000000, 0.258819)
+OBJECT Pillar_G (3)/Plate_Pivot position=(157.481200, 0.954000, 33.814080) rotation=(0.000000, 195.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(0.000003, 0.954000, 0.999997) localRotation=(0.000000, 0.000000, 0.000000)
+OBJECT Pillar_G (4) position=(165.010000, 0.000000, 30.650000) rotation=(0.000000, 225.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(165.010000, 0.000000, 30.650000) localRotation=(0.000000, 225.000000, 0.000000)
+RENDERER boundsCenter=(165.059500, 0.924555, 30.699510) size=(4.209189, 1.849110, 4.209189)
+COLLIDER BoxCollider {"BoxCollider":{"m_Material":{"instanceID":0},"m_IncludeLayers":{"serializedVersion":"2","m_Bits":0},"m_ExcludeLayers":{"serializedVersion":"2","m_Bits":0},"m_LayerOverridePriority":0,"m_IsTrigger":false,"m_ProvidesContacts":false,"m_Enabled":true,"serializedVersion":"3","m_Size":{"x":2.9748246669769289,"y":1.8491097688674927,"z":2.9778695106506349},"m_Center":{"x":0.0,"y":0.9245551228523254,"z":-0.07002206891775131}}}
+SLOT {"MonoBehaviour":{"m_Enabled":true,"m_EditorHideFlags":0,"m_Name":"","m_EditorClassIdentifier":"Assembly-CSharp::StatuePuzzleSlot","expectedIdentity":2,"platePivot":{"instanceID":0},"puzzle":{"instanceID":0},"placementOffset":{"x":0.019090652465820314,"y":0.00047346949577331543,"z":-0.000015020370483398438},"surfaceEulerAngles":{"x":4.760908822731835e-8,"y":0.000009734400919114705,"z":13.689592361450196}}}
+PLACEMENT worldPosition=(164.289400, 0.954474, 29.956410) outward=(-0.707107, 0.000000, 0.707107)
+OBJECT Pillar_G (4)/Plate_Pivot position=(164.302900, 0.954000, 29.942900) rotation=(0.000000, 225.000000, 0.000000) scale=(1.000000, 1.000000, 1.000000) localPosition=(0.000003, 0.954000, 0.999997) localRotation=(0.000000, 0.000000, 0.000000)
+MESH Pillar_G (1) name=Pillar_G bounds=Center: (0.00, 0.92, -0.07), Extents: (1.49, 0.92, 1.49) vertexCount=368
+SURFACE Pillar_G (2) localPoint=(-0.000045, 0.978360, 1.157953) localNormal=(0.000000, 0.066671, 0.997775)
+SURFACE Pillar_G (3) localPoint=(-0.000002, 0.978360, 1.157952) localNormal=(0.000000, 0.066671, 0.997775)
+SURFACE Pillar_G (4) localPoint=(-0.000012, 0.978360, 1.157951) localNormal=(0.000000, 0.066671, 0.997775)
+SURFACE Pillar_G (1) localPoint=(-0.000024, 0.978360, 1.157958) localNormal=(0.000000, 0.066671, 0.997775)
+SURFACE Pillar_G (2) localPoint=(-0.000045, 0.978360, 1.157953) localNormal=(0.000000, 0.066671, 0.997775)
+SURFACE Pillar_G (3) localPoint=(-0.000002, 0.978360, 1.157952) localNormal=(0.000000, 0.066671, 0.997775)
+SURFACE Pillar_G (4) localPoint=(-0.000012, 0.978360, 1.157951) localNormal=(0.000000, 0.066671, 0.997775)
+SURFACE Pillar_G (1) localPoint=(-0.000024, 0.978360, 1.157958) localNormal=(0.000000, 0.066671, 0.997775)
+ALIGNED Pillar_G (2) identity=MorthenHedar localPosition=(-0.000048, 0.978493, 1.159948) localRotation=(0.000000, 270.000000, 3.822791) normalError=0
+ALIGNED Pillar_G (3) identity=BalthorSabrath localPosition=(0.000000, 0.978493, 1.159947) localRotation=(0.000000, 270.000000, 3.822789) normalError=0
+ALIGNED Pillar_G (4) identity=AngradVeyr localPosition=(-0.000017, 0.978493, 1.159942) localRotation=(0.000000, 270.000000, 3.822789) normalError=0
+ALIGNED Pillar_G (1) identity=EldricFerden localPosition=(-0.000019, 0.978493, 1.159949) localRotation=(0.000000, 270.000000, 3.822789) normalError=0
+PREVIEW Pillar_G (2) plate=Plate Mothen Hedar plateNormalError=0
+PREVIEW Pillar_G (3) plate=Plate Balthor Sabrath plateNormalError=0
+PREVIEW Pillar_G (4) plate=Plate Angrad Veyr plateNormalError=0
+PREVIEW Pillar_G (1) plate=Plate Eldric Ferden plateNormalError=0
+APPLY COMPLETE dirty=True
+SAVED Assets/Scenes/Map3.unity dirty=False slots=4
+FINAL: Four plate pivots aligned to the new front panels using the actual mesh surface and normal; 2 mm surface clearance; obsolete placement offsets and surface angles cleared. Four rendered plate previews checked. Map3 saved and clean; exactly eight blocks changed from the live checkpoint, with no added or removed scene objects. Pre-existing saved/live light-intensity differences were present before alignment. Temporary authoring helper archived and removed from Assets. No runtime or prefab changes.

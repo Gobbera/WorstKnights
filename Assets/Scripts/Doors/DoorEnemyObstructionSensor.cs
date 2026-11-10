@@ -482,14 +482,7 @@ public sealed class DoorEnemyObstructionSensor : MonoBehaviour
 
     private Collider[] ResolveDoorSolidColliders()
     {
-        Transform colliderRoot = doorController.MovingPart != null
-            ? doorController.MovingPart
-            : doorController.transform;
-        Collider[] doorColliders = colliderRoot.GetComponentsInChildren<Collider>(true);
-        if ((doorColliders == null || doorColliders.Length == 0) && colliderRoot != doorController.transform)
-            doorColliders = doorController.GetComponentsInChildren<Collider>(true);
-
-        return doorColliders;
+        return doorController.GetMovingPartColliders();
     }
 
     private bool CanUseSolidContactCollider(Collider contactCollider)

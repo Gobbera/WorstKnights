@@ -1,0 +1,198 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Photon.Pun;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class LeverCarrierValidationSession
+{
+    private const string Request = "Temp/LeverCarrier.request";
+    private const string Result = ".codex/diagnostics/lever-carrier-motion-20261107.txt";
+    private const string Backup = ".codex/backups/lever-carrier-motion-20261107/";
+    private const string Preview = "Assets/Tests/LeverCarrierValidation.unity";
+    private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    private static InteractionTriggerSystem[] sources;
+    private static Quaternion[] restRotations;
+    private static Vector3[] restPositions;
+    private static double startedAt;
+    private static int stage;
+    static LeverCarrierValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += phase =>
+        {
+            if (phase == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("Carrier.Play", false))
+            {
+                foreach (var manager in UnityEngine.Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include))
+                { manager.StopAllCoroutines(); manager.enabled = false; manager.gameObject.SetActive(false); }
+                if (PhotonNetwork.IsConnected) PhotonNetwork.Disconnect();
+            }
+            if (phase != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("Carrier.Restore", false)) return;
+            SessionState.SetBool("Carrier.Restore", false);
+            var original = SceneManager.GetSceneByPath(SessionState.GetString("Carrier.Original", "Assets/Scenes/Map3.unity"));
+            if (original.IsValid()) SceneManager.SetActiveScene(original);
+            if (original.IsValid() && SessionState.GetBool("Carrier.Dirty", false)) EditorSceneManager.MarkSceneDirty(original);
+            var preview = SceneManager.GetSceneByPath(Preview);
+            if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+            AssetDatabase.DeleteAsset(Preview); Log("Restored " + original.path + " dirty=" + original.isDirty);
+        };
+    }
+    private static void Update()
+    {
+        if (SessionState.GetBool("Carrier.Play", false) && EditorApplication.isPlaying)
+        {
+            try { Tick(); } catch (Exception error) { File.AppendAllText(Result, "\nPLAY FAILED " + error); Stop(); }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        var command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        try { if (command == "inspect") Inspect(); else if (command == "before" || command == "after") Begin(command); else if (command == "tests") Tests(); }
+        catch (Exception error) { File.AppendAllText(Result, "\nFAILED " + error); }
+    }
+    private static void Log(string value) => File.AppendAllText(Result, "\n" + value);
+    private static T[] Find<T>(Scene scene) where T : Component => scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<T>(true)).ToArray();
+    private static void Inspect()
+    {
+        var scene = SceneManager.GetActiveScene(); bool dirty = scene.isDirty;
+        EditorSceneManager.SaveScene(scene, Backup + "Map3.live-before.unity", true);
+        if (dirty) EditorSceneManager.MarkSceneDirty(scene);
+        foreach (var source in Find<InteractionTriggerSystem>(scene))
+        {
+            var mechanism = source.Mechanism; if (mechanism == null) continue;
+            var body = mechanism.MovingPart.GetComponent<Rigidbody>();
+            Log("SCENE " + source.name + " parent=" + source.transform.parent + " mode=" + source.Mode
+                + " armBody=" + (body == null ? "none" : "kinematic=" + body.isKinematic + " interpolation=" + body.interpolation + " constraints=" + body.constraints)
+                + " settings=" + EditorJsonUtility.ToJson(mechanism));
+        }
+        foreach (var platform in Find<PlatformController>(scene)) Log("PLATFORM " + platform.name + " rootBody=" + platform.GetComponent<Rigidbody>());
+    }
+    private static void Begin(string command)
+    {
+        var original = SceneManager.GetActiveScene();
+        SessionState.SetString("Carrier.Original", original.path); SessionState.SetBool("Carrier.Dirty", original.isDirty);
+        SessionState.SetBool("Carrier.Assert", command == "after");
+        var authored = Find<InteractionTriggerSystem>(original).First(s => s.name.EndsWith("Elevator_01", StringComparison.Ordinal)).Mechanism;
+        var preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        for (int i = 0; i < (command == "after" ? 3 : 2); i++)
+        {
+            var parent = new GameObject(i == 0 ? "Stationary Carrier" : "Moving Carrier"); parent.transform.position = new Vector3(4200 + i * 4, 2, 4200);
+            if (i > 0)
+            {
+                var platform = parent.AddComponent<PlatformController>(); var data = new SerializedObject(platform);
+                data.FindProperty("prototypeLocalOnly").boolValue = true;
+                data.FindProperty("motionMode").enumValueIndex = (int)PlatformController.PlatformMotionMode.OneWay;
+                data.FindProperty("activationMode").enumValueIndex = (int)PlatformController.PlatformActivationMode.AlwaysActive;
+                data.FindProperty("carryPlayers").boolValue = false;
+                var points = data.FindProperty("movementPoints"); points.arraySize = 1; var point = points.GetArrayElementAtIndex(0);
+                point.FindPropertyRelative("directionMode").enumValueIndex = 0; point.FindPropertyRelative("axis").enumValueIndex = 1;
+                point.FindPropertyRelative("direction").enumValueIndex = 1; point.FindPropertyRelative("distance").floatValue = 15.8f; point.FindPropertyRelative("speed").floatValue = 2.5f;
+                data.ApplyModifiedPropertiesWithoutUndo();
+            }
+            var root = new GameObject("Lever " + i); root.transform.SetParent(parent.transform, false);
+            var source = root.AddComponent<InteractionTriggerSystem>(); var sourceData = new SerializedObject(source);
+            if (i == 2) sourceData.FindProperty("triggerType").enumValueIndex = (int)InteractionTriggerType.Button;
+            sourceData.FindProperty("localOnly").boolValue = true; sourceData.FindProperty("activationMode").enumValueIndex = (int)InteractionTriggerMode.Toggle;
+            sourceData.FindProperty("interactionCooldown").floatValue = 0;
+            var template = i == 2 ? AssetDatabase.LoadAssetAtPath<GameObject>(InteractionTriggerAuthoringUtility.ButtonPath) : authored.gameObject;
+            var clone = UnityEngine.Object.Instantiate(template, root.transform, false);
+            clone.transform.localPosition = Vector3.zero; clone.transform.localRotation = Quaternion.identity;
+            var mechanism = clone.GetComponent<InteractionTriggerMechanism>(); sourceData.FindProperty("mechanism").objectReferenceValue = mechanism; sourceData.ApplyModifiedPropertiesWithoutUndo();
+            var settings = new SerializedObject(mechanism); settings.FindProperty("activationAudioCue").objectReferenceValue = null; settings.FindProperty("deactivationAudioCue").objectReferenceValue = null; settings.ApplyModifiedPropertiesWithoutUndo();
+        }
+        var camera = new GameObject("Validation Camera").AddComponent<Camera>(); camera.transform.position = new Vector3(4210, 5, 4190); camera.transform.LookAt(new Vector3(4202, 2, 4200));
+        EditorSceneManager.SaveScene(preview, Preview); SessionState.SetBool("Carrier.Play", true); EditorApplication.isPlaying = true;
+    }
+    private static void Tick()
+    {
+        if (sources == null)
+        {
+            var preview = SceneManager.GetSceneByPath(Preview);
+            for (int i = 0; i < SceneManager.sceneCount; i++) if (SceneManager.GetSceneAt(i) != preview)
+                foreach (var root in SceneManager.GetSceneAt(i).GetRootGameObjects()) root.SetActive(false);
+            SceneManager.SetActiveScene(preview);
+            sources = Find<InteractionTriggerSystem>(preview).OrderBy(s => s.name).ToArray();
+            restRotations = sources.Select(s => (Quaternion)typeof(InteractionTriggerMechanism).GetField("releasedRotation", Private).GetValue(s.Mechanism)).ToArray();
+            restPositions = sources.Select(s => (Vector3)typeof(InteractionTriggerMechanism).GetField("releasedPosition", Private).GetValue(s.Mechanism)).ToArray();
+            foreach (var source in sources) if (!source.TryUse(null)) throw new InvalidOperationException("Lever use failed.");
+            stage = 0; startedAt = Time.timeAsDouble;
+        }
+        double elapsed = Time.timeAsDouble - startedAt;
+        if (stage == 0 && elapsed >= 0.6)
+        {
+            for (int i = 0; i < sources.Length; i++) Measure(i, "during", elapsed);
+            if (SessionState.GetBool("Carrier.Assert", false)) AssertState(true);
+            stage = 1;
+        }
+        if (stage == 1 && SessionState.GetBool("Carrier.Assert", false) && elapsed >= 1)
+        {
+            foreach (var source in sources) if (!source.TryUse(null)) throw new InvalidOperationException("Return use failed.");
+            stage = 2;
+        }
+        if (stage == 2 && elapsed >= 1.7)
+        {
+            for (int i = 0; i < sources.Length; i++) Measure(i, "return while moving", elapsed);
+            AssertState(false);
+            for (int i = 1; i < sources.Length; i++)
+            {
+                sources[i].transform.parent.rotation = Quaternion.Euler(0, 35, 0);
+                sources[i].transform.parent.localScale = new Vector3(1.2f, 1.1f, 0.8f);
+            }
+            foreach (var source in sources) if (!source.TryUse(null)) throw new InvalidOperationException("Second activation failed.");
+            stage = 3;
+        }
+        if ((stage == 1 || stage == 3) && elapsed >= 7)
+        {
+            for (int i = 0; i < sources.Length; i++) Measure(i, "after", elapsed);
+            if (SessionState.GetBool("Carrier.Assert", false)) AssertState(true);
+            Stop();
+        }
+    }
+    private static void AssertState(bool active)
+    {
+        for (int i = 0; i < sources.Length; i++)
+        {
+            var mechanism = sources[i].Mechanism; var part = mechanism.MovingPart;
+            float angle = Quaternion.Angle(restRotations[i], part.localRotation);
+            float offset = Vector3.Distance(part.position, part.parent.TransformPoint(restPositions[i]));
+            if (mechanism.Type == InteractionTriggerType.Lever)
+            {
+                float expected = active ? Mathf.Abs(mechanism.ActivationAngle) : 0f;
+                if (Mathf.Abs(angle - expected) > 1 || offset > 0.02f) throw new InvalidOperationException("Lever pose delayed or off anchor on carrier " + i + "; angle=" + angle + " offset=" + offset);
+            }
+            else if (Mathf.Abs(offset - (active ? mechanism.PressDistance : 0f)) > 0.01f)
+                throw new InvalidOperationException("Button travel delayed or off carrier on " + i + "; offset=" + offset);
+        }
+    }
+    private static void Measure(int i, string phase, double elapsed)
+    {
+        var part = sources[i].Mechanism.MovingPart;
+        float angle = Quaternion.Angle(restRotations[i], part.localRotation);
+        float anchorError = Vector3.Distance(part.position, part.parent.TransformPoint(restPositions[i]));
+        Log((SessionState.GetBool("Carrier.Assert", false) ? "AFTER " : "BEFORE ") + phase + " lever=" + i + " t=" + elapsed + " localAngle=" + angle + " anchorError=" + anchorError + " carrierY=" + sources[i].transform.parent.position.y);
+    }
+    private static void Stop() { SessionState.SetBool("Carrier.Play", false); SessionState.SetBool("Carrier.Restore", true); EditorApplication.isPlaying = false; }
+    private static void Tests()
+    {
+        var original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive); int passed = 0, failed = 0;
+        try
+        {
+            foreach (var type in new[] { typeof(InteractionTriggerSystemTests), typeof(InteractionTriggerRoutingTests), typeof(PlatformControllerTests), typeof(TimedInteractionTests), typeof(PlayerPickupInteractorFocusTests), typeof(StatuePuzzleTests), typeof(FlamethrowerTrapTests) })
+                foreach (var method in type.GetMethods().Where(m => m.GetCustomAttributes(typeof(NUnit.Framework.TestAttribute), false).Length > 0))
+                {
+                    var fixture = Activator.CreateInstance(type);
+                    try { type.GetMethod("SetUp").Invoke(fixture, null); method.Invoke(fixture, null); passed++; }
+                    catch (Exception error) { failed++; Log("TEST FAILED " + type.Name + "." + method.Name + " " + error); }
+                    finally { type.GetMethod("TearDown").Invoke(fixture, null); }
+                }
+        }
+        finally { SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(scene, true); if (dirty) EditorSceneManager.MarkSceneDirty(original); }
+        Log("TESTS passed=" + passed + " failed=" + failed + " originalDirty=" + original.isDirty);
+    }
+}

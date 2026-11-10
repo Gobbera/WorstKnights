@@ -15,7 +15,7 @@ public class PlayerInputHandler : MonoBehaviour, IPlayerInput
     private const float MovementDeadzoneFallback = 0.15f;
 
     private Vector2 movementInput;
-    private static bool GameplayInputEnabled => !InGameSettingsMenuController.IsAnyMenuOpen;
+    private bool GameplayInputEnabled => !InGameSettingsMenuController.IsAnyMenuOpen && !PlayerInteractionControl.IsLockedFor(this);
 
     public Vector2 MovementInput => GameplayInputEnabled ? movementInput : Vector2.zero;
     public bool AttackPressed => GameplayInputEnabled && Input.GetKeyDown(GetAttackKey());

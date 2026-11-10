@@ -1,72 +1,41 @@
 # Environment Reverb System
 
-O fluxo simples agora e parecido com o sistema nativo da Unity, mas usando uma area em caixa.
+Use Assets/Prefabs/Audio/Reverb/PF_BoxReverbZone.prefab for room and corridor reverb. Size its trigger BoxCollider, select an AudioReverbPreset and choose the transition time. No manager needs to be placed manually.
 
-Use o prefab:
+## Authoring
 
-`Assets/Prefabs/Audio/Reverb/PF_BoxReverbZone.prefab`
+- **Preset**: Room, Stoneroom, Hallway, StoneCorridor, Cave or another Unity preset.
+- **Wet Scale**: overall effect strength; 1 is full strength and 0.5 is subtler.
+- **Priority**: the higher value wins when zones overlap.
+- **Transition Time**: fade duration when this zone becomes active.
+- **Player Detection Mask**: layers included in local-player detection.
+- **Draw Gizmos**: shows the authored box in Scene view.
 
-Voce coloca na cena, ajusta o `BoxCollider`, escolhe o `AudioReverbPreset` daquela area e define o tempo de transicao.
+The component enforces Is Trigger on its BoxCollider.
 
-## Componentes
+| Environment | Preset | Wet Scale | Transition Time |
+| --- | --- | --- | --- |
+| Stone room | Stoneroom | 0.7 | 0.8 s |
+| Long corridor | StoneCorridor | 0.85 | 0.6 s |
+| Large cave | Cave | 0.9 | 1.2 s |
+| Dry area | Off | 0 | as required |
 
-### `BoxReverbZone`
+A thin zone in a doorway can use Hallway, a higher priority such as 100 and a 0.2-0.5-second transition to soften the change between rooms.
 
-Este e o componente que voce deve usar normalmente.
+## Runtime behavior
 
-Campos principais:
+When the local player enters a zone, BoxReverbZone creates a scene-local BoxReverbZoneManager. The manager selects the current preset and blends its settings onto a technical AudioReverbZone following the active AudioListener. The authored BoxCollider determines room membership; the technical zone supplies Unity's reverb DSP.
 
-- `Preset`: preset de reverb da area, como `Room`, `Stoneroom`, `Hallway`, `StoneCorridor`, `Cave`.
-- `Wet Scale`: intensidade geral do efeito. `1` e normal, `0.5` e mais sutil.
-- `Priority`: quando duas zonas se sobrepoem, a maior prioridade vence.
-- `Transition Time`: tempo do fade ao entrar nessa zona.
-- `Player Detection Mask`: layers que contam como player.
-- `Draw Gizmos`: mostra a caixa de atuacao no Scene View.
+The profile-based EnvironmentReverbManager remains available for scenes that use EnvironmentReverbProfile and its associated volume/portal components.
 
-O `BoxCollider` deve ficar como `Is Trigger`. O componente ja forca isso automaticamente.
+## Sound effects
 
-### Manager automatico
+Each AudioCue controls its participation through **Affected By Environment Reverb** and **Environment Reverb Send**. Enable these for world footsteps, doors, impacts, weapons, enemy voices and world loops. UI, music and intentionally dry ambience can bypass environment reverb.
 
-Voce nao precisa colocar manager na cena.
+## Player voice chat
 
-Quando o jogador local entra em uma `BoxReverbZone`, o sistema cria um `Box Reverb Zone Manager` em Play Mode e prende uma zona tecnica no `AudioListener`.
+The current simulated proximity voice now routes remote participants through owned Vivox Participant Audio Taps and Unity AudioSources. The sources enable reverb-zone sends, so the listener's existing room preset, wet scale and transition affect received speech as well as world sounds.
 
-Essa zona tecnica existe somente para a Unity aplicar o DSP do reverb. Quem define o formato real da area e o `BoxCollider`.
+Configure **Unity Voice Output**, **Environment Reverb Send** and optional **Voice Mixer Group** on Assets/Resources/Voice/VivoxVoiceSettings.asset. Unity's 2D source output avoids a second distance rolloff; the voice manager applies the existing proximity gain and mute to the tap source. The local microphone is not tapped or reverberated before transmission.
 
-## Como usar
-
-1. Arraste `PF_BoxReverbZone` para a sala, corredor ou area.
-2. Ajuste o tamanho e posicao do `BoxCollider`.
-3. Escolha o `Preset`.
-4. Ajuste `Transition Time`, normalmente entre `0.4` e `1.2`.
-5. Ajuste `Priority` se houver sobreposicao.
-
-Exemplos:
-
-- sala de pedra: `Preset = Stoneroom`, `Wet Scale = 0.7`, `Transition Time = 0.8`;
-- corredor comprido: `Preset = StoneCorridor`, `Wet Scale = 0.85`, `Transition Time = 0.6`;
-- caverna grande: `Preset = Cave`, `Wet Scale = 0.9`, `Transition Time = 1.2`;
-- area seca/sem reverb: `Preset = Off`.
-
-## Portas e transicoes
-
-Para portas, use uma `BoxReverbZone` fina no vao da porta.
-
-Sugestao:
-
-- `Preset`: o preset do corredor ou uma opcao intermediaria como `Hallway`;
-- `Priority`: maior que as salas, por exemplo `100`;
-- `Transition Time`: curto, entre `0.2` e `0.5`.
-
-Isso suaviza a troca quando o player cruza de uma area para outra.
-
-## Sons afetados
-
-Cada `AudioCue` controla se participa do reverb:
-
-- `Affected By Environment Reverb`: liga/desliga o reverb naquele som.
-- `Environment Reverb Send`: intensidade enviada para o reverb.
-
-Use ligado em passos, portas, impactos, armas, vozes/sons de inimigos e loops 3D do mundo.
-
-Use desligado em UI, musica global, ambiente 2D global e sons que devem soar secos.
+See [VivoxEnvironmentReverb.md](VivoxEnvironmentReverb.md) for scope, fallback behavior and validation limits. Native Vivox positional output remains on its existing direct route.

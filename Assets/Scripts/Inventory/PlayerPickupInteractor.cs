@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PhotonView))]
+[RequireComponent(typeof(PlayerInteractionControl))]
 public class PlayerPickupInteractor : MonoBehaviour
 {
     private const string FirstPersonCameraName = "FP_Camera";
@@ -20,7 +21,8 @@ public class PlayerPickupInteractor : MonoBehaviour
 
     [FormerlySerializedAs("pickupKey")]
     [SerializeField] private KeyCode interactKey = KeyCode.E;
-    [SerializeField] [Min(0.5f)] private float pickupDistance = 3f;
+    [Tooltip("Global interaction reach in meters. Individual mechanisms may require a shorter distance.")]
+    [SerializeField, InspectorName("Interaction Distance"), Min(0.5f)] private float pickupDistance = 3f;
     [SerializeField] [Min(0f)] private float pickupSphereRadius = 0.25f;
     [FormerlySerializedAs("pickupMask")]
     [SerializeField] private LayerMask interactionMask = Physics.DefaultRaycastLayers;
@@ -83,6 +85,8 @@ public class PlayerPickupInteractor : MonoBehaviour
     }
 
     public bool IsInteractionUiOpen => activePasscodeDoor != null;
+    public float InteractionDistance => pickupDistance;
+    public Vector3 InteractionOrigin { get { ResolveReferences(); return interactionCamera != null ? interactionCamera.transform.position : transform.position; } }
     public KeyCode InteractKey => interactKey;
     public string InteractKeyText => GetKeyDisplayName(interactKey);
 
@@ -111,7 +115,7 @@ public class PlayerPickupInteractor : MonoBehaviour
             return;
         }
 
-        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        if (InGameSettingsMenuController.IsAnyMenuOpen || PlayerInteractionControl.IsLockedFor(this))
         {
             ClearPickupOutline();
             SetInteractionPromptVisible(false);
@@ -186,6 +190,7 @@ public class PlayerPickupInteractor : MonoBehaviour
 
     public bool TryInteract()
     {
+        if (PlayerInteractionControl.IsLockedFor(this)) return false;
         if (!TryResolveInteractionCamera())
             return false;
 
@@ -194,6 +199,7 @@ public class PlayerPickupInteractor : MonoBehaviour
 
     public bool TryInteractWithHeldItem(HandType hand, ItemDefinition itemDefinition, KeyCode actionKey)
     {
+        if (PlayerInteractionControl.IsLockedFor(this)) return false;
         if (itemDefinition == null || actionKey == KeyCode.None)
             return false;
 
@@ -215,6 +221,7 @@ public class PlayerPickupInteractor : MonoBehaviour
 
     public bool TryPickupItem()
     {
+        if (PlayerInteractionControl.IsLockedFor(this)) return false;
         if (!TryResolveInteractionCamera())
             return false;
 
@@ -271,7 +278,7 @@ public class PlayerPickupInteractor : MonoBehaviour
             pickupSphereRadius,
             direction,
             sphereCastHits,
-            pickupDistance,
+            PlayerInteractionAreaRegistry.GetSearchDistance(this, pickupDistance),
             DestructibleDebrisCollision.ExcludeDebrisLayer(interactionMask.value),
             QueryTriggerInteraction.Collide);
     }
@@ -301,6 +308,7 @@ public class PlayerPickupInteractor : MonoBehaviour
 
     private bool TryInteract(InteractionFocus focus)
     {
+        if (PlayerInteractionControl.IsLockedFor(this)) return false;
         if (focus.Pickup != null)
             return TryPickupItem(focus.Pickup);
 
@@ -342,7 +350,7 @@ public class PlayerPickupInteractor : MonoBehaviour
         for (int i = 0; i < hitCount; i++)
         {
             RaycastHit hit = sphereCastHits[i];
-            if (hit.collider == null)
+            if (hit.collider == null || hit.distance > pickupDistance)
                 continue;
 
             if (hit.collider.transform.IsChildOf(transform))
@@ -945,6 +953,17 @@ public class PlayerPickupInteractor : MonoBehaviour
             if (!TryGetInteractableFromCollider(hit.collider, out IPlayerInteractable interactable))
                 continue;
 
+            if (interactable is IPlayerInteractionRangeProvider ranged && !ranged.IsInInteractionRange(this))
+                continue;
+
+            if (interactable is IPlayerInteractionAreaProvider area)
+            {
+                if (hit.collider == area.InteractionAreaCollider) continue;
+                if (area.UsesInteractionArea && !IsAreaInteractionVisible(hit, interactable)) continue;
+            }
+            else if (interactable is not IPlayerInteractionRangeProvider && hit.distance > pickupDistance)
+                continue;
+
             bool shouldReplace = interactable.InteractionPriority > bestPriority;
             if (!shouldReplace
                 && interactable.InteractionPriority == bestPriority
@@ -962,6 +981,24 @@ public class PlayerPickupInteractor : MonoBehaviour
         }
 
         return bestInteractable != null;
+    }
+
+    private bool IsAreaInteractionVisible(RaycastHit targetHit, IPlayerInteractable target)
+    {
+        Vector3 origin = interactionCamera.transform.position;
+        Vector3 delta = targetHit.point - origin;
+        float distance = delta.magnitude;
+        if (distance < 0.01f) return true;
+        int count = Physics.RaycastNonAlloc(origin, delta / distance, aimHits, distance,
+            DestructibleDebrisCollision.ExcludeDebrisLayer(interactionMask.value), QueryTriggerInteraction.Ignore);
+        if (count == aimHits.Length) return false;
+        for (int i = 0; i < count; i++)
+        {
+            var blocker = aimHits[i].collider;
+            if (blocker == null || blocker.transform.IsChildOf(transform) || aimHits[i].distance >= distance - 0.01f) continue;
+            if (!TryGetInteractableFromCollider(blocker, out var candidate) || !ReferenceEquals(candidate, target)) return false;
+        }
+        return true;
     }
 
     private static bool TryGetInteractableFromCollider(Collider collider, out IPlayerInteractable bestInteractable)

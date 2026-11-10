@@ -22,7 +22,7 @@
    Do instead: when debugging spawn, camera, model sockets, or runtime composition, inspect `Assets/Resources/Player.prefab` because both the scene reference and Photon spawn use that same asset.
 
 5. **[2026-05-07] Cross-project scene migrations can keep YAML intact while breaking GUID-linked refs**
-   Do instead: compare imported scene GUIDs against local `.meta` files, then either preserve the original `.meta` or patch the scene/prefab references before debugging runtime logic.
+   Do instead: compare imported scene GUIDs against local `.meta` files, then either preserve the original `.meta` or patch the scene/prefab references before debugging runtime logic. After an FBX reimport, wait for import/reload to settle and audit the live hierarchy: scene-added pivots/components can become orphaned during instance reconstruction. Match existing objects and references against a live checkpoint before recreating children or resetting authored poses.
 
 6. **[2026-04-07] Unity movement refactors need asset serialization checks**
    Do instead: after changing serialized movement fields, open the matching `.asset` YAML or inspector values and confirm new fields were actually written.
@@ -41,7 +41,7 @@
 
 ## Domain Behavior Guardrails
 1. **[2026-09-01] Rotating door hinges need closed-pose pivot snapshots**
-   Do instead: capture the rotate pivot in the moving part's parent space while closed and evaluate the hinge pose from that snapshot each frame, especially when `Pivot` is a child of the moving part.
+   Do instead: keep DoorController/reactions on each root and reciprocal Paired Door references. Capture child hinges and panel-center reference points in closed local space. Convert the initiating leaf's physical opening side to the peer's local sign; reimports can apply mirror transforms, so copying a raw sign is unsafe. Use panel geometry for Open Away when the origin is on the hinge, and publish each peer's resolved direction. Advance both once per frame without a fixed driver, share cooldown/enemy locks, and include both in enemy collision/route checks.
 
 2. **[2026-07-13] New gameplay scenes must be registered in both scene bootstraps and Build Settings**
    Do instead: when cloning or adding a gameplay map, update every hardcoded gameplay-scene check such as `RoomManager`/enemy bootstraps and add the scene to `ProjectSettings/EditorBuildSettings.asset`, otherwise direct Play and menu/room loading diverge.
@@ -50,7 +50,7 @@
    Do instead: create or join the Photon room from `RoomList` before loading gameplay, publish scene path/index in `CustomRoomPropertiesForLobby`, keep `AutomaticallySyncScene` off in Menu until the master handoff, mark the pending gameplay scene before hiding the lobby and calling `LoadScene`, keep scene-baked players alive until `RoomManager` has spawned the runtime Photon player, and let `RoomManager` create a temporary gameplay camera until the local network player camera is active so the Game view does not stay on the last Menu frame.
 
 4. **[2026-07-23] Scene-fixed interactables should degrade from PhotonView sync to room-state sync**
-   Do instead: keep doors and destructibles usable offline/local by default, use RPCs when a valid `PhotonView` exists, and fall back to scene-stable room properties plus master-authority requests when the object is a fixed scene actor without manual `PhotonView` setup.
+   Do instead: keep doors and destructibles usable offline/local by default, require `PhotonView.ViewID > 0` before choosing RPCs, and use room properties plus master-authority requests for fixed scene actors. For Editor/build failures, compare resolved IDs on both clients: names and `GetSiblingIndex()` paths are not persistent scene-instance identities. Prefer serialized unique instance IDs; do not blame a legacy stored token solely because the hierarchy moved.
 
 5. **[2026-07-14] Stairs and walls should not ship with raw MeshCollider gameplay collision**
    Do instead: for movement-test maps, use `Tools/Level/Collision/Generate Stair Ramp Helpers` for straight ProBuilder stairs, `Generate Mesh Stair Ramp Helpers` for imported stair meshes, and helper box colliders for snaggy walls, then disable any original MeshCollider so the player capsule reads simplified collision.
@@ -126,6 +126,9 @@
 8. **[2026-11-05] Player melee arc damage and previews must share the aimed frame**
    Do instead: use attack-local coordinates for lateral angle and half height, and the same rotation for contact samples and gizmos; preserve camera pitch when vertical aim is enabled. Keep a positive half height for bounded contact: zero removes the limit and can trigger floor reactions during horizontal swings. Compare arc range with FP_Camera ground clearance before expecting ground hits.
 
+9. **[2026-11-07] Interpolated mechanism bodies can stall under moving Transform parents**
+   Do instead: keep logical local rotation and press-distance progress in `InteractionTriggerMechanism`; do not advance from interpolated Rigidbody world-pose feedback. Reconcile Transform/body poses on parent-matrix changes so carrier transport cannot cancel animation or consume its speed. Validate both motion and anchoring during travel, rather than only after the carrier stops.
+
 ## UI & Emotes
 1. **[2026-10-14] In-game settings UI is gameplay-root bootstrapped**
    Do instead: keep the reusable Settings overlay at `Assets/Resources/UI/InGameSettingsMenu.prefab`, let `GameplaySceneRoot` instantiate it through `InGameSettingsMenuController`, and guard local gameplay input with `InGameSettingsMenuController.IsAnyMenuOpen` instead of pausing multiplayer time.
@@ -156,8 +159,8 @@
 7. **[2026-07-02] Cross-client audio should reuse replicated gameplay state before adding dedicated Photon events**
    Do instead: drive jump, land, attack, pickup, emote, torch-lit loops, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
 
-8. **[2026-07-13] Vivox native positional can be replaced by simulated proximity**
-   Do instead: keep `Use Native Vivox Positional Audio` off when native `JoinPositionalChannelAsync` causes `5100/1001`; join a 2D `-sim3d` Vivox channel, map `VivoxParticipant.PlayerId` through Photon `kwkVivoxPlayerId`, and drive per-participant local volume/mute from Photon player distance.
+8. **[2026-11-09] Vivox proximity reverb requires Unity playback with mirrored gain**
+   Do instead: retain the default 2D `-sim3d` channel and Photon `kwkVivoxPlayerId` mapping when native positional audio causes `5100/1001`. Use owned remote Participant Audio Taps with original-mix suppression and 2D Unity sources (`bypassReverbZones=false`, configured send); mirror proximity volume/mute because taps expose unmixed audio. Reconcile existing participants after recovery and release taps on departure. Keep native positional output direct unless its spatialization policy is deliberately changed.
 
 9. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
    Do instead: when testing builds, expect profiles like `kwk-player-xxxxxxxx`; only pass `--ugs-profile=<name>` for deliberate persistent identity, and never reuse the same manual profile in two simultaneous clients.
@@ -305,8 +308,8 @@
 8. **[2026-08-04] Player look pose must target FP camera input and TP model bones explicitly**
    Do instead: resolve `MouseLook` from the GameObject named `FP_Camera`, resolve procedural bones from the TP `Model` animator, and never let `FPS_Model` or inactive `TP_Camera` satisfy look-pose/camera marker searches.
 
-9. **[2026-08-05] Attack aim and head look need complementary pitch handoff**
-   Do instead: while `Upper Body Attack` pitch releases, feed normal head-look the remaining camera-limited pitch so spine/chest do not hold the attack pose and then correct late.
+9. **[2026-11-09] Remote look needs continuous smoothing and complementary attack handoff**
+   Do instead: use `remoteLookSmoothTime` (Player prefab: 0.08 s) to filter received yaw/pitch every rendered frame, and feed both head look and attack aim from that same filtered direction. Keep local camera input immediate, continue pose acquisition across frames, and preserve complementary pitch during attack release. Reset the filter on the first snapshot and teleports. Validate packet gaps, frame rates, root turns and state transitions; do not restore raw-angle snapping after the first allowed frame.
 
 10. **[2026-09-01] Perspective visibility must account for the global `FirstPersonView` overlay**
    Do instead: use the `PlayerPerspectiveVisibility` Elements list on `Assets/Resources/Player.prefab`, resolve final renderer visibility by target specificity, and force-hide owner-only roots/layer renderers such as `Separated_UpperBody` on remote player instances so the local Hands Camera cannot draw them.
@@ -395,7 +398,7 @@
 
 ## User Directives
 1. **[2026-11-05] Mechanism triggers separate prefab feedback, activation policy, and gameplay targets**
-   Do instead: keep policy on `InteractionTriggerSystem`, prefab feedback on `InteractionTriggerMechanism`, and gameplay in targets. Router `SelectRoute` defers; `SelectRouteAndActivate` immediately hands off to B with route mode overrides. Use Follow State signals with `PlatformController.TwoPosition` for repeatable A/B travel and prepared platform movement audio. Remote call controls should use `InteractionTriggerStateTarget` (Set A/B/Toggle) to synchronize the main trigger instead of changing its signal alone; Momentary puzzle stages reject these state commands. Keep categorized prefabs under `Assets/Prefabs/Mechanisms/Triggers/` and trap cooldowns on the puzzle.
+   Do instead: keep trigger policy, prefab feedback and gameplay targets separate. Router `SelectRoute` defers; `SelectRouteAndActivate` hands off to B with mode overrides. Use Follow State + `PlatformController.TwoPosition` for travel and `InteractionTriggerStateTarget` for synchronized calls. Interactables own Distance/Box Collider range and timed locks/animation hooks. Box membership uses player-body position, not camera; a separate trigger and registry extend aim only for eligible mechanisms, preserving ordinary reach. Accepted-use actor IDs drive owner feedback; initial restore/state commands do not replay it. Keep categorized prefabs under `Assets/Prefabs/Mechanisms/Triggers/`, prepared Start/Moving/Stop platform audio (one-shots only on real departure/arrival; restore resumes the loop), and trap cooldowns on the puzzle.
 
 2. **[2026-11-05] All new authoring text must be English**
    Do instead: converse with the user in Brazilian Portuguese; write code, comments, Inspector labels, tooltips, prompts, menus, messages and documentation in English. Preserve this preference on later changes; translate touched authoring text that was previously Portuguese.

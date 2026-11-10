@@ -29,7 +29,9 @@ In Map3, **Statue Puzzle > On Puzzle Solved** immediately activates route 1 on t
 
 ## Movement audio
 
-Assign **Movement Audio Cue** on PlatformController. The dedicated **Movement Audio Source** is prepared before movement, follows Moving Part and loops while moving. It stops at each endpoint, when paused, broken or disabled. The setup menu authors a source in advance; older objects have an Awake fallback. Audio derives from synchronized movement on each client without a separate audio RPC. Empty cues stay silent.
+Assign **Start Audio Cue**, **Moving Audio Cue** and **Stop Audio Cue** on PlatformController. Start plays once on departure, Moving loops during travel, and Stop plays once on arrival at A or B. Start and Moving begin together. Continuous reversal keeps the current loop; pausing, breaking and disabling do not play an arrival. Empty stages stay silent.
+
+The **Audio Sources** foldout exposes three dedicated sources. **Prepare Audio Sources** creates missing sources before Play, preserves the existing Moving source and repairs shared stage references; the routing setup uses the same preparation. Older objects prepare missing sources in Awake. All sources follow Moving Part. The existing serialized movement cue/source remain compatible. Audio derives from synchronized movement on each client without a separate audio RPC; restoration resumes the loop without replaying past one-shots. See [PlatformAudioStages.md](PlatformAudioStages.md).
 
 ## Breakable platforms
 

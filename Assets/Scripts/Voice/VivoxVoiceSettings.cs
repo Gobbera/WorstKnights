@@ -1,5 +1,6 @@
 using Unity.Services.Vivox;
 using UnityEngine;
+using UnityEngine.Audio;
 
 [CreateAssetMenu(fileName = "VivoxVoiceSettings", menuName = "Kings Worst Knights/Voice/Vivox Voice Settings")]
 public sealed class VivoxVoiceSettings : ScriptableObject
@@ -21,6 +22,12 @@ public sealed class VivoxVoiceSettings : ScriptableObject
     [SerializeField] [Min(0.05f)] private float positionUpdateInterval = DefaultPositionUpdateInterval;
     [SerializeField] private bool allowDirectionalPanning = true;
 
+    [Header("Unity Audio Output")]
+    [Tooltip("Routes simulated proximity and 2D voice through Unity AudioSources so environment reverb can affect received speech. Native Vivox positional output remains direct.")]
+    [SerializeField] private bool unityVoiceOutput = true;
+    [SerializeField] [Range(0f, 1.1f)] private float environmentReverbSend = 1f;
+    [SerializeField] private AudioMixerGroup voiceMixerGroup;
+
     public VivoxVoiceMode InitialMode => initialMode;
     public bool UseNativeVivoxPositionalAudio => useNativeVivoxPositionalAudio;
     public int AudibleDistance => Mathf.Max(1, audibleDistance);
@@ -29,6 +36,9 @@ public sealed class VivoxVoiceSettings : ScriptableObject
     public AudioFadeModel FadeModel => audioFadeModel;
     public float PositionUpdateInterval => Mathf.Max(0.05f, positionUpdateInterval);
     public bool AllowDirectionalPanning => allowDirectionalPanning;
+    public bool UnityVoiceOutput => unityVoiceOutput;
+    public float EnvironmentReverbSend => Mathf.Clamp(environmentReverbSend, 0f, 1.1f);
+    public AudioMixerGroup VoiceMixerGroup => voiceMixerGroup;
 
     public Channel3DProperties CreateChannel3DProperties()
     {
@@ -45,6 +55,7 @@ public sealed class VivoxVoiceSettings : ScriptableObject
         conversationalDistance = Mathf.Clamp(conversationalDistance, 0, audibleDistance);
         audioFadeIntensity = Mathf.Max(0f, audioFadeIntensity);
         positionUpdateInterval = Mathf.Max(0.05f, positionUpdateInterval);
+        environmentReverbSend = Mathf.Clamp(environmentReverbSend, 0f, 1.1f);
     }
 
     public static VivoxVoiceSettings CreateRuntimeDefaults()

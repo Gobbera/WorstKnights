@@ -73,7 +73,7 @@ public sealed class PlayerEmoteWheelController : MonoBehaviour
 
     public void HandleRuntimeInput()
     {
-        if (InGameSettingsMenuController.IsAnyMenuOpen)
+        if (InGameSettingsMenuController.IsAnyMenuOpen || PlayerInteractionControl.IsLockedFor(this))
             return;
 
         if (Input.GetKeyDown(wheelKey))
@@ -96,7 +96,7 @@ public sealed class PlayerEmoteWheelController : MonoBehaviour
     {
         ResolveReferences();
 
-        if (!HasLocalAuthority() || isWheelOpen || InGameSettingsMenuController.IsAnyMenuOpen)
+        if (!HasLocalAuthority() || isWheelOpen || InGameSettingsMenuController.IsAnyMenuOpen || PlayerInteractionControl.IsLockedFor(this))
             return;
 
         if (playerMovement != null && !playerMovement.CanBeginInventoryItemAction())

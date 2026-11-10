@@ -148,6 +148,69 @@ public sealed class PlatformControllerTests
         Assert.That(root.GetComponentsInChildren<AudioSource>(true), Is.Empty);
     }
 
+    [Test]
+    public void AudioPreparationIsIdempotentAndPreservesTheExistingMovingSource()
+    {
+        var existing = new GameObject(PlatformController.MovementAudioObjectName);
+        existing.transform.SetParent(root.transform, false);
+        var source = existing.AddComponent<AudioSource>(); Set(platform, "movementAudioSource", source);
+        PlatformControllerEditor.PrepareAudioSources(platform);
+        PlatformControllerEditor.PrepareAudioSources(platform);
+        Assert.That(root.GetComponentsInChildren<AudioSource>(true).Length, Is.EqualTo(3));
+        Assert.That(Get("movementAudioSource"), Is.SameAs(source));
+        Assert.That(Get("startAudioSource"), Is.Not.SameAs(source));
+        Assert.That(Get("stopAudioSource"), Is.Not.SameAs(source).And.Not.SameAs(Get("startAudioSource")));
+        Assert.That(source.loop, Is.True);
+        Assert.That(((AudioSource)Get("startAudioSource")).loop, Is.False);
+        Assert.That(((AudioSource)Get("stopAudioSource")).loop, Is.False);
+        foreach (var audio in root.GetComponentsInChildren<AudioSource>()) Assert.That(audio.playOnAwake, Is.False);
+    }
+
+    [Test]
+    public void AudioPreparationSeparatesAccidentallySharedStageSources()
+    {
+        var source = root.AddComponent<AudioSource>();
+        Set(platform, "movementAudioSource", source); Set(platform, "startAudioSource", source); Set(platform, "stopAudioSource", source);
+        PlatformControllerEditor.PrepareAudioSources(platform);
+        Assert.That(root.GetComponentsInChildren<AudioSource>().Length, Is.EqualTo(3));
+        Assert.That(Get("movementAudioSource"), Is.SameAs(source));
+        Assert.That(Get("startAudioSource"), Is.Not.SameAs(source));
+        Assert.That(Get("stopAudioSource"), Is.Not.SameAs(source).And.Not.SameAs(Get("startAudioSource")));
+    }
+
+    [Test]
+    public void ArrivalAudioRecognizesBothDestinationsOfRepeatedTrips()
+    {
+        signal.Activate(); Step(0); Step(1);
+        Assert.That(Call("HasReachedAudioEndpoint", 1d), Is.False);
+        Step(2); Assert.That(Call("HasReachedAudioEndpoint", 2d), Is.True);
+        signal.Deactivate(); Step(3); Step(4);
+        Assert.That(Call("HasReachedAudioEndpoint", 4d), Is.False);
+        Step(5); Assert.That(Call("HasReachedAudioEndpoint", 5d), Is.True);
+    }
+
+    [Test]
+    public void PauseAndBreakDoNotCountAsArrival()
+    {
+        Set(platform, "motionMode", PlatformController.PlatformMotionMode.PingPong);
+        signal.Activate(); Step(0); Step(0.5); signal.Deactivate(); Step(0.5);
+        Assert.That(Call("HasReachedAudioEndpoint", 0.5d), Is.False);
+        Set(platform, "motionMode", PlatformController.PlatformMotionMode.TwoPosition);
+        Call("BreakPlatform", 0.5d);
+        Assert.That(Call("HasReachedAudioEndpoint", 0.5d), Is.False);
+    }
+
+    [Test]
+    public void OneWayArrivalIsRecognizedButContinuousPingPongTurnsAreNot()
+    {
+        Set(platform, "motionMode", PlatformController.PlatformMotionMode.OneWay);
+        signal.Activate(); Step(0); Step(2);
+        Assert.That(Call("HasReachedAudioEndpoint", 2d), Is.True);
+        Set(platform, "motionMode", PlatformController.PlatformMotionMode.PingPong);
+        Assert.That(Call("HasReachedAudioEndpoint", 2d), Is.False);
+    }
+
+    private object Get(string field) => typeof(PlatformController).GetField(field, Private).GetValue(platform);
     private object Decode(string state)
     {
         var args = new object[] { state, null };

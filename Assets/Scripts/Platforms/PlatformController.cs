@@ -113,10 +113,16 @@ public partial class PlatformController : MonoBehaviourPunCallbacks
     [SerializeField] private DoorSignalSource[] activationSignals = Array.Empty<DoorSignalSource>();
     [SerializeField] private PlatformSignalRequirementMode signalRequirement = PlatformSignalRequirementMode.Any;
     [Header("Movement Audio")]
+    [Tooltip("Plays once when the platform starts a trip.")]
+    [SerializeField] private AudioCue startAudioCue;
     [Tooltip("Loops while the platform moves and stops at rest, on break or disable.")]
     [SerializeField] private AudioCue movementAudioCue;
+    [Tooltip("Plays once when the platform arrives at either endpoint.")]
+    [SerializeField] private AudioCue stopAudioCue;
+    [SerializeField] private AudioSource startAudioSource;
     [Tooltip("Dedicated source prepared before movement starts. Do not share it with other audio.")]
     [SerializeField] private AudioSource movementAudioSource;
+    [SerializeField] private AudioSource stopAudioSource;
     [SerializeField] [HideInInspector] private PlatformAxis movementAxis = PlatformAxis.X;
     [SerializeField] [HideInInspector] private PlatformDirection movementDirection = PlatformDirection.Positive;
     [SerializeField] [HideInInspector] [Min(0f)] private float movementDistance = 2f;
@@ -197,6 +203,7 @@ public partial class PlatformController : MonoBehaviourPunCallbacks
         EnsureRoomStateInitialized();
         ApplyMotionPoseForCurrentState(GetCurrentSimulationTime());
         ResetWorldPositionTracking();
+        SyncMovementAudio(GetCurrentSimulationTime(), suppressOneShots: true);
     }
 
     private void OnValidate()
@@ -261,6 +268,7 @@ public partial class PlatformController : MonoBehaviourPunCallbacks
     public override void OnDisable()
     {
         StopMovementAudio();
+        restoreMovementAudio = true;
         carriedPassengerBodies.Clear();
         base.OnDisable();
     }
@@ -1092,6 +1100,7 @@ public partial class PlatformController : MonoBehaviourPunCallbacks
             return;
 
         bool wasBroken = isBroken;
+        bool initialState = lastAppliedStateSequence <= 0;
 
         lastAppliedStateSequence = snapshot.StateSequence;
         movementElapsedTime = motionMode == PlatformMotionMode.OneWay || motionMode == PlatformMotionMode.TwoPosition
@@ -1118,7 +1127,7 @@ public partial class PlatformController : MonoBehaviourPunCallbacks
 
         ApplyMotionPoseForCurrentState(GetCurrentSimulationTime());
         ResetWorldPositionTracking();
-        SyncMovementAudio(GetCurrentSimulationTime());
+        SyncMovementAudio(GetCurrentSimulationTime(), suppressOneShots: initialState);
     }
 
     private string BuildRoomPropertyKey()

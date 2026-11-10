@@ -1,0 +1,42 @@
+# Timed Mechanism Interaction
+
+## Scope and checkpoint
+
+Checkpoint: `.codex/backups/timed-interaction-20261106/` preserves affected sources and prefab assets before implementation.
+
+1. Add per-object interaction distance, capped by the player's global Interaction Distance, using the same range for focus, prompt and activation.
+2. Add an optional timed player control lock that starts only after accepted use, blocks gameplay input and restores automatically without disabling physics, animation or existing locks.
+3. Provide optional player Animator trigger and start/finish events for animation integration. Accepted-use replication identifies the activating player; late joins do not replay interactions.
+4. Author a Lever prefab variant with the new settings, preserving existing scene controls and the original prefab defaults.
+5. Validate range, rejected/accepted interactions, expiry, disable/death cleanup, independent players, animation hooks and the real Player prefab in Play Mode.
+
+## Authoring
+
+Select **Lever_Interaction_01** in the Interaction Trigger System's Lever prefab category, then **Apply Prefab**, or place the variant under a trigger controller. The variant inherits `Lever_01` movement/audio and overrides only the new interaction settings: **Interaction Distance = 1.5 m**, **Lock Player Controls = true**, **Control Lock Duration = 1 s**. Existing scene mechanisms are not replaced. **Tools > Mechanisms > Create Timed Interaction Lever Variant** prepares the variant and the Player control component without resetting existing assets.
+
+Configure **Interaction Trigger Interactable** on a prefab or its scene instance:
+
+- **Interaction Distance**: maximum distance from the player's interaction camera to the closest enabled mechanism collider. The player's global **Player Pickup Interactor > Interaction Distance** remains the upper limit, currently 3 m by default. Focus, prompt, direct interaction and Master validation use the object range. Objects without the range-provider contract retain their existing reach behavior.
+- **Range Mode**: Distance uses the numeric reach above; Box Collider instead requires the player's root/body position inside **Interaction Box**. Its center/size are editable in the interactable Inspector, with a separate-box creation action and gizmo. The prepared Lever variant contains a linked box while keeping Distance as its selected mode. See [InteractionBox.md](InteractionBox.md).
+- **Lock Player Controls**: optionally block movement, camera look, attacks, kicks, jumps, inventory input, emotes and other interactions after a use is accepted.
+- **Control Lock Duration**: timed lock length. Zero skips the lock. Source disable/destroy, player disable/death or expiry releases it; finishing one interaction does not remove an unrelated damage/volume/look lock.
+- **Player Animation Trigger**: optional case-sensitive Trigger parameter on active player Animators. Matching third/first-person Animators receive the trigger on accepted use. Leave empty until the animation states/clips are authored in those controllers; this feature does not supply a new lever/button animation clip or move/align the player.
+- **On Interaction Started / Finished**: local-player UnityEvents carrying the player's GameObject, for extra animation/feedback hooks. Start runs with the lock already established; finish runs once after release. With locking disabled/zero duration, start/finish are immediate.
+
+New interaction attempts are rejected while the player is locked. An unavailable target, out-of-range use or rejected request does not start a lock. A repeated accepted-state sequence cannot replay feedback. Timed interaction starts use the local player's normal inventory/action availability to avoid starting over an existing incompatible action.
+
+## Physics and controls
+
+`PlayerInteractionControl` is prepared on `Assets/Resources/Player.prefab` and required by `PlayerPickupInteractor`; no component is created on mechanism activation. The player motor/input readers consult this state without disabling their components. Existing planar momentum is stopped once in FixedUpdate. Gravity, vertical velocity, external impacts, platform carrying and animation remain available. The interaction lock blocks self-directed movement and actions rather than making the Rigidbody kinematic.
+
+## Networking
+
+The trigger's accepted-use room state now includes the activating PhotonView ID. An owner request starts its lock only after accepted-state confirmation, while matching player animation triggers can be presented on other clients. Initial/late-join restoration does not replay locks or animations. Legacy six-field snapshots remain readable. State commands from other controls do not masquerade as direct player interaction with the controlled mechanism. Global input locks do not stop the settings menu.
+
+## Validation
+
+**115 Editor tests pass**, covering per-object/global range, prompt/focus filtering, rejected/accepted interactions, expiry, optional/zero-duration locks, disable/death cleanup, separate players, physics momentum, preservation of damage locks, sequence deduplication and initial snapshot behavior, plus existing interaction focus, trigger, puzzle, platform and trap regressions.
+
+Native Play Mode used the real Player prefab and the Lever variant in an isolated scene. It verified out-of-range rejection, accepted-use locking, movement/look/combat/inventory/interaction blocking, timed movement recovery, early release on source disable and ordinary interaction with locking disabled. An authored temporary Animator probe confirmed the optional Trigger reaches its configured state; no lever/button player animation clip is added to the production controllers.
+
+The Player prefab comparison contains only one new root control component/reference. The original Lever prefab and Map3 file remain unchanged. Temporary scenes, animation probe assets and validation helpers are removed after testing. Evidence: `.codex/diagnostics/timed-interaction-20261106.txt` and `timed-interaction-prefab-diff-20261106.txt`. Runtime/Editor builds pass without errors; the initial runtime build reported existing Photon warnings. Two-client Photon validation remains outstanding.

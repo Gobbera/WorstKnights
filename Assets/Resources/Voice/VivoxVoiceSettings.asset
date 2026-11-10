@@ -20,3 +20,6 @@ MonoBehaviour:
   audioFadeModel: 2
   positionUpdateInterval: 0.3
   allowDirectionalPanning: 1
+  unityVoiceOutput: 1
+  environmentReverbSend: 1
+  voiceMixerGroup: {fileID: 0}
