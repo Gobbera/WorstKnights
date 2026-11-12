@@ -1,0 +1,249 @@
+using System;
+using System.Reflection;
+using NUnit.Framework;
+using TMPro;
+using Unity.Services.Core;
+using UnityEngine;
+using UnityEngine.UI;
+using Object = UnityEngine.Object;
+
+public sealed class VoiceIntensityCalibrationTests
+{
+    private string profileKey;
+    private GameObject menu;
+    private VoiceIntensitySettingsPanel panel;
+    private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+
+    [SetUp]
+    public void SetUp() { profileKey = "voice.intensity.test." + Guid.NewGuid().ToString("N"); }
+
+    [TearDown]
+    public void TearDown()
+    {
+        if (panel != null) panel.Close();
+        if (menu != null) Object.DestroyImmediate(menu);
+        PlayerPrefs.DeleteKey(profileKey); PlayerPrefs.Save();
+        panel = null; menu = null;
+    }
+
+    [Test]
+    public void CalibrationAnchorsNormalizeWithoutChangingWithListenerVolume()
+    {
+        Assert.That(VoiceIntensityProfile.TryCreate(0.005f, 0.025f, 0.1f, 0.4f, out var profile), Is.True);
+        Assert.That(profile.Normalize(0.005f), Is.Zero);
+        Assert.That(profile.Normalize(0.025f), Is.EqualTo(0.25f).Within(0.0001f));
+        Assert.That(profile.Normalize(0.1f), Is.EqualTo(0.6f).Within(0.0001f));
+        Assert.That(profile.Normalize(0.4f), Is.EqualTo(1f));
+        Assert.That(profile.Normalize(1f), Is.EqualTo(1f));
+        var first = new VoiceListeningPreference(0.1f, true);
+        var second = VoiceListeningPreference.Default;
+        Assert.That(first.Volume, Is.Not.EqualTo(second.Volume));
+        Assert.That(profile.Normalize(0.1f), Is.EqualTo(0.6f).Within(0.0001f));
+    }
+
+    [TestCase(float.NaN)]
+    [TestCase(float.PositiveInfinity)]
+    [TestCase(-1f)]
+    public void InvalidEnergyCannotActivateTheMeter(float energy)
+    {
+        var monitor = new VoiceIntensityMonitor();
+        Tick(monitor, energy, true, 1f);
+        Assert.That(monitor.Intensity, Is.Zero);
+        Assert.That(monitor.Band, Is.EqualTo(VoiceIntensityBand.Silent));
+    }
+
+    [Test]
+    public void DefaultStructCannotBeMistakenForACalibratedProfile()
+    {
+        Assert.That(default(VoiceIntensityProfile).Normalize(0.1f), Is.Zero);
+        var monitor = new VoiceIntensityMonitor(); monitor.SetProfile(default);
+        Assert.That(monitor.Profile.IsCalibrated, Is.False);
+        Assert.That(monitor.Profile.Loud, Is.GreaterThan(monitor.Profile.Normal));
+    }
+
+    [TestCase(30)]
+    [TestCase(60)]
+    [TestCase(120)]
+    public void MeterConvergesAtDifferentRenderFrameRates(int fps)
+    {
+        var monitor = new VoiceIntensityMonitor();
+        for (int i = 0; i < fps * 2; i++) monitor.Update(Activity(0.1f, true), 1f / fps);
+        Assert.That(monitor.Intensity, Is.EqualTo(0.6f).Within(0.001f));
+        Assert.That(monitor.Band, Is.EqualTo(VoiceIntensityBand.Normal));
+    }
+
+    [Test]
+    public void NoiseAndOneShortImpulseDoNotActivateIntensity()
+    {
+        var monitor = new VoiceIntensityMonitor();
+        Tick(monitor, 0.005f, true, 1f);
+        Assert.That(monitor.Intensity, Is.Zero);
+        monitor.Update(Activity(0.8f, true), 0.1f);
+        monitor.Update(Activity(0.005f, false), 0.1f);
+        Assert.That(monitor.Intensity, Is.Zero);
+        Tick(monitor, 0.4f, true, 1f);
+        Assert.That(monitor.Band, Is.EqualTo(VoiceIntensityBand.Loud));
+    }
+
+    [Test]
+    public void ReleaseDecaysSmoothlyWhileMuteAndDisconnectClearImmediately()
+    {
+        var monitor = new VoiceIntensityMonitor(); Tick(monitor, 0.1f, true, 1f);
+        float peak = monitor.Intensity;
+        monitor.Update(Activity(0.005f, false), 0.05f);
+        Assert.That(monitor.Intensity, Is.GreaterThan(0f).And.LessThan(peak));
+        Tick(monitor, 0.005f, false, 2f);
+        Assert.That(monitor.Band, Is.EqualTo(VoiceIntensityBand.Silent));
+        Tick(monitor, 0.4f, true, 1f);
+        monitor.Update(VoiceActivitySnapshot.FromInput(true, true, true, true, true, true, 0.4d), 0.01f);
+        Assert.That(monitor.Intensity, Is.Zero);
+        Tick(monitor, 0.4f, true, 1f); monitor.Update(default, 0.01f);
+        Assert.That(monitor.Intensity, Is.Zero);
+        Assert.That(monitor.InputAvailable, Is.False);
+    }
+
+    [Test]
+    public void ACompleteCalibrationProducesAValidProfileAndOneSaveRevision()
+    {
+        var monitor = new VoiceIntensityMonitor(); Calibrate(monitor, 0.005f, 0.025f, 0.1f, 0.4f);
+        Assert.That(monitor.Calibration.Stage, Is.EqualTo(VoiceCalibrationStage.Complete));
+        Assert.That(monitor.Profile.IsCalibrated, Is.True);
+        Assert.That(monitor.CompletedRevision, Is.EqualTo(1));
+        Tick(monitor, 0.1f, true, 1f);
+        Assert.That(monitor.CompletedRevision, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void MissingInputPausesCollectionAndMissingSpeechTimesOut()
+    {
+        var monitor = new VoiceIntensityMonitor(); monitor.Calibration.Begin();
+        for (int i = 0; i < 10; i++) monitor.Update(default, 0.1f);
+        Assert.That(monitor.Calibration.Progress, Is.Zero);
+        for (int i = 0; i < 30; i++) monitor.Update(Activity(0.005f, false), 0.1f);
+        Assert.That(monitor.Calibration.Stage, Is.EqualTo(VoiceCalibrationStage.Quiet));
+        monitor.Calibration.Continue();
+        Tick(monitor, 0.005f, false, 16f);
+        Assert.That(monitor.Calibration.Stage, Is.EqualTo(VoiceCalibrationStage.Failed));
+        Assert.That(monitor.Profile.IsCalibrated, Is.False);
+    }
+
+    [Test]
+    public void OverlappingLevelsAndCanceledAttemptsPreserveThePreviousProfile()
+    {
+        var monitor = new VoiceIntensityMonitor(); Calibrate(monitor, 0.005f, 0.025f, 0.1f, 0.4f);
+        float original = monitor.Profile.Loud;
+        Calibrate(monitor, 0.005f, 0.025f, 0.1f, 0.105f);
+        Assert.That(monitor.Calibration.Stage, Is.EqualTo(VoiceCalibrationStage.Failed));
+        Assert.That(monitor.Profile.Loud, Is.EqualTo(original));
+        monitor.Calibration.Begin(); monitor.Calibration.Cancel();
+        Assert.That(monitor.Profile.Loud, Is.EqualTo(original));
+        Assert.That(monitor.Profile.IsCalibrated, Is.True);
+    }
+
+    [Test]
+    public void RobustCalibrationDiscardsIsolatedSilenceAndSpeechOutliers()
+    {
+        var calibration = new VoiceIntensityCalibrator(); calibration.Begin();
+        for (int i = 0; i < 30; i++) calibration.Collect(i == 5 ? 0.8f : 0.005f, true, false, 0.1f);
+        for (int stage = 0; stage < 3; stage++)
+        {
+            calibration.Continue(); float energy = stage == 0 ? 0.025f : stage == 1 ? 0.1f : 0.4f;
+            for (int i = 0; i < 30; i++) calibration.Collect(i == 5 ? 0.95f : energy, true, true, 0.1f);
+        }
+        Assert.That(calibration.TryTakeResult(out var profile), Is.True);
+        Assert.That(profile.Noise, Is.EqualTo(0.005f));
+        Assert.That(profile.Normal, Is.EqualTo(0.1f));
+        Assert.That(profile.Loud, Is.EqualTo(0.4f));
+    }
+
+    [Test]
+    public void SavedProfilesAreValidatedAndIsolatedByMicrophoneAndProcessingContext()
+    {
+        VoiceIntensityProfile.TryCreate(0.005f, 0.025f, 0.1f, 0.4f, out var profile);
+        VoiceIntensityProfileStore.Save(profileKey, profile);
+        Assert.That(VoiceIntensityProfileStore.Load(profileKey).Normal, Is.EqualTo(0.1f));
+        string first = VoiceIntensityProfileStore.KeyFor("Microphone A", 0, true, true);
+        Assert.That(first, Is.Not.EqualTo(VoiceIntensityProfileStore.KeyFor("Microphone B", 0, true, true)));
+        Assert.That(first, Is.Not.EqualTo(VoiceIntensityProfileStore.KeyFor("Microphone A", 5, true, true)));
+        Assert.That(first, Is.Not.EqualTo(VoiceIntensityProfileStore.KeyFor("Microphone A", 0, false, true)));
+        Assert.That(first, Is.Not.EqualTo(VoiceIntensityProfileStore.KeyFor("Microphone A", 0, true, false)));
+        PlayerPrefs.SetString(profileKey, "{invalid}");
+        Assert.That(VoiceIntensityProfileStore.Load(profileKey).IsCalibrated, Is.False);
+    }
+
+    [Test]
+    public void FrameHitchesDoNotDuplicateCalibrationSamples()
+    {
+        var monitor = new VoiceIntensityMonitor(); monitor.Calibration.Begin();
+        monitor.Update(Activity(0.005f, false), 1f);
+        Assert.That(monitor.Calibration.Progress, Is.EqualTo(1f / 30f).Within(0.0001f));
+    }
+
+    [Test]
+    public void OpeningTheDialogOfflineDoesNotInitializeVoiceAndReusesItsRow()
+    {
+        var state = UnityServices.State;
+        menu = Object.Instantiate(Resources.Load<GameObject>("UI/InGameSettingsMenu"));
+        panel = VoiceIntensitySettingsPanel.EnsureForMenu(menu.GetComponent<SettingsMenu>());
+        Assert.That(VoiceIntensitySettingsPanel.EnsureForMenu(menu.GetComponent<SettingsMenu>()), Is.SameAs(panel));
+        panel.Open();
+        Assert.That(VoiceIntensitySettingsPanel.BlocksMenuToggleThisFrame, Is.True);
+        Assert.That(Field<Button>(panel, "measureButton").interactable, Is.False);
+        Assert.That(Field<TMP_Text>(panel, "instruction").text, Does.Contain("Join a room"));
+        Assert.That(Field<TMP_Text>(panel, "levelLabel").text, Is.EqualTo("Unavailable"));
+        typeof(VoiceIntensitySettingsPanel).GetMethod("Present", Private)
+            .Invoke(panel, new object[] { new VoiceIntensityMonitor(), true, "Test microphone", (bool?)false });
+        Assert.That(Field<TMP_Text>(panel, "levelLabel").text, Is.EqualTo("Input closed"));
+        panel.Close();
+        Assert.That(Field<GameObject>(panel, "dialog").activeSelf, Is.False);
+        Assert.That(VoiceIntensitySettingsPanel.BlocksMenuToggleThisFrame, Is.True);
+        Assert.That(UnityServices.State, Is.EqualTo(state));
+    }
+
+    [Test]
+    public void ClosingTheSettingsMenuAlsoClosesTheTestDialog()
+    {
+        menu = Object.Instantiate(Resources.Load<GameObject>("UI/InGameSettingsMenu"));
+        panel = VoiceIntensitySettingsPanel.EnsureForMenu(menu.GetComponent<SettingsMenu>());
+        panel.Open(); menu.GetComponent<InGameSettingsMenuController>().CloseMenu();
+        Assert.That(Field<GameObject>(panel, "dialog").activeSelf, Is.False);
+    }
+
+    [Test]
+    public void ClosedPttCannotTeachTheCalibrationNoiseFloor()
+    {
+        var monitor = new VoiceIntensityMonitor(); monitor.Calibration.Begin();
+        for (int i = 0; i < 30; i++)
+            monitor.Update(VoiceActivitySnapshot.FromInput(true, true, true, true, false, true, 0.4d), 0.1f);
+        Assert.That(monitor.Calibration.Progress, Is.Zero);
+        Assert.That(monitor.Profile.IsCalibrated, Is.False);
+    }
+
+    [TestCase(1f)]
+    [TestCase(0.001f)]
+    [TestCase(0.00001f)]
+    public void RelativeAnchorsSupportDifferentMicrophoneEnergyScales(float scale)
+    {
+        Assert.That(VoiceIntensityProfile.TryCreate(0.005f * scale, 0.025f * scale, 0.1f * scale,
+            0.4f * scale, out var profile), Is.True);
+        Assert.That(profile.Normalize(0.1f * scale), Is.EqualTo(0.6f).Within(0.0001f));
+    }
+
+    private static void Calibrate(VoiceIntensityMonitor monitor, float noise, float quiet, float normal, float loud)
+    {
+        monitor.Calibration.Begin();
+        foreach (float energy in new[] { noise, quiet, normal, loud })
+        {
+            if (monitor.Calibration.Stage != VoiceCalibrationStage.Silence) monitor.Calibration.Continue();
+            for (int i = 0; i < 30; i++) monitor.Update(Activity(energy, energy != noise), 0.1f);
+        }
+    }
+
+    private static void Tick(VoiceIntensityMonitor monitor, float energy, bool speech, float seconds)
+    {
+        for (int i = 0; i < Mathf.CeilToInt(seconds / 0.01f); i++) monitor.Update(Activity(energy, speech), 0.01f);
+    }
+    private static VoiceActivitySnapshot Activity(float energy, bool speech)
+        => VoiceActivitySnapshot.FromInput(true, true, true, false, true, speech, energy);
+    private static T Field<T>(object target, string name) => (T)target.GetType().GetField(name, Private).GetValue(target);
+}

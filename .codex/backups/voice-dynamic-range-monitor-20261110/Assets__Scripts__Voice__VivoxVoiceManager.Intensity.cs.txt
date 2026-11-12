@@ -1,0 +1,134 @@
+using System;
+using Unity.Services.Vivox;
+using UnityEngine;
+
+public sealed partial class VivoxVoiceManager
+{
+    public const ParticipantPropertyUpdateFrequency IntensityUpdateFrequency = ParticipantPropertyUpdateFrequency.TenPerSecond;
+    private readonly VoiceIntensityMonitor intensityMonitor = new VoiceIntensityMonitor();
+    private string intensityProfileKey;
+    private float nextIntensityEnvironmentCheck;
+    private int savedIntensityRevision;
+    private const string AutomaticInputLevelKey = "voice.input.automaticLevel.v1";
+
+    public VoiceIntensityMonitor LocalVoiceIntensity => intensityMonitor;
+    public string InputMicrophoneName { get; private set; } = "System microphone";
+    public bool? InputAutomaticGain { get; private set; }
+
+    public bool SetAutomaticInputLevel(bool enabled)
+    {
+        if (!TryGetInputProcessing(out var processing)) return false;
+        if (!ApplyAutomaticInputLevel(processing, enabled)) return false;
+        PlayerPrefs.SetInt(AutomaticInputLevelKey, enabled ? 1 : 0); PlayerPrefs.Save();
+        RefreshIntensityEnvironment();
+        return true;
+    }
+
+    private void ApplySavedInputProcessing()
+    {
+        if (!PlayerPrefs.HasKey(AutomaticInputLevelKey) || !TryGetInputProcessing(out var processing)) return;
+        bool enabled = PlayerPrefs.GetInt(AutomaticInputLevelKey) != 0;
+        ApplyAutomaticInputLevel(processing, enabled);
+    }
+
+    private static bool ApplyAutomaticInputLevel(IVivoxGlobalAudioSettings processing, bool enabled)
+    {
+        try
+        {
+            if (processing.AutomaticGainControlEnabled != enabled) processing.AutomaticGainControlEnabled = enabled;
+            return processing.AutomaticGainControlEnabled == enabled;
+        }
+        catch (NotImplementedException) { return false; }
+        catch (NotSupportedException) { return false; }
+    }
+
+    private static bool TryGetInputProcessing(out IVivoxGlobalAudioSettings processing)
+    {
+        processing = null;
+        if (Application.platform == RuntimePlatform.WebGLPlayer || !TryGetInitializedVoiceService(out var service)
+            || !service.IsLoggedIn) return false;
+        try
+        {
+            processing = service.VivoxGlobalAudioSettings;
+            return processing != null;
+        }
+        catch (NotImplementedException) { return false; }
+        catch (NotSupportedException) { return false; }
+    }
+
+    public bool BeginVoiceCalibration()
+    {
+        if (!IsVoiceConnected) return false;
+        RefreshIntensityEnvironment();
+        if (string.IsNullOrEmpty(intensityProfileKey)) return false;
+        intensityMonitor.Calibration.Begin();
+        return true;
+    }
+
+    public void ContinueVoiceCalibration() { intensityMonitor.Calibration.Continue(); }
+    public void CancelVoiceCalibration()
+    {
+        var calibration = intensityMonitor.Calibration;
+        if (calibration.Stage >= VoiceCalibrationStage.Silence && calibration.Stage <= VoiceCalibrationStage.Loud)
+            calibration.Cancel();
+    }
+
+    public void ResetVoiceCalibration()
+    {
+        VoiceIntensityProfileStore.Clear(intensityProfileKey);
+        intensityMonitor.SetProfile(VoiceIntensityProfile.Default);
+        savedIntensityRevision = intensityMonitor.CompletedRevision;
+    }
+
+    private void ResetLocalVoiceIntensity()
+    {
+        var calibration = intensityMonitor.Calibration;
+        if (calibration.Stage >= VoiceCalibrationStage.Silence && calibration.Stage <= VoiceCalibrationStage.Loud)
+            calibration.Cancel("Calibration canceled because voice input changed.");
+        intensityMonitor.ResetEnvelope();
+    }
+
+    private void UpdateLocalVoiceIntensity(float deltaTime)
+    {
+        if (IsVoiceConnected && Time.unscaledTime >= nextIntensityEnvironmentCheck)
+        {
+            nextIntensityEnvironmentCheck = Time.unscaledTime + 1f;
+            RefreshIntensityEnvironment();
+        }
+        intensityMonitor.Update(LocalVoiceActivity, deltaTime);
+        if (intensityMonitor.CompletedRevision != savedIntensityRevision)
+        {
+            VoiceIntensityProfileStore.Save(intensityProfileKey, intensityMonitor.Profile);
+            savedIntensityRevision = intensityMonitor.CompletedRevision;
+        }
+    }
+
+    private void RefreshIntensityEnvironment()
+    {
+        if (!IsVoiceConnected || !TryGetInitializedVoiceService(out IVivoxService service) || !service.IsLoggedIn) return;
+        string microphone = service.EffectiveInputDevice?.DeviceName ?? service.ActiveInputDevice?.DeviceName ?? "System microphone";
+        bool? automaticGain = null, noiseSuppression = null;
+        if (Application.platform != RuntimePlatform.WebGLPlayer)
+        {
+            try
+            {
+                var processing = service.VivoxGlobalAudioSettings;
+                if (processing != null)
+                {
+                    automaticGain = processing.AutomaticGainControlEnabled;
+                    noiseSuppression = processing.NoiseSuppressionEnabled;
+                }
+            }
+            catch (NotImplementedException) { }
+            catch (NotSupportedException) { }
+        }
+        string key = VoiceIntensityProfileStore.KeyFor(microphone, service.InputDeviceVolume, automaticGain, noiseSuppression);
+        InputMicrophoneName = microphone; InputAutomaticGain = automaticGain;
+        if (key == intensityProfileKey) return;
+        bool changed = intensityProfileKey != null;
+        intensityProfileKey = key;
+        intensityMonitor.SetProfile(VoiceIntensityProfileStore.Load(key));
+        savedIntensityRevision = intensityMonitor.CompletedRevision;
+        if (changed) intensityMonitor.Calibration.Cancel("Microphone settings changed. Calibration profile reloaded.");
+    }
+}

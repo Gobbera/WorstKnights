@@ -1,0 +1,167 @@
+using TMPro;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
+
+[DisallowMultipleComponent]
+[DefaultExecutionOrder(-1200)]
+public sealed class VoiceIntensitySettingsPanel : MonoBehaviour
+{
+    private const string ResourcePath = "UI/VoiceIntensitySettingsPanel";
+    private static VoiceIntensitySettingsPanel activePanel;
+    private static int closedFrame = -1;
+    [SerializeField] private RectTransform openRow;
+    [SerializeField] private Button openButton;
+    [SerializeField] private GameObject dialog;
+    [SerializeField] private Slider meter;
+    [SerializeField] private Image meterFill;
+    [SerializeField] private TMP_Text levelLabel;
+    [SerializeField] private TMP_Text inputLabel;
+    [SerializeField] private TMP_Text profileLabel;
+    [SerializeField] private TMP_Text instruction;
+    [SerializeField] private Slider progress;
+    [SerializeField] private Button measureButton;
+    [SerializeField] private TMP_Text measureLabel;
+    [SerializeField] private Button cancelButton;
+    [SerializeField] private Button resetButton;
+    [SerializeField] private Button closeButton;
+    private bool eventsBound;
+    private SettingsMenu owner;
+
+    public static bool BlocksMenuToggleThisFrame => activePanel != null || closedFrame == Time.frameCount;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { activePanel = null; closedFrame = -1; }
+
+    public static VoiceIntensitySettingsPanel EnsureForMenu(SettingsMenu menu)
+    {
+        var panel = menu.GetComponentInChildren<VoiceIntensitySettingsPanel>(true);
+        if (panel == null)
+        {
+            var prefab = Resources.Load<GameObject>(ResourcePath);
+            if (prefab == null) { Debug.LogWarning($"VoiceIntensitySettingsPanel: missing Resources/{ResourcePath}."); return null; }
+            panel = Instantiate(prefab, menu.transform, false).GetComponent<VoiceIntensitySettingsPanel>();
+        }
+        panel.owner = menu;
+        Transform rows = menu.resolutionDropdown != null ? menu.resolutionDropdown.transform.parent.parent : menu.transform;
+        float lowest = -502f;
+        foreach (Transform child in rows)
+            if (child != panel.openRow && child is RectTransform row && child.name.StartsWith("TXT_"))
+                lowest = Mathf.Min(lowest, row.anchoredPosition.y);
+        panel.openRow.SetParent(rows, false);
+        panel.openRow.anchoredPosition = new Vector2(-204.5f, lowest - 55f);
+        panel.Bind();
+        return panel;
+    }
+
+    private void OnEnable() { Bind(); dialog.SetActive(false); }
+    private void OnDisable() { Close(); }
+
+    private void Bind()
+    {
+        if (eventsBound) return;
+        openButton.onClick.AddListener(Open);
+        measureButton.onClick.AddListener(Measure);
+        cancelButton.onClick.AddListener(Cancel);
+        resetButton.onClick.AddListener(ResetProfile);
+        closeButton.onClick.AddListener(Close);
+        eventsBound = true;
+    }
+
+    private void OnDestroy()
+    {
+        if (activePanel == this) activePanel = null;
+        if (openRow != null && !openRow.IsChildOf(transform))
+        {
+            if (Application.isPlaying) Destroy(openRow.gameObject); else DestroyImmediate(openRow.gameObject);
+        }
+    }
+
+    public void Open()
+    {
+        if (activePanel != null && activePanel != this) activePanel.Close();
+        if (owner != null) VoiceSettingsPanel.CancelRebindingForMenu(owner.gameObject);
+        activePanel = this;
+        transform.SetAsLastSibling(); dialog.SetActive(true); Refresh();
+    }
+
+    public void Close()
+    {
+        if (activePanel != this && (dialog == null || !dialog.activeSelf)) return;
+        VivoxVoiceManager.Instance?.CancelVoiceCalibration();
+        if (dialog != null) dialog.SetActive(false);
+        if (activePanel == this) activePanel = null;
+        closedFrame = Time.frameCount;
+    }
+
+    public static void CloseForMenu(GameObject menu)
+    {
+        if (activePanel != null && menu != null && activePanel.transform.IsChildOf(menu.transform)) activePanel.Close();
+    }
+
+    private void Update()
+    {
+        if (activePanel != this) return;
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) { Close(); return; }
+        Refresh();
+    }
+
+    private void Measure()
+    {
+        var manager = VivoxVoiceManager.Instance;
+        if (manager == null) return;
+        var calibration = manager.LocalVoiceIntensity.Calibration;
+        if (calibration.Stage >= VoiceCalibrationStage.Quiet && calibration.Stage <= VoiceCalibrationStage.Loud)
+            manager.ContinueVoiceCalibration();
+        else manager.BeginVoiceCalibration();
+        Refresh();
+    }
+
+    private void Cancel() { VivoxVoiceManager.Instance?.CancelVoiceCalibration(); Refresh(); }
+    private void ResetProfile() { VivoxVoiceManager.Instance?.ResetVoiceCalibration(); Refresh(); }
+
+    private void Refresh()
+    {
+        var manager = VivoxVoiceManager.Instance;
+        bool connected = manager != null && manager.IsVoiceConnected;
+        Present(manager?.LocalVoiceIntensity, connected, manager?.InputMicrophoneName ?? "System microphone",
+            manager?.InputAutomaticGain);
+    }
+
+    private void Present(VoiceIntensityMonitor monitor, bool connected, string microphone, bool? automaticGain)
+    {
+        float value = monitor?.Intensity ?? 0f;
+        meter.SetValueWithoutNotify(value);
+        VoiceIntensityBand band = monitor?.Band ?? VoiceIntensityBand.Silent;
+        levelLabel.text = !connected ? "Unavailable" : monitor == null || !monitor.InputAvailable
+            ? "Input closed" : $"{band}  {Mathf.RoundToInt(value * 100f)}%";
+        meterFill.color = band == VoiceIntensityBand.Loud ? new Color(1f, 0.7f, 0.3f) : new Color(0.45f, 1f, 0.65f);
+        string automatic = automaticGain.HasValue ? automaticGain.Value ? "On" : "Off" : "Unavailable";
+        inputLabel.text = $"{microphone}\nAutomatic input level: {automatic}";
+        profileLabel.text = monitor != null && monitor.Profile.IsCalibrated ? "Calibrated for this microphone" : "Provisional levels - calibrate before comparing voices";
+        var calibration = monitor?.Calibration;
+        bool sampling = calibration != null && calibration.IsSampling;
+        measureButton.interactable = connected && !sampling;
+        cancelButton.interactable = calibration != null && calibration.Stage >= VoiceCalibrationStage.Silence
+            && calibration.Stage <= VoiceCalibrationStage.Loud;
+        resetButton.interactable = connected && monitor != null && monitor.Profile.IsCalibrated;
+        progress.SetValueWithoutNotify(calibration?.Progress ?? 0f);
+        measureLabel.text = sampling ? "Measuring..." : calibration != null && calibration.Stage >= VoiceCalibrationStage.Quiet
+            && calibration.Stage <= VoiceCalibrationStage.Loud ? "Measure next step" : "Calibrate";
+        if (!connected) { instruction.text = "Join a room with voice connected to test your microphone."; return; }
+        string ptt = VoiceTransmissionPreferences.Mode == VoiceTransmissionMode.PushToTalk
+            ? $"Hold {VoiceTransmissionPreferences.BindingDisplayName} while measuring. " : string.Empty;
+        string step;
+        switch (calibration.Stage)
+        {
+            case VoiceCalibrationStage.Silence: step = "Stay silent while the room noise is measured."; break;
+            case VoiceCalibrationStage.Quiet: step = "Speak quietly and steadily at your usual microphone distance."; break;
+            case VoiceCalibrationStage.Normal: step = "Speak normally and steadily at your usual microphone distance."; break;
+            case VoiceCalibrationStage.Loud: step = "Speak at a comfortably louder level. Keep the same microphone distance."; break;
+            default: step = string.IsNullOrEmpty(calibration.Message)
+                ? "Start with silence, then measure quiet, normal and louder speech. Your voice follows the current microphone mode."
+                : calibration.Message; break;
+        }
+        instruction.text = ptt + step + (sampling ? " Collecting about 3 seconds of clear samples." : string.Empty);
+    }
+}

@@ -11,6 +11,7 @@
 1. **[2026-05-12] Unsaved Unity authoring changes are invisible to file-level reads**
    Do instead: when scene objects are not yet in the `.unity` YAML, prefer a runtime/bootstrap attachment path or ask the user to save before patching references directly. Native tests can load dirty ScriptableObject values that differ from disk; clone assets and bound attack waits by both cooldowns. For plain NUnit validation with a dirty scene, keep it loaded, run fixtures with explicit setup/teardown on the Editor main thread in an additive temporary scene, restore the original active scene and close only the temporary scene; retain the original dirty state.
    For a Play Mode visual preview, keep the dirty scene loaded beside a saved additive validation scene. Disable other scene roots only after entering Play, then restore the original active scene and close only the validation scene on EnteredEditMode. Compare live scene copies if needed; never save over the user's scene to run the preview.
+   In an EditMode `UnityTest` that enters Play Mode, wait using a `Time.time` deadline and `yield return null`; this Editor runner can treat `WaitForSeconds` as a single frame. Assert elapsed game time when validating delayed attacks, cancellation or projectile travel.
 
 2. **[2026-05-11] Fresh Unity scripts can miss CLI validation until project files regenerate**
    Do instead: when `dotnet build Assembly-CSharp.csproj` ignores a new `.cs` file, either trigger a Unity project-file refresh before trusting the build or validate by folding the change into an already-included script.
@@ -131,9 +132,21 @@
 
 ## UI & Emotes
 1. **[2026-10-14] In-game settings UI is gameplay-root bootstrapped**
-   Do instead: keep the reusable Settings overlay at `Assets/Resources/UI/InGameSettingsMenu.prefab`, let `GameplaySceneRoot` instantiate it through `InGameSettingsMenuController`, and guard local gameplay input with `InGameSettingsMenuController.IsAnyMenuOpen` instead of pausing multiplayer time.
+   Do instead: keep the reusable Settings overlay at `Assets/Resources/UI/InGameSettingsMenu.prefab`, let `GameplaySceneRoot` instantiate it through `InGameSettingsMenuController`, and guard local gameplay input with `InGameSettingsMenuController.IsAnyMenuOpen` instead of pausing multiplayer time. Build the runtime `Controls`, `Video`, `Audio`, and `VoIP` tabs through `SettingsTabsController` only after all generated settings rows exist; reuse and toggle the original controls rather than cloning their state. Leaving VoIP must close microphone testing and cancel push-to-talk rebinding.
 
-2. **[2026-07-30] Emote wheel slots are authored from the player emote controller**
+2. **[2026-11-10] Local voice activity must use the sender state, independent of playback**
+   Do instead: use `VivoxVoiceManager.LocalVoiceActivity` for the microphone HUD and instantiate `Resources/UI/VoiceActivityHUD` through `GameplaySceneRoot`. Gate the self participant's SpeechDetected with connection, input mute and channel transmission. Keep the icon non-interactive and use unscaled visual fades; never infer local speech from received AudioSources, reverb or listener gain.
+
+3. **[2026-11-10] Voice intensity needs periodic metadata and device calibration**
+   Do instead: request `TenPerSecond` participant updates at login and use `LocalVoiceIntensity` with noise/speech gates and unscaled smoothing. Distinguish raw Input level, Measured/Saved input references and live Calibrated intensity; show the active profile's references after discarded attempts. Validate separation against the observed span, not fixed ratios of bounded SDK energy. Calibrate silence/quiet/normal/loud in Settings > Microphone Test, preserving valid profiles on failure and respecting PTT. Key anchors by microphone/SDK processing context. Leave AGC at its SDK default until the user changes Automatic input level; save/apply that choice only after initialized SDK/login. AGC changes affect sent volume and reload the matching profile. Treat energy as relative; verify real microphones before range work. Missing changed-property events alone cannot establish stale input.
+
+4. **[2026-11-10] Dynamic voice range and microphone playback have separate ownership**
+   Do instead: use the editable normal/loud distance-to-decibel tables in `VivoxVoiceSettings`; quiet/normal/unknown speech follows the normal table and mutes at 30 m, while calibrated maximum Loud follows its table and mutes at 50 m. Smooth intermediate Loud metadata and blend both table gain and cutoff. Keep `-50 dB` audible until the configured boundary and reserve mute for the boundary itself. Convert table decibels through linear amplitude for Unity/SDK playback; the legacy fade model/intensity fields apply only to native Vivox positional output. Use transient Photon event 74 for sequenced/timestamped intensity and preserve listener gain independence and player serialization. Cache anchors by actor; inactive camera children remain valid while the player root is active. Hear myself owns one Capture Source Tap only during the test, starts Off, follows actual input/PTT and stops on close/focus/channel/manager loss. Never start another microphone or initialize Vivox from offline settings.
+
+5. **[2026-11-10] Vivox input-device selection is login-bound and identity-stable**
+   Do instead: populate the Settings microphone dropdown from `AvailableInputDevices` only after the existing Vivox service is initialized and logged in; never initialize voice merely to enumerate devices. Persist the chosen `DeviceID`, reapply it after login and hot-plug events, fall back to the system default when absent, and use the effective physical `DeviceID` for per-microphone calibration while migrating legacy name-based profiles. Device switches cancel active sampling but keep the existing Vivox capture/tap pipeline.
+
+6. **[2026-07-30] Emote wheel slots are authored from the player emote controller**
    Do instead: edit the five `emoteWheelSlots` on `Assets/Resources/Player.prefab`'s `PlayerEmoteWheelController` for emote type, label, and sprite, and use `Assets/Prefabs/UI/EmoteWheel.prefab` only when a scene needs an explicit saved Canvas object.
 
 ## Audio & Feedback
@@ -160,13 +173,14 @@
    Do instead: drive jump, land, attack, pickup, emote, torch-lit loops, and similar world SFX from existing replicated sequence counters or shared item/state application paths first, and only add explicit audio RPC/event traffic for sounds that have no stable gameplay signal to hook into.
 
 8. **[2026-11-09] Vivox proximity reverb requires Unity playback with mirrored gain**
-   Do instead: retain the default 2D `-sim3d` channel and Photon `kwkVivoxPlayerId` mapping when native positional audio causes `5100/1001`. Use owned remote Participant Audio Taps with original-mix suppression and 2D Unity sources (`bypassReverbZones=false`, configured send); mirror proximity volume/mute because taps expose unmixed audio. Reconcile existing participants after recovery and release taps on departure. Keep native positional output direct unless its spatialization policy is deliberately changed.
+   Do instead: retain the default `-sim3d` channel and Photon `kwkVivoxPlayerId` mapping when native positional audio causes `5100/1001`. Use owned remote Participant Audio Taps with original-mix suppression; taps bypass SDK gain. A 2D source placed on the listener has no direction. For directional Unity/reverb playback, place each source on its remote voice anchor, use full spatial blend with a flat custom rolloff and zero Doppler so manual proximity remains the only distance gain; use an HRTF spatializer when convincing front/back separation is required. Keep distance gain/mute separate from listener volume/manual mute and combine them on both output paths. Cache SDK requests per participant instance, reapply identity choices on reconnect and keep unmapped speakers quiet. Keep native positional output direct unless deliberately redesigned.
 
-9. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
+9. **[2026-11-10] Vivox microphone mute APIs can initialize a cold SDK**
+   Do instead: require both `InitializationState == Initialized` and `IsLoggedIn` at the microphone API boundary. Initialization finishes before native account login; issuing mute in that interval causes 1001 and updates the SDK mute cache before the failed response. Keep logical suppression pending, apply mute after login/before joining, and require a fresh PTT release/press after interruptions. Settings must work without initializing voice; preserve listener gain/reverb separately.
+   Treat `ChannelJoined` as the safe point for `Set3DPosition`; publish around `0.3s`, suspend updates on channel loss and retry with backoff so disconnect `5100` cannot cascade into stale-session `1001`.
+
+10. **[2026-07-13] Standalone Vivox profiles are intentionally ephemeral by default**
    Do instead: when testing builds, expect profiles like `kwk-player-xxxxxxxx`; only pass `--ugs-profile=<name>` for deliberate persistent identity, and never reuse the same manual profile in two simultaneous clients.
-
-10. **[2026-07-08] Vivox channel drops must suspend 3D publishing and reconnect with backoff**
-   Do instead: treat `ChannelJoined` as the safe point for `Set3DPosition`, publish around `0.3s`, and on `ChannelLeft` or connection recovery stop 3D updates immediately and retry with backoff so server disconnect `5100` does not cascade into stale-session `1001` loops.
 
 ## Inventory & Equipment
 1. **[2026-08-17] Sword trail no longer uses the legacy attack-trail stack**
@@ -251,6 +265,12 @@
 
 7. **[2026-10-23] Plain NUnit Run can move Unity tests off the main thread**
    Do instead: use Unity's test runner normally. When preserving dirty open scenes, invoke focused EditMode cases directly on EditorApplication.update with their SetUp/TearDown and TestCase arguments, recording results. Plain NUnitTestAssemblyRunner.Run starts a background execution thread even with NumberOfTestWorkers=0; GameObject and AssetDatabase calls then fail.
+
+8. **[2026-11-10] Keyboard frame-edge checks need native player-loop validation**
+   Do instead: validate `wasPressedThisFrame` rebind/escape paths in an isolated Play Mode probe; the installed Input System's Editor state buffer does not advance the device frame counter reliably. Disable room/voice managers before their Start callbacks, preserve loaded scenes, and restore the keyboard and preferences after synthetic input. Keep pure gate/UI cases in Edit Mode.
+
+9. **[2026-11-10] Native Play validation can upgrade saved Unity serialization**
+   Do instead: record initial working-tree state and checkpoint project settings before a probe. Review automatic asset saves afterward, preserve user edits, and restore only verified unrelated migrations such as TimeManager's fixed-timestep format. Keep those generated versions in the checkpoint when restoring.
 
 ## Enemy & Combat Networking
 1. **[2026-08-17] Enemy spawn/death lifecycle is code-driven and replicated**
@@ -397,14 +417,17 @@
    Do instead: inspect AudioClip preload/background flags and compare first/repeated triggers; a stopwatch around Play/Reinit excludes deferred graphics work. Enable Editor `ProfilerDriver.enabled` for raw frame history, then inspect Render Thread PSO creation on DX12. Use only known compiled VFX task indices: querying native GPU marker names with an invalid index can crash the Editor. Capture matching `GraphicsStateCollection` states for targeted warmup instead of blindly warming every shader.
 
 ## User Directives
-1. **[2026-11-05] Mechanism triggers separate prefab feedback, activation policy, and gameplay targets**
+1. **[2026-11-12] Keep Skeleton Blender work in one project file**
+   Do instead: consolidate current Skeleton animations and grip adjustments in `C:/Users/leona/Desktop/Worst Knights/Assets/Enemies/Skeleton/Skeleton/Skeleton.fbm/SkeletonTesteIA.blend` and update that file for subsequent edits. Avoid creating a separate `.blend` for each task.
+
+2. **[2026-11-05] Mechanism triggers separate prefab feedback, activation policy, and gameplay targets**
    Do instead: keep trigger policy, prefab feedback and gameplay targets separate. Router `SelectRoute` defers; `SelectRouteAndActivate` hands off to B with mode overrides. Use Follow State + `PlatformController.TwoPosition` for travel and `InteractionTriggerStateTarget` for synchronized calls. Interactables own Distance/Box Collider range and timed locks/animation hooks. Box membership uses player-body position, not camera; a separate trigger and registry extend aim only for eligible mechanisms, preserving ordinary reach. Accepted-use actor IDs drive owner feedback; initial restore/state commands do not replay it. Keep categorized prefabs under `Assets/Prefabs/Mechanisms/Triggers/`, prepared Start/Moving/Stop platform audio (one-shots only on real departure/arrival; restore resumes the loop), and trap cooldowns on the puzzle.
 
-2. **[2026-11-05] All new authoring text must be English**
+3. **[2026-11-05] All new authoring text must be English**
    Do instead: converse with the user in Brazilian Portuguese; write code, comments, Inspector labels, tooltips, prompts, menus, messages and documentation in English. Preserve this preference on later changes; translate touched authoring text that was previously Portuguese.
 
-3. **[2026-05-26] Large gameplay systems should start from a saved checkpoint plus a staged implementation doc**
+4. **[2026-05-26] Large gameplay systems should start from a saved checkpoint plus a staged implementation doc**
    Do instead: before sizable Unity feature work, create a project snapshot from saved-on-disk files, record the requested scope in `Docs/`, and align editor-side setup steps before writing runtime code.
 
-4. **[2026-07-22] Reaction setup and bridge changes must update the central workflow doc**
+5. **[2026-07-22] Reaction setup and bridge changes must update the central workflow doc**
    Do instead: whenever a reaction setup, emitter, or bridge is added or changed, update `Docs/ReactionEmitterWorkflow.md` in the same pass with the new flow, parameters, and tool behavior.

@@ -1,0 +1,201 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using TMPro;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class VoiceTransmissionValidationSession
+{
+    private const string Request = "Temp/VoiceTransmissionValidation.request";
+    private const string Results = ".codex/diagnostics/voice-transmission-settings-20261110.txt";
+    private const string Prefab = "Assets/Resources/UI/InGameSettingsMenu.prefab";
+    private const string PlayScene = "Assets/Tests/VoiceTransmissionValidation.unity";
+
+    static VoiceTransmissionValidationSession()
+    {
+        EditorApplication.update += Update;
+        EditorApplication.playModeStateChanged += PlayModeChanged;
+    }
+
+    private static void Update()
+    {
+        if (EditorApplication.isPlaying && SessionState.GetBool("VoiceTransmission.RunPlay", false))
+        {
+            SessionState.SetBool("VoiceTransmission.RunPlay", false);
+            try
+            {
+                Log("NATIVE PLAY keyboard integration, no voice initialization");
+                Tests(typeof(VoiceTransmissionTests));
+                Log("SERVICES after input probe=" + Unity.Services.Core.UnityServices.State);
+            }
+            catch (Exception error) { Log("PLAY FAILED " + error); }
+            finally
+            {
+                SessionState.SetBool("VoiceTransmission.Restore", true);
+                EditorApplication.isPlaying = false;
+            }
+            return;
+        }
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating
+            || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        if (command == "play-input") { BeginPlayInput(); return; }
+        Scene original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        Scene validation = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(validation);
+        try
+        {
+            Log("ORIGINAL " + original.path + " dirty=" + dirty);
+            if (command == "setup-tests") AuthorControls();
+            Tests(typeof(VoiceTransmissionTests));
+            Tests(typeof(VoiceActivityIndicatorTests));
+            Tests(typeof(VivoxVoiceOutputTests));
+            Preview();
+        }
+        catch (Exception error) { Log("VALIDATION FAILED " + error); }
+        finally
+        {
+            SceneManager.SetActiveScene(original);
+            EditorSceneManager.CloseScene(validation, true);
+            if (dirty && !original.isDirty) EditorSceneManager.MarkSceneDirty(original);
+            Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        }
+    }
+
+    private static void BeginPlayInput()
+    {
+        Scene original = SceneManager.GetActiveScene();
+        SessionState.SetString("VoiceTransmission.Original", original.path);
+        SessionState.SetBool("VoiceTransmission.Dirty", original.isDirty);
+        Scene preview = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(preview);
+        new GameObject("Voice keyboard validation root");
+        EditorSceneManager.SaveScene(preview, PlayScene);
+        SessionState.SetBool("VoiceTransmission.EnterPlay", true);
+        EditorApplication.isPlaying = true;
+    }
+
+    private static void PlayModeChanged(PlayModeStateChange change)
+    {
+        if (change == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool("VoiceTransmission.EnterPlay", false))
+        {
+            SessionState.SetBool("VoiceTransmission.EnterPlay", false);
+            foreach (var manager in Object.FindObjectsByType<RoomManager>(FindObjectsInactive.Include))
+            { manager.StopAllCoroutines(); manager.enabled = false; }
+            foreach (var manager in Object.FindObjectsByType<VivoxVoiceManager>(FindObjectsInactive.Include)) manager.enabled = false;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene.path != PlayScene)
+                    foreach (var root in scene.GetRootGameObjects()) root.SetActive(false);
+            }
+            SessionState.SetBool("VoiceTransmission.RunPlay", true);
+        }
+        if (change != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool("VoiceTransmission.Restore", false)) return;
+        SessionState.SetBool("VoiceTransmission.Restore", false);
+        Scene original = SceneManager.GetSceneByPath(SessionState.GetString("VoiceTransmission.Original", ""));
+        if (original.IsValid())
+        {
+            SceneManager.SetActiveScene(original);
+            if (SessionState.GetBool("VoiceTransmission.Dirty", false) && !original.isDirty) EditorSceneManager.MarkSceneDirty(original);
+        }
+        Scene preview = SceneManager.GetSceneByPath(PlayScene);
+        if (preview.IsValid()) EditorSceneManager.CloseScene(preview, true);
+        AssetDatabase.DeleteAsset(PlayScene);
+        Log("PLAY RESTORED " + original.path + " dirty=" + original.isDirty);
+    }
+
+    private static void AuthorControls()
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(Prefab);
+        try
+        {
+            VoiceSettingsPanel panel = VoiceSettingsPanel.EnsureForMenu(root.GetComponent<SettingsMenu>());
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var dropdown = (TMP_Dropdown)typeof(VoiceSettingsPanel).GetField("modeDropdown", flags).GetValue(panel);
+            dropdown.captionText.fontSize = 24f;
+            dropdown.captionText.enableAutoSizing = true;
+            dropdown.captionText.fontSizeMin = 16f; dropdown.captionText.fontSizeMax = 24f;
+            dropdown.itemText.fontSize = 24f;
+            dropdown.SetValueWithoutNotify(0);
+            var button = (Button)typeof(VoiceSettingsPanel).GetField("bindingButton", flags).GetValue(panel);
+            button.interactable = false;
+            var label = (TMP_Text)typeof(VoiceSettingsPanel).GetField("bindingLabel", flags).GetValue(panel);
+            label.text = "V"; label.fontSize = 24f; label.fontSizeMin = 16f; label.fontSizeMax = 24f;
+            EditorUtility.SetDirty(panel);
+            PrefabUtility.SaveAsPrefabAsset(root, Prefab);
+            Log("AUTHORED shared settings controls");
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
+    private static void Tests(Type type)
+    {
+        int passed = 0, failed = 0;
+        foreach (var method in type.GetMethods())
+        {
+            var cases = method.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().ToArray();
+            if (cases.Length == 0 && method.GetCustomAttributes(typeof(TestAttribute), false).Length == 0) continue;
+            var arguments = cases.Length > 0 ? cases.Select(c => c.Arguments) : new[] { Array.Empty<object>() };
+            foreach (object[] args in arguments)
+            {
+                object fixture = Activator.CreateInstance(type);
+                string name = type.Name + "." + method.Name + "(" + string.Join(",", args) + ")";
+                try { type.GetMethod("SetUp")?.Invoke(fixture, null); method.Invoke(fixture, args); passed++; Log("PASS " + name); }
+                catch (Exception error)
+                {
+                    Exception cause = error.InnerException ?? error;
+                    if (cause is IgnoreException) Log("SKIP " + name + " " + cause.Message);
+                    else { failed++; Log("FAIL " + name + " " + cause); }
+                }
+                finally { type.GetMethod("TearDown")?.Invoke(fixture, null); }
+            }
+        }
+        Log("TESTS " + type.Name + " passed=" + passed + " failed=" + failed);
+    }
+
+    private static void Preview()
+    {
+        var cameraRoot = new GameObject("Isolated settings preview camera");
+        Camera camera = cameraRoot.AddComponent<Camera>();
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.08f, 0.09f, 0.11f, 1f);
+        camera.cullingMask = 1 << 31; camera.orthographic = true; camera.nearClipPlane = 0.01f;
+        var target = new RenderTexture(1280, 720, 24); camera.targetTexture = target;
+        var root = Object.Instantiate(Resources.Load<GameObject>("UI/InGameSettingsMenu"));
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 31;
+        var canvas = root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = camera; canvas.planeDistance = 1f;
+        var group = root.GetComponent<CanvasGroup>(); group.alpha = 1f;
+        var settings = root.GetComponent<SettingsMenu>();
+        VoiceSettingsPanel panel = VoiceSettingsPanel.EnsureForMenu(settings);
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var mode = (TMP_Dropdown)typeof(VoiceSettingsPanel).GetField("modeDropdown", flags).GetValue(panel);
+        mode.SetValueWithoutNotify(1);
+        ((Button)typeof(VoiceSettingsPanel).GetField("bindingButton", flags).GetValue(panel)).interactable = true;
+        var sensitivity = settings.mouseSensitivitySlider; sensitivity.minValue = 0.1f; sensitivity.maxValue = 3f; sensitivity.SetValueWithoutNotify(1f);
+        var resolution = settings.resolutionDropdown;
+        resolution.ClearOptions(); resolution.AddOptions(new System.Collections.Generic.List<string> { "1280 x 720" });
+        Canvas.ForceUpdateCanvases(); camera.Render();
+        RenderTexture previous = RenderTexture.active; RenderTexture.active = target;
+        var image = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+        image.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0); image.Apply();
+        File.WriteAllBytes(".codex/diagnostics/voice-transmission-settings-preview-20261110.png", image.EncodeToPNG());
+        RenderTexture.active = previous; camera.targetTexture = null;
+        Object.DestroyImmediate(image); Object.DestroyImmediate(target);
+        Log("PREVIEW rendered shared settings UI; no voice connection or microphone capture");
+    }
+
+    private static void Log(string value)
+    {
+        Directory.CreateDirectory(".codex/diagnostics"); File.AppendAllText(Results, value + Environment.NewLine);
+    }
+}

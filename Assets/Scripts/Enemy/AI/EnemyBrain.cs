@@ -20,6 +20,7 @@ public class EnemyBrain : MonoBehaviour
     [SerializeField] private EnemyPerception enemyPerception;
     [SerializeField] private EnemyAttack enemyAttack;
     [SerializeField] private BeholderAttackController beholderAttacks;
+    [SerializeField] private EnemyArcherCombat archerCombat;
     [SerializeField] private EnemyAnimationController enemyAnimationController;
 
     [Header("Spawn")]
@@ -195,8 +196,11 @@ public class EnemyBrain : MonoBehaviour
     public bool CanTriggerAlert => !useLastSeenSearchFlow || alertArmed;
     public bool AlertArmed => alertArmed;
     public bool UsesBeholderAttacks => beholderAttacks != null && beholderAttacks.isActiveAndEnabled;
-    public bool IsAttackLocked => UsesBeholderAttacks ? beholderAttacks.IsAttacking : enemyAttack != null && enemyAttack.IsAttackLocked;
-    public bool CanStartAttack => UsesBeholderAttacks ? beholderAttacks.CanStartAttack : enemyAttack != null && enemyAttack.CanStartAttack;
+    public bool UsesArcherCombat => archerCombat != null && archerCombat.isActiveAndEnabled;
+    public bool IsAttackLocked => UsesArcherCombat ? archerCombat.IsAttacking
+        : UsesBeholderAttacks ? beholderAttacks.IsAttacking : enemyAttack != null && enemyAttack.IsAttackLocked;
+    public bool CanStartAttack => UsesArcherCombat ? archerCombat.CanStartAttack
+        : UsesBeholderAttacks ? beholderAttacks.CanStartAttack : enemyAttack != null && enemyAttack.CanStartAttack;
     public bool IsStunned => Time.time < stunnedUntil;
     public bool IsTraversing => traversalLockCount > 0;
     public float StunRemaining => Mathf.Max(0f, stunnedUntil - Time.time);
@@ -464,12 +468,14 @@ public class EnemyBrain : MonoBehaviour
             return;
 
         stunnedUntil = Mathf.Max(stunnedUntil, Time.time + safeDuration);
+        archerCombat?.CancelAttack();
         StopNavigation();
         SetExternalState(EnemyState.Stunned);
     }
 
     public void BeginTraversal()
     {
+        archerCombat?.CancelAttack();
         traversalLockCount++;
         enemyNavigation?.Pause();
         enemyMotor?.Stop();
@@ -1136,6 +1142,12 @@ public class EnemyBrain : MonoBehaviour
 
     public void TrackCurrentTargetDuringAttack(float deltaTime)
     {
+        if (UsesArcherCombat)
+        {
+            if (archerCombat.TryGetCommittedFacingPoint(out Vector3 committedPoint))
+                RotateTowards(committedPoint, deltaTime);
+            return;
+        }
         if (UsesBeholderAttacks)
         {
             if (!HasValidTarget) return;
@@ -1162,6 +1174,12 @@ public class EnemyBrain : MonoBehaviour
 
     public bool TryAttackCurrentTarget()
     {
+        if (UsesArcherCombat)
+        {
+            bool started = HasValidTarget && archerCombat.TryStartAttack(currentTarget);
+            if (started) RegisterCombatAwareness(currentTarget.transform.position);
+            return started;
+        }
         if (UsesBeholderAttacks)
             return HasValidTarget && beholderAttacks.TryStartAttack(currentTarget);
         if (enemyAttack == null || !enemyAttack.CanStartAttack || !HasValidTarget)
@@ -1177,6 +1195,8 @@ public class EnemyBrain : MonoBehaviour
 
     public bool IsCurrentTargetInsideAttackStartRange()
     {
+        if (UsesArcherCombat)
+            return HasValidTarget && archerCombat.CanAttackTarget(currentTarget);
         if (UsesBeholderAttacks)
             return HasValidTarget && beholderAttacks.CanAttackTarget(currentTarget);
         if (!HasValidTarget || enemyAttack == null || !enemyAttack.CanStartAttack)
@@ -1200,6 +1220,13 @@ public class EnemyBrain : MonoBehaviour
     {
         if (beholderAttacks != null) beholderAttacks.CancelAttack();
     }
+
+    public bool TryMaintainArcherDistance()
+    {
+        return UsesArcherCombat && HasValidTarget && archerCombat.TryMaintainDistance(currentTarget);
+    }
+
+    public void CancelArcherAttack() => archerCombat?.CancelAttack();
 
     public bool IsLastKnownPositionBeyondMaxChaseDistance()
     {
@@ -1792,6 +1819,9 @@ public class EnemyBrain : MonoBehaviour
 
         if (beholderAttacks == null)
             beholderAttacks = GetComponent<BeholderAttackController>();
+
+        if (archerCombat == null)
+            archerCombat = GetComponent<EnemyArcherCombat>();
 
         if (enemyAnimationController == null)
             enemyAnimationController = GetComponent<EnemyAnimationController>();

@@ -1,0 +1,83 @@
+using Photon.Pun;
+using Unity.Services.Vivox;
+using UnityEngine;
+
+public sealed partial class VivoxVoiceManager
+{
+    private readonly VoiceTransmissionGate transmissionGate = new VoiceTransmissionGate();
+    private bool applicationHasFocus;
+    private bool applicationPaused;
+
+    public bool IsMicrophoneTransmissionAllowed { get; private set; }
+
+    private void InitializeVoiceTransmission()
+    {
+        applicationHasFocus = Application.isFocused;
+        VoiceTransmissionPreferences.Changed += OnVoiceTransmissionPreferenceChanged;
+    }
+
+    private void OnVoiceTransmissionPreferenceChanged()
+    {
+        transmissionGate.Reset();
+        UpdateVoiceTransmission();
+        UpdateLocalVoiceActivity();
+    }
+
+    private void OnApplicationFocus(bool focused)
+    {
+        applicationHasFocus = focused;
+        if (!focused) SuspendVoiceTransmission();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        applicationPaused = paused;
+        if (paused) SuspendVoiceTransmission();
+    }
+
+    private void UpdateVoiceTransmission()
+    {
+        bool ready = isActiveAndEnabled && !applicationIsQuitting
+            && CurrentMode != VivoxVoiceMode.Disabled && PhotonNetwork.InRoom && IsVoiceConnected;
+        IsMicrophoneTransmissionAllowed = transmissionGate.Evaluate(VoiceTransmissionPreferences.Mode,
+            ready, applicationHasFocus && !applicationPaused, VoiceTransmissionPreferences.IsPushToTalkHeld(),
+            VoiceSettingsPanel.IsAnyRebinding);
+
+        if (TryGetInitializedVoiceService(out IVivoxService service))
+            ApplyMicrophoneGate(service, IsMicrophoneTransmissionAllowed);
+    }
+
+    // Also called synchronously from UI capture/focus/channel callbacks, even when Update is paused.
+    public void SuspendVoiceTransmission()
+    {
+        StopMicrophoneMonitoring();
+        PublishSuppressedVoiceRange();
+        transmissionGate.Reset();
+        IsMicrophoneTransmissionAllowed = false;
+        if (TryGetInitializedVoiceService(out IVivoxService service))
+            ApplyMicrophoneGate(service, false);
+        ResetLocalVoiceActivity();
+    }
+
+    private static bool TryGetInitializedVoiceService(out IVivoxService service)
+    {
+        // MuteInputDevice queues initialization when called on an uninitialized SDK.
+        return TryGetVivoxService(out service)
+            && service.InitializationState == VivoxInitializationState.Initialized;
+    }
+
+    private static void ApplyMicrophoneGate(IVivoxService service, bool allowTransmission)
+    {
+        // Initialization can finish while LoginAsync is still creating the native account.
+        // These APIs target that account and update the SDK mute cache before their async response.
+        if (service.InitializationState != VivoxInitializationState.Initialized || !service.IsLoggedIn)
+            return;
+
+        if (allowTransmission)
+        {
+            if (service.IsInputDeviceMuted) service.UnmuteInputDevice();
+        }
+        else if (!service.IsInputDeviceMuted)
+            service.MuteInputDevice();
+    }
+}

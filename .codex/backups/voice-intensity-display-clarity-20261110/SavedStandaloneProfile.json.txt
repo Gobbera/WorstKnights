@@ -1,0 +1,1 @@
+{"noise":0.0,"quiet":0.4820393919944763,"normal":0.5403960347175598,"loud":0.6392102241516113,"automaticInputLevel":false}

@@ -14,12 +14,77 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VivoxVoiceSettings
   initialMode: 2
   useNativeVivoxPositionalAudio: 0
-  audibleDistance: 25
+  audibleDistance: 50
   conversationalDistance: 1
-  audioFadeIntensity: 1.4
-  audioFadeModel: 2
+  audioFadeIntensity: 1
+  audioFadeModel: 3
   positionUpdateInterval: 0.3
   allowDirectionalPanning: 1
+  dynamicProximity: 1
+  normalVoiceDistance: 30
+  normalVoiceAttenuation:
+  - distance: 1
+    decibels: 0
+  - distance: 2
+    decibels: -1
+  - distance: 3
+    decibels: -3
+  - distance: 5
+    decibels: -4
+  - distance: 7
+    decibels: -5
+  - distance: 8
+    decibels: -8
+  - distance: 10
+    decibels: -10
+  - distance: 12
+    decibels: -13
+  - distance: 13
+    decibels: -15
+  - distance: 14
+    decibels: -16
+  - distance: 15
+    decibels: -20
+  - distance: 20
+    decibels: -25
+  - distance: 25
+    decibels: -50
+  loudVoiceAttenuation:
+  - distance: 1
+    decibels: 0
+  - distance: 2
+    decibels: 0
+  - distance: 3
+    decibels: -1
+  - distance: 5
+    decibels: -1
+  - distance: 7
+    decibels: -2
+  - distance: 8
+    decibels: -3
+  - distance: 10
+    decibels: -4
+  - distance: 12
+    decibels: -4
+  - distance: 13
+    decibels: -5
+  - distance: 14
+    decibels: -5
+  - distance: 15
+    decibels: -6
+  - distance: 20
+    decibels: -9
+  - distance: 25
+    decibels: -10
+  - distance: 30
+    decibels: -13
+  - distance: 35
+    decibels: -15
+  - distance: 40
+    decibels: -20
+  - distance: 45
+    decibels: -25
+  microphoneMonitorVolume: 0.35
   unityVoiceOutput: 1
   environmentReverbSend: 1
   voiceMixerGroup: {fileID: 0}

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="17" result="Passed" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-12 00:20:45Z" end-time="2026-11-12 00:20:49Z" duration="4,5879832">
+  <test-suite type="TestSuite" id="1000" name="KingsWorstKnights" fullname="KingsWorstKnights" runstate="Runnable" testcasecount="560" result="Passed" start-time="2026-11-12 00:20:45Z" end-time="2026-11-12 00:20:49Z" duration="4.587983" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1635" name="Assembly-CSharp-Editor.dll" fullname="C:/Git/Unity/WorstKnights/Library/ScriptAssemblies/Assembly-CSharp-Editor.dll" runstate="Runnable" testcasecount="560" result="Passed" start-time="2026-11-12 00:20:45Z" end-time="2026-11-12 00:20:49Z" duration="4.440646" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="28984" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestFixture" id="1182" name="SkeletonArcherPlayModeTests" fullname="SkeletonArcherPlayModeTests" classname="SkeletonArcherPlayModeTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-11-12 00:20:45Z" end-time="2026-11-12 00:20:49Z" duration="4.327305" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1187" name="AClosePlayerDuringCooldownDoesNotResetTheRetreatPathEveryTick" fullname="SkeletonArcherPlayModeTests.AClosePlayerDuringCooldownDoesNotResetTheRetreatPathEveryTick" methodname="AClosePlayerDuringCooldownDoesNotResetTheRetreatPathEveryTick" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="217470653" result="Passed" start-time="2026-11-12 00:19:41Z" end-time="2026-11-12 00:19:55Z" duration="13.313389" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+        <test-case id="1186" name="AClosePlayerMakesTheArcherRetreatAlongTheNavMesh" fullname="SkeletonArcherPlayModeTests.AClosePlayerMakesTheArcherRetreatAlongTheNavMesh" methodname="AClosePlayerMakesTheArcherRetreatAlongTheNavMesh" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="968226204" result="Passed" start-time="2026-11-12 00:19:55Z" end-time="2026-11-12 00:20:00Z" duration="5.789636" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+        <test-case id="1189" name="AGuardingShieldStopsTheArrowWithoutPlayerDamage" fullname="SkeletonArcherPlayModeTests.AGuardingShieldStopsTheArrowWithoutPlayerDamage" methodname="AGuardingShieldStopsTheArrowWithoutPlayerDamage" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="336202113" result="Passed" start-time="2026-11-12 00:20:00Z" end-time="2026-11-12 00:20:09Z" duration="8.340618" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+        <test-case id="1183" name="ArcherPreparesThenReleasesOneArrowThatDamagesThePlayerOnce" fullname="SkeletonArcherPlayModeTests.ArcherPreparesThenReleasesOneArrowThatDamagesThePlayerOnce" methodname="ArcherPreparesThenReleasesOneArrowThatDamagesThePlayerOnce" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="2047030181" result="Passed" start-time="2026-11-12 00:20:09Z" end-time="2026-11-12 00:20:17Z" duration="8.695282" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+        <test-case id="1190" name="AReplicatedVisualArrowCannotDealDamageLocally" fullname="SkeletonArcherPlayModeTests.AReplicatedVisualArrowCannotDealDamageLocally" methodname="AReplicatedVisualArrowCannotDealDamageLocally" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="87285984" result="Passed" start-time="2026-11-12 00:20:17Z" end-time="2026-11-12 00:20:24Z" duration="6.354020" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+        <test-case id="1185" name="AWallAddedDuringPreparationPreventsTheShotFromHittingThePlayer" fullname="SkeletonArcherPlayModeTests.AWallAddedDuringPreparationPreventsTheShotFromHittingThePlayer" methodname="AWallAddedDuringPreparationPreventsTheShotFromHittingThePlayer" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="822858679" result="Passed" start-time="2026-11-12 00:20:24Z" end-time="2026-11-12 00:20:33Z" duration="9.258775" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+        <test-case id="1188" name="ExistingPerceptionAndCombatContractsStillPassWithRuntimeInitialization" fullname="SkeletonArcherPlayModeTests.ExistingPerceptionAndCombatContractsStillPassWithRuntimeInitialization" methodname="ExistingPerceptionAndCombatContractsStillPassWithRuntimeInitialization" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="272684873" result="Passed" start-time="2026-11-12 00:20:33Z" end-time="2026-11-12 00:20:39Z" duration="6.445902" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+          <output><![CDATA[Enemy: could not reach the last known position; trying search points in Room.
+]]></output>
+        </test-case>
+        <test-case id="1184" name="StunDuringPreparationCannotReleaseADelayedArrow" fullname="SkeletonArcherPlayModeTests.StunDuringPreparationCannotReleaseADelayedArrow" methodname="StunDuringPreparationCannotReleaseADelayedArrow" classname="SkeletonArcherPlayModeTests" runstate="Runnable" seed="738912484" result="Passed" start-time="2026-11-12 00:20:39Z" end-time="2026-11-12 00:20:49Z" duration="9.616065" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+      </test-suite>
+      <test-suite type="TestFixture" id="1191" name="SkeletonArcherTests" fullname="SkeletonArcherTests" classname="SkeletonArcherTests" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.096322" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="ParameterizedMethod" id="1195" name="BallisticLowArcReachesTheRequestedPoint" fullname="SkeletonArcherTests.BallisticLowArcReachesTheRequestedPoint" classname="SkeletonArcherTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.010618" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1192" name="BallisticLowArcReachesTheRequestedPoint(8.0f,0.0f)" fullname="SkeletonArcherTests.BallisticLowArcReachesTheRequestedPoint(8.0f,0.0f)" methodname="BallisticLowArcReachesTheRequestedPoint" classname="SkeletonArcherTests" runstate="Runnable" seed="473925198" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.003649" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1193" name="BallisticLowArcReachesTheRequestedPoint(16.0f,2.0f)" fullname="SkeletonArcherTests.BallisticLowArcReachesTheRequestedPoint(16.0f,2.0f)" methodname="BallisticLowArcReachesTheRequestedPoint" classname="SkeletonArcherTests" runstate="Runnable" seed="2010428280" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.000097" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1194" name="BallisticLowArcReachesTheRequestedPoint(12.0f,-3.0f)" fullname="SkeletonArcherTests.BallisticLowArcReachesTheRequestedPoint(12.0f,-3.0f)" methodname="BallisticLowArcReachesTheRequestedPoint" classname="SkeletonArcherTests" runstate="Runnable" seed="288044475" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.000050" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1201" name="BowDrawAndPresentationArrowMatchExportedTimingAfterMovingTheActor" fullname="SkeletonArcherTests.BowDrawAndPresentationArrowMatchExportedTimingAfterMovingTheActor" methodname="BowDrawAndPresentationArrowMatchExportedTimingAfterMovingTheActor" classname="SkeletonArcherTests" runstate="Runnable" seed="2134583719" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.012888" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1197" name="RetreatHysteresisDoesNotOscillateAtThePreferredMinimum" fullname="SkeletonArcherTests.RetreatHysteresisDoesNotOscillateAtThePreferredMinimum" methodname="RetreatHysteresisDoesNotOscillateAtThePreferredMinimum" classname="SkeletonArcherTests" runstate="Runnable" seed="1570783" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.000170" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1202" name="SweptArrowHitsAThinWallAndIgnoresItsOwner" fullname="SkeletonArcherTests.SweptArrowHitsAThinWallAndIgnoresItsOwner" methodname="SweptArrowHitsAThinWallAndIgnoresItsOwner" classname="SkeletonArcherTests" runstate="Runnable" seed="504187443" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.003955" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1196" name="UnreachableOrInvalidBallisticsCannotCreateProjectiles" fullname="SkeletonArcherTests.UnreachableOrInvalidBallisticsCannotCreateProjectiles" methodname="UnreachableOrInvalidBallisticsCannotCreateProjectiles" classname="SkeletonArcherTests" runstate="Runnable" seed="1420123787" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.000252" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1200" name="VariantsShareTheBaseAndAllControllerBindingsResolve" fullname="SkeletonArcherTests.VariantsShareTheBaseAndAllControllerBindingsResolve" classname="SkeletonArcherTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.063379" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1198" name="VariantsShareTheBaseAndAllControllerBindingsResolve(False)" fullname="SkeletonArcherTests.VariantsShareTheBaseAndAllControllerBindingsResolve(False)" methodname="VariantsShareTheBaseAndAllControllerBindingsResolve" classname="SkeletonArcherTests" runstate="Runnable" seed="953109072" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.044524" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1199" name="VariantsShareTheBaseAndAllControllerBindingsResolve(True)" fullname="SkeletonArcherTests.VariantsShareTheBaseAndAllControllerBindingsResolve(True)" methodname="VariantsShareTheBaseAndAllControllerBindingsResolve" classname="SkeletonArcherTests" runstate="Runnable" seed="602645475" result="Passed" start-time="2026-11-12 00:20:49Z" end-time="2026-11-12 00:20:49Z" duration="0.015002" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+            <output><![CDATA[Saving results to: .codex/diagnostics/skeleton-test-results.xml
+]]></output>
+          </test-case>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

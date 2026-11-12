@@ -26,6 +26,7 @@ public class EnemyAnimationController : MonoBehaviour
     [SerializeField] private EnemyMotor enemyMotor;
     [SerializeField] private EnemyAttack enemyAttack;
     private BeholderAttackController beholderAttacks;
+    private EnemyArcherCombat archerCombat;
     [SerializeField] private EnemyHealth enemyHealth;
     [SerializeField] private AudioEmitter audioEmitter;
 
@@ -43,6 +44,12 @@ public class EnemyAnimationController : MonoBehaviour
     [SerializeField] private bool playAlertAudioOnStateEnter = true;
     [SerializeField] private AudioCue alertAudioCue;
     [SerializeField] private Transform alertAudioAnchor;
+
+    [Header("Melee Attack Audio")]
+    [SerializeField] private AudioCue attackAudioCue;
+    [Tooltip("Seconds after the melee attack animation starts.")]
+    [SerializeField, Min(0f)] private float attackAudioDelay;
+    [SerializeField] private Transform attackAudioAnchor;
 
     private readonly Dictionary<string, AnimatorControllerParameterType> parameterTypes = new Dictionary<string, AnimatorControllerParameterType>();
     private RuntimeAnimatorController cachedRuntimeAnimatorController;
@@ -67,10 +74,12 @@ public class EnemyAnimationController : MonoBehaviour
     private float spawnPlaybackStartedAt;
     private float spawnPlaybackDuration;
     private bool deathSequenceStarted;
+    private float pendingAttackAudioAt = float.PositiveInfinity;
 
     private void Awake()
     {
         beholderAttacks = GetComponent<BeholderAttackController>();
+        archerCombat = GetComponent<EnemyArcherCombat>();
         if (enemySetup == null)
             enemySetup = GetComponent<EnemySetup>();
 
@@ -102,7 +111,10 @@ public class EnemyAnimationController : MonoBehaviour
     {
         EnsureAnimatorConfiguration();
         if (animator == null)
+        {
+            pendingAttackAudioAt = float.PositiveInfinity;
             return;
+        }
 
         bool isAlive = enemyHealth == null || enemyHealth.IsAlive;
         EnemyState state = enemyBrain != null ? enemyBrain.CurrentState : (isAlive ? EnemyState.Idle : EnemyState.Dead);
@@ -154,6 +166,7 @@ public class EnemyAnimationController : MonoBehaviour
 
         if (!isAlive)
         {
+            pendingAttackAudioAt = float.PositiveInfinity;
             PlayDeathSequenceIfNeeded();
             wasAlive = isAlive;
             RememberState(state);
@@ -162,6 +175,7 @@ public class EnemyAnimationController : MonoBehaviour
 
         if (HandleSpawnState(state))
         {
+            pendingAttackAudioAt = float.PositiveInfinity;
             wasAlive = isAlive;
             RememberState(state);
             return;
@@ -170,7 +184,9 @@ public class EnemyAnimationController : MonoBehaviour
         if (isAlive && enemyHealth != null && enemyHealth.DamageSequence != lastDamageSequence)
         {
             lastDamageSequence = enemyHealth.DamageSequence;
-            if (enemyAttack == null || enemyAttack.CanDamageInterruptCurrentAttack(animator))
+            if (archerCombat != null && archerCombat.isActiveAndEnabled
+                ? archerCombat.CanDamageInterrupt
+                : enemyAttack == null || enemyAttack.CanDamageInterruptCurrentAttack(animator))
                 PlayTakeDamageAnimation();
         }
 
@@ -181,10 +197,46 @@ public class EnemyAnimationController : MonoBehaviour
             lastAttackSequence = enemyAttack.AttackSequence;
             SetTriggerIfExists("Attack");
             SetTriggerIfExists("AttackTrigger");
+            pendingAttackAudioAt = attackAudioCue != null
+                ? Time.time + Mathf.Max(0f, attackAudioDelay) : float.PositiveInfinity;
         }
 
+        UpdateAttackAudio(state);
         wasAlive = isAlive;
         RememberState(state);
+    }
+
+    private void OnDisable()
+    {
+        pendingAttackAudioAt = float.PositiveInfinity;
+    }
+
+    private void UpdateAttackAudio(EnemyState state)
+    {
+        if (float.IsPositiveInfinity(pendingAttackAudioAt))
+            return;
+
+        if (enemyAttack == null || !enemyAttack.CanStartAttack
+            || (enemyBrain != null && state != EnemyState.Attack)
+            || ((enemySetup == null || enemySetup.HasAuthority) && !enemyAttack.IsAttackLocked)
+            || IsTakeDamageStateActive())
+        {
+            pendingAttackAudioAt = float.PositiveInfinity;
+            return;
+        }
+
+        if (Time.time < pendingAttackAudioAt)
+            return;
+
+        pendingAttackAudioAt = float.PositiveInfinity;
+        if (attackAudioCue == null)
+            return;
+
+        Transform anchor = attackAudioAnchor != null ? attackAudioAnchor : transform;
+        if (audioEmitter != null)
+            audioEmitter.PlayAttached(attackAudioCue, anchor);
+        else
+            GameAudioService.Play(attackAudioCue, anchor);
     }
 
     public bool TryGetDeathSequenceDestroyDelay(out float delay)
@@ -251,6 +303,7 @@ public class EnemyAnimationController : MonoBehaviour
     {
         if (animator == null
             || !isAlive
+            || (archerCombat != null && archerCombat.IsAttacking)
             || (state == EnemyState.Attack && (beholderAttacks == null || !beholderAttacks.isActiveAndEnabled))
             || state == EnemyState.Dead
             || state == EnemyState.PreSpawn
@@ -278,6 +331,7 @@ public class EnemyAnimationController : MonoBehaviour
 
     private void PlayTakeDamageAnimation()
     {
+        pendingAttackAudioAt = float.PositiveInfinity;
         if (animator == null)
             return;
 

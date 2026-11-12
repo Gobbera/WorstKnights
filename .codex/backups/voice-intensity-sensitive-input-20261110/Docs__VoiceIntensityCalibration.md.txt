@@ -1,0 +1,43 @@
+# Voice Intensity Calibration
+
+Stage 4 of [Voice Controls Implementation Plan](VoiceControlsImplementationPlan.md). This stage exposes local relative intensity and calibration; stage 5 will connect it to voice range.
+
+## Using the microphone test
+
+1. Restart Play or rebuild so the next Vivox login requests periodic participant updates. Join a room and wait for voice to connect.
+2. Open Settings > Microphone Test > Open test. An offline dialog stays unavailable and does not initialize voice.
+3. Select Calibrate and stay silent. If using push-to-talk, hold the configured key throughout each measurement, including silence.
+4. Select Measure next step for quiet, normal and comfortably louder speech. Use the same microphone distance and speak steadily for about three seconds of accepted samples per step.
+5. A successful profile is saved automatically. Cancel, Close, Escape, connection loss and failed calibration keep the previous valid profile. Reset profile removes only the current microphone/context profile.
+
+The meter displays Silent, Quiet, Normal or Loud and a relative percentage. Input closed means mute/PTT or another transmission gate prevents measurement. The dialog uses the existing microphone mode: speech during calibration can be heard by the room. There is no local audio echo or second microphone capture.
+
+## Measurement and calibration
+
+`VivoxVoiceManager` requests `ParticipantPropertyUpdateFrequency.TenPerSecond` in login options. This SDK setting applies to participant property updates across that login, including remote participants; it does not change encoded voice quality. Existing sessions must log in again to adopt the setting.
+
+`LocalVoiceActivity` observes only the active channel's self participant, with the existing connection, mute, focus and transmission gates. `VoiceIntensityMonitor` polls its energy at most once per 0.1 seconds. A slow frame never duplicates the same observation to catch up. The SDK publishes changed properties: absence of an energy event alone cannot prove stale input.
+
+Each calibration step accepts 30 samples. Silence requires available input without detected speech; other steps require speech above the measured noise floor. Closed input does not contribute samples. Each collecting step fails after 15 seconds without enough valid samples. Silence uses the 90th percentile, speech uses medians, and the anchors must have meaningful relative separation. Isolated peaks cannot define a speech level. An unsuccessful attempt does not replace a usable profile.
+
+Normalization interpolates logarithmically between the noise gate and quiet (25%), normal (60%) and loud (100%) anchors. Two consecutive speech observations above the noise threshold open the meter gate. Distinct opening/closing thresholds limit noise chatter. Unscaled exponential smoothing uses 0.08 seconds for attack and 0.22 seconds for release; blocked input immediately clears the meter. Provisional anchors support a preview before calibration but should not be used to compare microphones.
+
+`VoiceIntensityProfileStore` saves versioned, validated anchors in local PlayerPrefs. A hashed context key includes the effective microphone name, Vivox input volume and available automatic-gain/noise-suppression flags. The manager checks context once per second while connected and reloads the matching profile when it changes. Profiles are independent of ephemeral Vivox player IDs and listener volume preferences.
+
+## Limits and live review
+
+Energy is a relative SDK observation, not physical sound pressure. Microphone gain, distance, operating-system effects, hardware processing and Vivox processing all affect it. The dialog reports automatic input-level status without modifying processing. Automatic gain control or compression may collapse quiet/normal/loud differences; calibration rejects those overlapping anchors instead of claiming usable results. OS/hardware changes invisible to the SDK require manual recalibration.
+
+Before stage 5, test real microphone energy separation in matching rebuilt clients, including background fan/keyboard noise, held/released PTT, normal speech and comfortably louder speech. Confirm that a saved profile reloads after restarting, switching microphone reloads the appropriate profile, and failed/canceled attempts preserve earlier calibration. If levels overlap, review the microphone's processing and repeat the test.
+
+Stage 4 adds no Photon intensity messages and does not consume intensity in distance attenuation. Existing listener volume/mute, authored range and received Unity reverb retain their behavior.
+
+## Validation
+
+- Final runtime/Editor CLI compilation passed with zero warnings and zero errors after removing the temporary validation helper. The helper is archived in `.codex/backups/voice-intensity-calibration-20261110/`.
+- 22 new native Editor cases passed: calibration, normalization across microphone scales, noise/spike rejection, 30/60/120 fps smoothing, input gating, timeouts, failed/canceled attempts, persistence, frame hitches and dialog lifecycle.
+- All 86 applicable existing voice/input/HUD/reverb regressions passed. Two keyboard frame-edge cases are skipped in Edit Mode and retain their previous native Play validation.
+- Settings and dialog previews were rendered at 1280 x 720 using synthetic metadata and inspected. Unity Services remained uninitialized; no microphone capture, voice login or network connection was started. Map3 remained loaded and clean.
+- Diagnostics: `.codex/diagnostics/voice-intensity-calibration-20261110.txt`. Preview files share that directory with the `voice-intensity-settings-preview` and `voice-intensity-dialog-preview` prefixes.
+
+The implementation follows the installed Vivox SDK's `IParticipantProperties.AudioEnergy` contract and `LoginOptions.ParticipantUpdateFrequency` API; see Unity's [Vivox v16 upgrade guide](https://docs.unity.com/en-us/vivox-unity/v16-upgrade-guide) for the participant-update setting.

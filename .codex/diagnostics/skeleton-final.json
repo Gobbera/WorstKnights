@@ -1,0 +1,11 @@
+{
+    "tests": "Status=Passed passed=17 failed=0 skipped=0\n",
+    "sharedContracts": "passed=26 failed=0",
+    "activeScene": "Assets/Scenes/Map3.unity",
+    "swordsman": "Assets/Prefabs/Enemies/New Skeleton/Skeleton Swordsman.prefab",
+    "archer": "Assets/Prefabs/Enemies/New Skeleton/Skeleton Archer.prefab",
+    "projectile": "Assets/Prefabs/Enemies/New Skeleton/Skeleton Arrow.prefab",
+    "body": "Assets/WorstKnights/Models/Enemies/New Skeleton/SkeletonTesteIA.fbx",
+    "sceneDirty": false,
+    "prefabVariantsVerified": true
+}

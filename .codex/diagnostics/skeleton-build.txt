@@ -1,0 +1,11 @@
+BUILD_OK
+Body calibration error=5,7541497E-06
+Clips=1_Pose,Attack_01,Attack_Bow_01,Death,Idle,Spawn,Take Damage,Walk
+Base=Assets/Prefabs/Enemies/New Skeleton/Skeleton Base.prefab
+Swordsman=Assets/Prefabs/Enemies/New Skeleton/Skeleton Swordsman.prefab
+Archer=Assets/Prefabs/Enemies/New Skeleton/Skeleton Archer.prefab
+Projectile=Assets/Prefabs/Enemies/New Skeleton/Skeleton Arrow.prefab
+Coordinates=-1.00000	0.00000	0.00000	0.00000
+0.00000	0.00000	1.00000	0.00000
+0.00000	-1.00005	0.00000	0.00000
+0.00000	0.00000	0.00000	1.00000

@@ -1,0 +1,2664 @@
+EDITOR play=False active=Assets/Scenes/Map3.unity
+SCENE Assets/Scenes/Map3.unity dirty=False roots=GameplaySceneRoot,Module_01,Directional Light,Directional Light (Scene),Scenario,Player,Door_01,Door_01 (1),Door_01 (2),Door_01 (4),Door_01 (9),Door_01 (5),Door_01 (7),Door_01 (6),Door_01 (8),Door_01 (3),Torch,Torch (1),Wall_Torch,Wall_Torch (2),Wall_Torch (9),Wall_Torch (4),Wall_Torch (5),Wall_Torch (3),Wall_Torch (1),Wall_Torch (11),Wall_Torch (10),Wall_Torch (6),Wall_Torch (12),Wall_Torch (13),Wall_Torch (15),Wall_Torch (14),Wall_Torch (7),Wall_Torch (17),Wall_Torch (8),Wall_Torch (16),Spot Light,Spot Light (3),Spot Light (1),Spot Light (2),Health Potion,Sword,Shield,Barrel,Barrel (2),Barrel (1),Canvas,Teste,Door_01 (10),Wall_Brick_45_Intersect_01,Wall_Brick_45_Intersect_01 (1),Wall_Brick_45_Intersect_01 (2),Wall_Brick_45_Intersect_01 (7),Wall_Brick_45_Intersect_01 (3),Wall_Brick_45_Intersect_01 (4),Wall_Brick_45_Intersect_01 (5),Wall_Brick_45_Intersect_01 (6),Beholder,NavMesh Surface,Enemy,Traversal_Door,Point of Interest,Point of Interest (1),Traversal_Door (1),Traversal_Door (2),Ambience,PF_BoxReverbZone,PF_BoxReverbZone (1),PF_BoxReverbZone (2),WK Fake Volume,WK Fake Volume (3),WK Fake Volume (1),WK Fake Volume (2),Interactive Fog Volume,Interactive Fog Volume (1),Interactive Fog Volume (2),Shelf,Table,Candlestick_01,Chest_Drawers_01,Chair_01,Wall_Shelf,Stone_Fire_Place,Picture_Frame,Chandelier,Vase,Dish,Mug,Candlestick_02,Book_01,Book_02,Books_01,Books_02,Books_Open_01,Chest_Drawer_02,Chest,HalfHalf_Wall_Brick_01,HalfHalf_Wall_Brick_01 (3),HalfHalf_Wall_Brick_01 (1),HalfHalf_Wall_Brick_01 (2),Wall_E (82),Wall_E (100),Wall_E (87),Wall_E (101),Wall_E (88),Wall_E (102),Wall_E (89),Wall_E (103),Wall_E (90),Wall_E (104),Wall_E (91),Wall_E (105),Wall_E (92),Wall_E (106),Wall_E (93),Wall_E (107),Wall_E (94),Wall_E (108),Wall_E (95),Wall_E (109),Wall_E (96),Wall_E (110),Wall_E (97),Wall_E (111),Wall_E (98),Wall_E (112),Wall_E (99),Wall_E (113),Wall_E (83),Wall_E (114),Wall_E (84),Wall_E (115),Wall_E (85),Wall_E (116),Wall_E (86),Wall_E (117),Floor_A 1 (144),Floor_A 1 (147),Floor_A 1 (145),Floor_A 1 (146),Floor_A 1 (156),Floor_A 1 (148),Floor_A 1 (157),Floor_A 1 (149),Floor_A 1 (158),Floor_A 1 (150),Floor_A 1 (152),Floor_A 1 (153),Floor_A 1 (154),Floor_A 1 (155),Floor_A 1 (151),Floor_A 1 (159),Pillar_F (58),Pillar_F (59),Pillar_F (60),Pillar_F (62),Pillar_F (63),Pillar_F (64),Pillar_F (65),Pillar_F (68),Pillar_F (66),Pillar_F (67),Wall_Torch (26),Wall_Torch (28),Wall_Torch (27),Wall_Torch (29),Statue Puzzle,Interaction Trigger System_Elevator_02,Carpet_01_01 (3),Carpet_01_02 (4),Carpet_01_02 (5),Carpet_01_03 (2),Plate Angrad Veyr,Plate Balthor Sabrath,Plate Eldric Ferden,Plate Mothen Hedar,Baseboard_01 (18),Baseboard_01 (36),Baseboard_01 (27),Baseboard_01 (37),Baseboard_01 (20),Baseboard_01 (38),Baseboard_01 (28),Baseboard_01 (39),Baseboard_01 (22),Baseboard_01 (40),Baseboard_01 (31),Baseboard_01 (41),Baseboard_01 (24),Baseboard_01 (42),Baseboard_01 (32),Baseboard_01 (43),Baseboard_01 (19),Baseboard_01 (44),Baseboard_01 (29),Baseboard_01 (45),Baseboard_01 (21),Baseboard_01 (46),Baseboard_01 (30),Baseboard_01 (47),Baseboard_01 (23),Baseboard_01 (48),Baseboard_01 (33),Baseboard_01 (49),Baseboard_01 (26),Baseboard_01 (50),Baseboard_01 (34),Baseboard_01 (51),Baseboard_01 (25),Baseboard_01 (52),Baseboard_01 (35),Baseboard_01 (53),Statues_Room,Door_Arch_B,Crystal
+PREFAB Assets/Prefabs/Enemies/Enemy.prefab
+NODE  pos=(0.0000, 0.0000, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+COMPONENT  :: UnityEngine.MeshFilter
+{
+    "MeshFilter": {
+        "m_Mesh": {
+            "fileID": 10208,
+            "guid": "0000000000000000e000000000000000",
+            "type": 0
+        }
+    }
+}
+COMPONENT  :: UnityEngine.MeshRenderer
+MATERIALS Mesh2D-Lit-Default=Packages/com.unity.render-pipelines.universal/Runtime/Materials/Mesh2D-Lit-Default.mat
+{
+    "MeshRenderer": {
+        "m_Enabled": false,
+        "m_CastShadows": 2,
+        "m_ReceiveShadows": true,
+        "m_DynamicOccludee": true,
+        "m_StaticShadowCaster": false,
+        "m_MotionVectors": 1,
+        "m_LightProbeUsage": 1,
+        "m_ReflectionProbeUsage": 1,
+        "m_RayTracingMode": 2,
+        "m_RayTraceProcedural": false,
+        "m_RayTracingAccelStructBuildFlagsOverride": false,
+        "m_RayTracingAccelStructBuildFlags": 1,
+        "m_SmallMeshCulling": true,
+        "m_ForceMeshLod": -1,
+        "m_MeshLodSelectionBias": 0.0,
+        "m_RenderingLayerMask": 1,
+        "m_RendererPriority": 0,
+        "m_Materials": [
+            {
+                "fileID": 2100000,
+                "guid": "9452ae1262a74094f8a68013fbcd1834",
+                "type": 2
+            }
+        ],
+        "m_StaticBatchInfo": {
+            "firstSubMesh": 0,
+            "subMeshCount": 0
+        },
+        "m_StaticBatchRoot": {
+            "instanceID": 0
+        },
+        "m_ProbeAnchor": {
+            "instanceID": 0
+        },
+        "m_LightProbeVolumeOverride": {
+            "instanceID": 0
+        },
+        "m_ScaleInLightmap": 1.0,
+        "m_ReceiveGI": 1,
+        "m_PreserveUVs": false,
+        "m_IgnoreNormalsForChartDetection": false,
+        "m_ImportantGI": false,
+        "m_StitchLightmapSeams": true,
+        "m_SelectedEditorRenderState": 3,
+        "m_MinimumChartSize": 4,
+        "m_AutoUVMaxDistance": 0.5,
+        "m_AutoUVMaxAngle": 89.0,
+        "m_LightmapParameters": {
+            "instanceID": 0
+        },
+        "m_GlobalIlluminationMeshLod": 0,
+        "m_SortingLayerID": 0,
+        "m_SortingLayer": 0,
+        "m_SortingOrder": 0,
+        "m_MaskInteraction": 0,
+        "m_AdditionalVertexStreams": {
+            "instanceID": 0
+        }
+    }
+}
+COMPONENT  :: UnityEngine.CapsuleCollider
+{
+    "CapsuleCollider": {
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_IncludeLayers": {
+            "serializedVersion": "2",
+            "m_Bits": 0
+        },
+        "m_ExcludeLayers": {
+            "serializedVersion": "2",
+            "m_Bits": 0
+        },
+        "m_LayerOverridePriority": 0,
+        "m_IsTrigger": false,
+        "m_ProvidesContacts": false,
+        "m_Enabled": true,
+        "serializedVersion": "2",
+        "m_Radius": 0.5,
+        "m_Height": 1.9730238914489747,
+        "m_Direction": 1,
+        "m_Center": {
+            "x": 0.0,
+            "y": 0.9403307437896729,
+            "z": 0.0
+        }
+    }
+}
+COMPONENT  :: UnityEngine.AI.NavMeshAgent
+{
+    "NavMeshAgent": {
+        "m_Enabled": true,
+        "m_AgentTypeID": 0,
+        "m_Radius": 0.5,
+        "m_Speed": 3.25,
+        "m_Acceleration": 8.0,
+        "avoidancePriority": 50,
+        "m_AngularSpeed": 120.0,
+        "m_StoppingDistance": 0.800000011920929,
+        "m_AutoTraverseOffMeshLink": true,
+        "m_AutoBraking": true,
+        "m_AutoRepath": true,
+        "m_Height": 1.9730238914489747,
+        "m_BaseOffset": 0.0,
+        "m_WalkableMask": 4294967295,
+        "m_ObstacleAvoidanceType": 4
+    }
+}
+COMPONENT  :: UnityEngine.Rigidbody
+{
+    "Rigidbody": {
+        "serializedVersion": "5",
+        "m_Mass": 1.0,
+        "m_LinearDamping": 0.0,
+        "m_AngularDamping": 0.05000000074505806,
+        "m_CenterOfMass": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_InertiaTensor": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_InertiaRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_IncludeLayers": {
+            "serializedVersion": "2",
+            "m_Bits": 0
+        },
+        "m_ExcludeLayers": {
+            "serializedVersion": "2",
+            "m_Bits": 0
+        },
+        "m_ImplicitCom": true,
+        "m_ImplicitTensor": true,
+        "m_UseGravity": true,
+        "m_IsKinematic": false,
+        "m_Interpolate": 0,
+        "m_Constraints": 112,
+        "m_CollisionDetection": 0
+    }
+}
+COMPONENT  :: Photon.Pun.PhotonView
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "PhotonUnityNetworking::Photon.Pun.PhotonView",
+        "ObservedComponentsFoldoutOpen": true,
+        "Group": 0,
+        "prefixField": -1,
+        "Synchronization": 3,
+        "OwnershipTransfer": 0,
+        "observableSearch": 2,
+        "ObservedComponents": [
+            {
+                "instanceID": 0
+            }
+        ],
+        "sceneViewId": 0,
+        "InstantiationId": 0,
+        "isRuntimeInstantiated": false
+    }
+}
+COMPONENT  :: EnemySetup
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemySetup",
+        "photonView": {
+            "instanceID": 0
+        },
+        "rb": {
+            "instanceID": 0
+        },
+        "capsule": {
+            "instanceID": 0
+        },
+        "enemyHealth": {
+            "instanceID": 0
+        },
+        "enemyBrain": {
+            "instanceID": 0
+        },
+        "enemyMotor": {
+            "instanceID": 0
+        },
+        "enemyNavigation": {
+            "instanceID": 0
+        },
+        "enemyPerception": {
+            "instanceID": 0
+        },
+        "enemyAttack": {
+            "instanceID": 0
+        },
+        "archerCombat": {
+            "instanceID": 0
+        },
+        "enemyAnimationController": {
+            "instanceID": 0
+        },
+        "enemyNetworkSync": {
+            "instanceID": 0
+        },
+        "attackOrigin": {
+            "instanceID": 0
+        },
+        "animator": {
+            "instanceID": 0
+        },
+        "modelRoot": {
+            "instanceID": 0
+        },
+        "useGravityWhenSimulated": true
+    }
+}
+COMPONENT  :: EnemyBrain
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyBrain",
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "enemyHealth": {
+            "instanceID": 0
+        },
+        "enemyMotor": {
+            "instanceID": 0
+        },
+        "enemyNavigation": {
+            "instanceID": 0
+        },
+        "enemyPerception": {
+            "instanceID": 0
+        },
+        "enemyAttack": {
+            "instanceID": 0
+        },
+        "beholderAttacks": {
+            "instanceID": 0
+        },
+        "archerCombat": {
+            "instanceID": 0
+        },
+        "enemyAnimationController": {
+            "instanceID": 0
+        },
+        "requireSpawnAnimation": true,
+        "spawnTriggerMode": 0,
+        "defaultState": 6,
+        "returnToPatrol": true,
+        "idleDuration": 1.0,
+        "patrolPoints": [],
+        "patrolMode": 0,
+        "patrolSpeed": 2.0,
+        "patrolWaitTime": 1.0,
+        "patrolStoppingDistance": 0.3499999940395355,
+        "startAtNearestPatrolPoint": true,
+        "useGeneratedHomePatrol": false,
+        "generatedHomePatrolRadius": 4.0,
+        "generatedHomePatrolPointCount": 4,
+        "globalPatrolCenter": {
+            "instanceID": 0
+        },
+        "globalPatrolRadius": 32.0,
+        "globalPatrolMinimumDistance": 8.0,
+        "globalPatrolSampleDistance": 8.0,
+        "globalPatrolSampleAttempts": 12,
+        "alertDuration": 1.5,
+        "alertBeforeChaseOnFirstTargetDetection": true,
+        "rotateDuringAlert": true,
+        "moveToAlertPosition": true,
+        "alertSpeed": 2.5,
+        "alertStoppingDistance": 0.75,
+        "chaseSpeed": 3.25,
+        "maxChaseDistance": 22.0,
+        "chaseDestinationUpdateInterval": 0.25,
+        "chaseStoppingDistance": 1.100000023841858,
+        "lostSightGraceDuration": 0.4000000059604645,
+        "combatLostSightGraceDuration": 6.0,
+        "combatMemoryDuration": 6.0,
+        "combatMemoryAwarenessRadius": 10.0,
+        "combatMemoryRequiresLineOfSight": true,
+        "combatSearchDuration": 8.0,
+        "combatSearchRadius": 4.0,
+        "combatSearchPointCount": 5,
+        "combatSearchPointWaitTime": 0.800000011920929,
+        "combatSearchSpeed": 3.0,
+        "enableCloseAwareness": true,
+        "closeAwarenessRadius": 3.0,
+        "closeAwarenessRequiresLineOfSight": true,
+        "searchDuration": 4.0,
+        "searchRadius": 3.0,
+        "searchPointCount": 3,
+        "searchSpeed": 2.5,
+        "searchStoppingDistance": 0.75,
+        "searchPointWaitTime": 0.6000000238418579,
+        "useLastSeenSearchFlow": false,
+        "reflectionPauseDuration": 2.5,
+        "searchToReflectionDelay": 4.0,
+        "lastSeenStallTimeout": 6.0,
+        "lastSeenProgressDistance": 0.4000000059604645,
+        "targetSwitchDistanceAdvantage": 2.0,
+        "roomChangeConfirmationTime": 0.20000000298023225,
+        "playerEvidenceLifetime": 45.0,
+        "returnSpeed": 2.75,
+        "returnStoppingDistance": 0.75,
+        "drawDebugGizmos": true,
+        "drawDebugLabels": true,
+        "lastKnownPositionColor": {
+            "r": 0.20000000298023225,
+            "g": 0.6499999761581421,
+            "b": 1.0,
+            "a": 0.8999999761581421
+        },
+        "investigationPositionColor": {
+            "r": 1.0,
+            "g": 0.550000011920929,
+            "b": 0.05000000074505806,
+            "a": 0.8999999761581421
+        },
+        "destinationColor": {
+            "r": 0.25,
+            "g": 1.0,
+            "b": 0.3499999940395355,
+            "a": 0.8999999761581421
+        },
+        "closeAwarenessColor": {
+            "r": 0.10000000149011612,
+            "g": 0.949999988079071,
+            "b": 1.0,
+            "a": 0.8999999761581421
+        },
+        "combatMemoryColor": {
+            "r": 1.0,
+            "g": 0.10000000149011612,
+            "b": 0.8500000238418579,
+            "a": 0.8999999761581421
+        }
+    }
+}
+COMPONENT  :: EnemyMotor
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyMotor",
+        "moveSpeed": 3.25,
+        "stopDistance": 0.800000011920929,
+        "turnSpeed": 10.0,
+        "enemySetup": {
+            "instanceID": 0
+        }
+    }
+}
+COMPONENT  :: EnemyNavigation
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyNavigation",
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "enemyMotor": {
+            "instanceID": 0
+        },
+        "navMeshAgent": {
+            "instanceID": 0
+        },
+        "useNavMeshAgent": true,
+        "createAgentAtRuntime": false,
+        "useDirectMovementFallback": true,
+        "samplePositionDistance": 2.0,
+        "configureAgentFromCapsule": false,
+        "agentRadiusPadding": 0.0,
+        "minimumAgentHeight": 0.10000000149011612,
+        "forceManualAgentTransformSync": true,
+        "applyRuntimeAvoidanceSettings": false,
+        "obstacleAvoidance": 4,
+        "avoidancePriority": 50,
+        "destinationRefreshDistance": 0.3499999940395355,
+        "reachedDistanceTolerance": 0.15000000596046449
+    }
+}
+COMPONENT  :: EnemyVision
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyVision",
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "eyeTransform": {
+            "instanceID": 0
+        },
+        "enableVision": true,
+        "viewDistance": 16.0,
+        "viewAngle": 110.0,
+        "targetLayers": {
+            "serializedVersion": "2",
+            "m_Bits": 4294967295
+        },
+        "obstacleLayers": {
+            "serializedVersion": "2",
+            "m_Bits": 4294967295
+        },
+        "detectionUpdateInterval": 0.20000000298023225,
+        "eyeHeightFallback": 1.5499999523162842,
+        "drawVisionGizmo": true,
+        "visionGizmoColor": {
+            "r": 1.0,
+            "g": 0.8500000238418579,
+            "b": 0.05000000074505806,
+            "a": 0.8999999761581421
+        }
+    }
+}
+COMPONENT  :: EnemyHearing
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyHearing",
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "enableHearing": true,
+        "hearingMultiplier": 1.0,
+        "minimumAudibleIntensity": 0.05000000074505806,
+        "detectPlayerMovement": false,
+        "playerMovementScanInterval": 0.3499999940395355,
+        "drawHearingGizmo": true,
+        "previewHearingRadius": 12.0,
+        "hearingGizmoColor": {
+            "r": 0.20000000298023225,
+            "g": 0.6499999761581421,
+            "b": 1.0,
+            "a": 0.25
+        }
+    }
+}
+COMPONENT  :: EnemyPerception
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyPerception",
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "enemyHealth": {
+            "instanceID": 0
+        },
+        "enemyVision": {
+            "instanceID": 0
+        },
+        "enemyHearing": {
+            "instanceID": 0
+        }
+    }
+}
+COMPONENT  :: EnemyAttack
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyAttack",
+        "attackEnabled": true,
+        "attackRange": 1.600000023841858,
+        "attackStartRange": 2.3499999046325685,
+        "attackDamage": 12.0,
+        "attackCooldown": 3.5,
+        "attackMovementLockDuration": 0.0,
+        "attackTurnTrackingEndNormalizedTime": 0.5,
+        "attackTurnSpeedMultiplier": 1.600000023841858,
+        "attackAnimationClipName": "Attack_01",
+        "attackStatePath": "Base Layer.Attack_01",
+        "attackHitStartNormalizedTime": 0.5419999957084656,
+        "attackHitEndNormalizedTime": 0.8939999938011169,
+        "damageInterruptWindowEndNormalizedTime": 0.18000000715255738,
+        "weaponHitRadius": 0.20000000298023225,
+        "weaponReach": 0.8999999761581421,
+        "hitMask": {
+            "serializedVersion": "2",
+            "m_Bits": 8251
+        },
+        "playerDamageAnimation": 1,
+        "playerCameraImpactType": 1,
+        "useForwardArcHitbox": true,
+        "arcOriginHeight": 1.0,
+        "arcHitRange": 2.25,
+        "arcHitAngle": 120.0,
+        "drawHitboxGizmo": true,
+        "hitboxGizmoColor": {
+            "r": 1.0,
+            "g": 0.15000000596046449,
+            "b": 0.05000000074505806,
+            "a": 0.3499999940395355
+        },
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "enemyHealth": {
+            "instanceID": 0
+        },
+        "weaponRoot": {
+            "instanceID": 0
+        },
+        "weaponTip": {
+            "instanceID": 0
+        }
+    }
+}
+COMPONENT  :: EnemyHealth
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyHealth",
+        "maxHealth": 125.0,
+        "damageImmunityDuration": 0.10000000149011612,
+        "damageKnockback": {
+            "enabled": true,
+            "horizontalStrength": 1.5,
+            "damageStrengthMultiplier": 0.0,
+            "upwardStrength": 1.5,
+            "controlLockDuration": 0.07999999821186066
+        },
+        "destroyOnDeath": true,
+        "destroyDelay": 0.0,
+        "preventDeath": false,
+        "preventedDeathHealth": 1.0,
+        "preventedDeathStunDuration": 5.0,
+        "preventedDeathInvulnerabilityDuration": 1.0
+    }
+}
+COMPONENT  :: EnemyKickReaction
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyKickReaction",
+        "canBePushedByKick": true,
+        "knockbackMultiplier": 1.0,
+        "durationMultiplier": 1.0
+    }
+}
+COMPONENT  :: EnemyAnimationController
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyAnimationController",
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "animator": {
+            "instanceID": 0
+        },
+        "enemyBrain": {
+            "instanceID": 0
+        },
+        "enemyMotor": {
+            "instanceID": 0
+        },
+        "enemyAttack": {
+            "instanceID": 0
+        },
+        "enemyHealth": {
+            "instanceID": 0
+        },
+        "audioEmitter": {
+            "instanceID": 0
+        },
+        "playPreSpawnAndSpawn": true,
+        "spawnFallbackDuration": 1.0,
+        "deathFallbackDuration": 1.0,
+        "deathFadeOutStartDelay": 5.0,
+        "deathFadeOutDuration": 1.0,
+        "triggerAlertOnStateEnter": true,
+        "alertTriggerName": "AlertTrigger",
+        "useAlertParameterAsFallbackTrigger": true,
+        "playAlertAudioOnStateEnter": true,
+        "alertAudioCue": {
+            "instanceID": 0
+        },
+        "alertAudioAnchor": {
+            "instanceID": 0
+        }
+    }
+}
+COMPONENT  :: EnemyNetworkSync
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyNetworkSync",
+        "enemySetup": {
+            "instanceID": 0
+        },
+        "enemyBrain": {
+            "instanceID": 0
+        },
+        "enemyMotor": {
+            "instanceID": 0
+        },
+        "enemyAttack": {
+            "instanceID": 0
+        },
+        "enemyHealth": {
+            "instanceID": 0
+        },
+        "beholderMood": {
+            "instanceID": 0
+        },
+        "beholderDialogue": {
+            "instanceID": 0
+        },
+        "archerCombat": {
+            "instanceID": 0
+        },
+        "remotePositionLerpSpeed": 12.0,
+        "remoteRotationLerpSpeed": 16.0,
+        "remoteTeleportDistance": 4.0
+    }
+}
+COMPONENT  :: ReactionSignalReceiver
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::ReactionSignalReceiver",
+        "receiverName": "Reactions",
+        "signalEntries": [
+            {
+                "signalId": "Hit",
+                "feedbackOrigin": {
+                    "instanceID": 0
+                },
+                "audioCue": {
+                    "fileID": 11400000,
+                    "guid": "30014b3cc0d22dd4a8c16115a81248e5",
+                    "type": 2
+                },
+                "effectPrefab": {
+                    "fileID": 3451279753407673077,
+                    "guid": "21ec746de78787842a80661b40fbf62f",
+                    "type": 3
+                },
+                "effectLifetime": 1.0,
+                "onSignalReceived": {
+                    "m_PersistentCalls": {
+                        "m_Calls": []
+                    }
+                }
+            },
+            {
+                "signalId": "Hit",
+                "feedbackOrigin": {
+                    "instanceID": 0
+                },
+                "audioCue": {
+                    "fileID": 11400000,
+                    "guid": "ca0942170795a1b40b6578fabcb76fec",
+                    "type": 2
+                },
+                "effectPrefab": {
+                    "instanceID": 0
+                },
+                "effectLifetime": 5.0,
+                "onSignalReceived": {
+                    "m_PersistentCalls": {
+                        "m_Calls": []
+                    }
+                }
+            }
+        ]
+    }
+}
+COMPONENT  :: ReactionSignalEmitter
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::ReactionSignalEmitter",
+        "signalReceiver": {
+            "instanceID": 0
+        }
+    }
+}
+COMPONENT  :: ImpactReactionSignalBridge
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::ImpactReactionSignalBridge",
+        "signalEmitter": {
+            "instanceID": 0
+        },
+        "signalReceiver": {
+            "instanceID": 0
+        },
+        "photonView": {
+            "instanceID": 0
+        },
+        "signalId": "Hit",
+        "broadcastInMultiplayer": true
+    }
+}
+COMPONENT  :: AudioEmitter
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::AudioEmitter",
+        "playbackAnchor": {
+            "instanceID": 0
+        },
+        "stopLoopingCueOnDisable": true
+    }
+}
+COMPONENT  :: FootstepPlaybackController
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::FootstepPlaybackController",
+        "audioEmitter": {
+            "instanceID": 0
+        },
+        "surfaceResolver": {
+            "instanceID": 0
+        },
+        "characterProfile": {
+            "instanceID": 0
+        },
+        "footstepAnchor": {
+            "instanceID": 0
+        },
+        "groundMask": {
+            "serializedVersion": "2",
+            "m_Bits": 4294967295
+        },
+        "probeOriginLift": 0.3499999940395355,
+        "probeDistance": 1.5,
+        "footstepHeightOffset": 0.0,
+        "verboseLogging": false
+    }
+}
+COMPONENT  :: EnemyFootstepAudioController
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "Assembly-CSharp::EnemyFootstepAudioController",
+        "enemyBrain": {
+            "instanceID": 0
+        },
+        "enemyMotor": {
+            "instanceID": 0
+        },
+        "enemyHealth": {
+            "instanceID": 0
+        },
+        "footstepPlayback": {
+            "instanceID": 0
+        },
+        "surfaceFallbackCue": {
+            "instanceID": 0
+        },
+        "minPlanarSpeed": 0.15000000596046449,
+        "metersPerStep": 1.2000000476837159,
+        "onlyWhenChasing": true,
+        "verboseLogging": false
+    }
+}
+NODE Model pos=(0.0000, 0.0000, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton pos=(0.0000, 0.0000, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+COMPONENT Model/Skeleton :: UnityEngine.Animator
+{
+    "Animator": {
+        "serializedVersion": "7",
+        "m_Enabled": true,
+        "m_Avatar": {
+            "fileID": 9000000,
+            "guid": "d3c50663596491c4d900b09366fee397",
+            "type": 3
+        },
+        "m_Controller": {
+            "fileID": 9100000,
+            "guid": "4ad8f576596aac145b77285c0730835f",
+            "type": 2
+        },
+        "m_CullingMode": 1,
+        "m_UpdateMode": 0,
+        "m_ApplyRootMotion": false,
+        "m_LinearVelocityBlending": false,
+        "m_StabilizeFeet": false,
+        "m_AnimatePhysics": false,
+        "m_WarningMessage": "",
+        "m_HasTransformHierarchy": true,
+        "m_AllowConstantClipSamplingOptimization": true,
+        "m_KeepAnimatorStateOnDisable": false,
+        "m_WriteDefaultValuesOnDisable": false
+    }
+}
+COMPONENT Model/Skeleton :: SceneAnimationPosePreview
+NODE Model/Skeleton/Arm_L pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Arm_L :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Arm_R pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Arm_R :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Body pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Body :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Eyes pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Eyes :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Knight_Eyes=Assets/WK_Pack/Materials/Exclusives/WK_Knight_Eyes.mat
+NODE Model/Skeleton/Hand_L pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Hand_L :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Hand_R pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Hand_R :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Head pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Head :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Jaw pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Jaw :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Legs_L pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Legs_L :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Legs_R pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(100.0000, 100.0000, 100.0000) active=True
+COMPONENT Model/Skeleton/Legs_R :: UnityEngine.SkinnedMeshRenderer
+MATERIALS WK_Skeleton_Bones=Assets/WK_Pack/Materials/Exclusives/WK_Skeleton_Bones.mat
+NODE Model/Skeleton/Skeleton pos=(0.0000, 0.0000, 0.0000) rot=(270.020, 0.000, 0.000) scale=(109.5629, 109.5629, 109.5629) active=True
+NODE Model/Skeleton/Skeleton/Root pos=(0.0000, 0.0000, 0.0000) rot=(0.000, 90.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips pos=(-0.0095, 0.0008, 0.0000) rot=(0.000, 180.000, 86.728) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.L pos=(0.0000, 0.0023, 0.0016) rot=(5.992, 4.628, 45.440) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.L/Knee.L pos=(0.0000, 0.0032, 0.0000) rot=(352.359, 0.711, 308.333) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.L/Knee.L/Ankle.L pos=(0.0000, 0.0038, 0.0000) rot=(1.686, 26.031, 87.959) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.L/Knee.L/Ankle.L/Foot.L pos=(0.0000, 0.0012, 0.0000) rot=(355.180, 2.411, 359.146) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.L/Knee.L/Ankle.L/Foot.L/Foot.L_end pos=(0.0000, 0.0019, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.R pos=(0.0000, 0.0023, -0.0016) rot=(7.430, 181.430, 3.279) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.R/Knee.R pos=(0.0000, 0.0032, 0.0000) rot=(352.372, 359.295, 49.177) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.R/Knee.R/Ankle.R pos=(0.0000, 0.0038, 0.0000) rot=(4.052, 334.230, 276.980) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.R/Knee.R/Ankle.R/Foot.R pos=(0.0000, 0.0012, 0.0000) rot=(347.419, 341.764, 316.175) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Leg.R/Knee.R/Ankle.R/Foot.R/Foot.R_end pos=(0.0000, 0.0019, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1 pos=(0.0000, 0.0000, 0.0000) rot=(336.916, 272.610, 174.147) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2 pos=(0.0000, 0.0008, 0.0000) rot=(17.672, 357.048, 356.211) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3 pos=(0.0000, 0.0009, 0.0000) rot=(6.025, 1.655, 1.541) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4 pos=(0.0000, 0.0008, 0.0000) rot=(17.387, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Neck_1 pos=(0.0000, 0.0018, 0.0000) rot=(15.083, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Neck_1/Neck_2 pos=(0.0000, 0.0006, 0.0000) rot=(334.220, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Neck_1/Neck_2/Head pos=(0.0000, 0.0006, 0.0000) rot=(324.549, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Neck_1/Neck_2/Head/Jaw pos=(0.0000, 0.0000, 0.0005) rot=(78.782, 182.293, 181.156) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Neck_1/Neck_2/Head/Jaw/Jaw_end pos=(0.0000, 0.0014, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L pos=(-0.0007, 0.0013, -0.0001) rot=(4.138, 2.518, 75.152) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L pos=(0.0000, 0.0017, 0.0000) rot=(358.237, 61.066, 88.839) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L pos=(0.0000, 0.0035, 0.0000) rot=(13.609, 3.658, 7.655) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L pos=(0.0000, 0.0027, 0.0000) rot=(356.324, 357.700, 3.319) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L/Fingers_01.L pos=(0.0000, 0.0010, 0.0000) rot=(7.008, 2.746, 10.616) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L/Fingers_01.L/Fingers_02.L pos=(0.0000, 0.0005, 0.0000) rot=(2.044, 1.073, 20.135) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L/Fingers_01.L/Fingers_02.L/Fingers_02.L_end pos=(0.0000, 0.0006, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L/Tumb_01.L pos=(0.0001, 0.0004, 0.0006) rot=(15.149, 17.456, 14.557) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L/Tumb_01.L/Tumb_02.L pos=(0.0000, 0.0007, 0.0000) rot=(342.939, 353.379, 358.837) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L/Tumb_01.L/Tumb_02.L/Tumb_02.L_end pos=(0.0000, 0.0005, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R pos=(0.0007, 0.0013, -0.0001) rot=(4.138, 357.483, 284.848) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R pos=(0.0000, 0.0017, 0.0000) rot=(354.558, 317.558, 281.553) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R pos=(0.0000, 0.0035, 0.0000) rot=(30.597, 2.712, 0.215) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R pos=(0.0000, 0.0027, 0.0000) rot=(350.136, 3.493, 336.092) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/Fingers_01.R pos=(0.0000, 0.0010, 0.0000) rot=(14.880, 338.449, 292.632) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/Fingers_01.R/Fingers_02.R pos=(0.0000, 0.0005, 0.0000) rot=(7.836, 340.116, 281.349) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/Fingers_01.R/Fingers_02.R/Fingers_02.R_end pos=(0.0000, 0.0006, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/Tumb_01.R pos=(-0.0001, 0.0004, 0.0006) rot=(4.710, 328.491, 301.820) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/Tumb_01.R/Tumb_02.R pos=(0.0000, 0.0007, 0.0000) rot=(322.154, 81.404, 254.792) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/Tumb_01.R/Tumb_02.R/Tumb_02.R_end pos=(0.0000, 0.0005, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+NODE Model/Skeleton/Sword pos=(0.4436, 0.6702, 0.1198) rot=(7.973, 339.410, 163.260) scale=(120.0410, 120.0403, 120.0403) active=True
+COMPONENT Model/Skeleton/Sword :: UnityEngine.MeshFilter
+COMPONENT Model/Skeleton/Sword :: UnityEngine.MeshRenderer
+MATERIALS WK_Gray=Assets/WK_Pack/Materials/Base Colors/WK_Gray.mat | WK_Light_Gray=Assets/WK_Pack/Materials/Base Colors/WK_Light_Gray.mat | WK_Brown=Assets/WK_Pack/Materials/Base Colors/WK_Brown.mat
+NODE FootstepAudioAnchor pos=(0.0000, 0.0000, 0.0000) rot=(0.000, 0.000, 0.000) scale=(1.0000, 1.0000, 1.0000) active=True
+IMPORTER {
+    "materials": {
+        "m_SupportsEmbeddedMaterials": true,
+        "m_MaterialImportMode": 2,
+        "m_MaterialName": 0,
+        "m_MaterialSearch": 1,
+        "m_MaterialLocation": 1,
+        "m_Materials": [
+            {
+                "type": "UnityEngine:Material",
+                "assembly": "UnityEngine.CoreModule",
+                "name": "Bone"
+            },
+            {
+                "type": "UnityEngine:Material",
+                "assembly": "UnityEngine.CoreModule",
+                "name": "Edge"
+            },
+            {
+                "type": "UnityEngine:Material",
+                "assembly": "UnityEngine.CoreModule",
+                "name": "Eyes"
+            },
+            {
+                "type": "UnityEngine:Material",
+                "assembly": "UnityEngine.CoreModule",
+                "name": "Gold"
+            },
+            {
+                "type": "UnityEngine:Material",
+                "assembly": "UnityEngine.CoreModule",
+                "name": "Grip"
+            }
+        ]
+    },
+    "animations": {
+        "m_LegacyGenerateAnimations": 4,
+        "m_BakeSimulation": false,
+        "m_ResampleCurves": true,
+        "m_OptimizeGameObjects": false,
+        "m_RemoveConstantScaleCurves": false,
+        "m_MotionNodeName": "",
+        "m_AnimationImportErrors": "",
+        "m_AnimationImportWarnings": "",
+        "m_AnimationRetargetingWarnings": "",
+        "m_AnimationDoRetargetingWarnings": false,
+        "m_ImportAnimatedCustomProperties": false,
+        "m_ImportConstraints": false,
+        "m_AnimationCompression": 3,
+        "m_AnimationRotationError": 0.5,
+        "m_AnimationPositionError": 0.5,
+        "m_AnimationScaleError": 0.5,
+        "m_AnimationWrapMode": 0,
+        "m_ExtraExposedTransformPaths": [],
+        "m_ExtraUserProperties": [],
+        "m_ClipAnimations": [
+            {
+                "serializedVersion": "16",
+                "name": "Skeleton|APose",
+                "takeName": "Skeleton|APose",
+                "internalID": -1478943242638098327,
+                "firstFrame": 0.0,
+                "lastFrame": 0.0,
+                "wrapMode": 0,
+                "orientationOffsetY": 0.0,
+                "level": 0.0,
+                "cycleOffset": 0.0,
+                "loop": false,
+                "hasAdditiveReferencePose": false,
+                "loopTime": false,
+                "loopBlend": false,
+                "loopBlendOrientation": false,
+                "loopBlendPositionY": false,
+                "loopBlendPositionXZ": false,
+                "keepOriginalOrientation": false,
+                "keepOriginalPositionY": true,
+                "keepOriginalPositionXZ": false,
+                "heightFromFeet": false,
+                "mirror": false,
+                "bodyMask": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "curves": [],
+                "events": [],
+                "transformMask": [],
+                "maskType": 3,
+                "maskSource": {
+                    "instanceID": 0
+                },
+                "additiveReferencePoseFrame": 0.0
+            },
+            {
+                "serializedVersion": "16",
+                "name": "Skeleton|Attack_01",
+                "takeName": "Skeleton|Attack_01",
+                "internalID": 1954886971395040704,
+                "firstFrame": 0.0,
+                "lastFrame": 24.0,
+                "wrapMode": 0,
+                "orientationOffsetY": 0.0,
+                "level": 0.0,
+                "cycleOffset": 0.0,
+                "loop": false,
+                "hasAdditiveReferencePose": false,
+                "loopTime": false,
+                "loopBlend": false,
+                "loopBlendOrientation": false,
+                "loopBlendPositionY": false,
+                "loopBlendPositionXZ": false,
+                "keepOriginalOrientation": false,
+                "keepOriginalPositionY": true,
+                "keepOriginalPositionXZ": false,
+                "heightFromFeet": false,
+                "mirror": false,
+                "bodyMask": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "curves": [],
+                "events": [],
+                "transformMask": [],
+                "maskType": 3,
+                "maskSource": {
+                    "instanceID": 0
+                },
+                "additiveReferencePoseFrame": 0.0
+            },
+            {
+                "serializedVersion": "16",
+                "name": "Skeleton|Idle",
+                "takeName": "Skeleton|Idle",
+                "internalID": -2420248955592922456,
+                "firstFrame": 0.0,
+                "lastFrame": 30.0,
+                "wrapMode": 0,
+                "orientationOffsetY": 0.0,
+                "level": 0.0,
+                "cycleOffset": 0.0,
+                "loop": false,
+                "hasAdditiveReferencePose": false,
+                "loopTime": true,
+                "loopBlend": false,
+                "loopBlendOrientation": false,
+                "loopBlendPositionY": false,
+                "loopBlendPositionXZ": false,
+                "keepOriginalOrientation": false,
+                "keepOriginalPositionY": true,
+                "keepOriginalPositionXZ": false,
+                "heightFromFeet": false,
+                "mirror": false,
+                "bodyMask": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "curves": [],
+                "events": [],
+                "transformMask": [],
+                "maskType": 3,
+                "maskSource": {
+                    "instanceID": 0
+                },
+                "additiveReferencePoseFrame": 0.0
+            },
+            {
+                "serializedVersion": "16",
+                "name": "Skeleton|Take Damage",
+                "takeName": "Skeleton|Take Damage",
+                "internalID": -5002083929482069279,
+                "firstFrame": 0.0,
+                "lastFrame": 12.0,
+                "wrapMode": 0,
+                "orientationOffsetY": 0.0,
+                "level": 0.0,
+                "cycleOffset": 0.0,
+                "loop": false,
+                "hasAdditiveReferencePose": false,
+                "loopTime": false,
+                "loopBlend": false,
+                "loopBlendOrientation": false,
+                "loopBlendPositionY": false,
+                "loopBlendPositionXZ": false,
+                "keepOriginalOrientation": false,
+                "keepOriginalPositionY": true,
+                "keepOriginalPositionXZ": false,
+                "heightFromFeet": false,
+                "mirror": false,
+                "bodyMask": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "curves": [],
+                "events": [],
+                "transformMask": [],
+                "maskType": 3,
+                "maskSource": {
+                    "instanceID": 0
+                },
+                "additiveReferencePoseFrame": 0.0
+            },
+            {
+                "serializedVersion": "16",
+                "name": "Skeleton|Walk",
+                "takeName": "Skeleton|Walk",
+                "internalID": 224802876785476837,
+                "firstFrame": 0.0,
+                "lastFrame": 24.0,
+                "wrapMode": 0,
+                "orientationOffsetY": 0.0,
+                "level": 0.0,
+                "cycleOffset": 0.0,
+                "loop": false,
+                "hasAdditiveReferencePose": false,
+                "loopTime": true,
+                "loopBlend": false,
+                "loopBlendOrientation": false,
+                "loopBlendPositionY": false,
+                "loopBlendPositionXZ": false,
+                "keepOriginalOrientation": false,
+                "keepOriginalPositionY": true,
+                "keepOriginalPositionXZ": false,
+                "heightFromFeet": false,
+                "mirror": false,
+                "bodyMask": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "curves": [],
+                "events": [],
+                "transformMask": [],
+                "maskType": 3,
+                "maskSource": {
+                    "instanceID": 0
+                },
+                "additiveReferencePoseFrame": 0.0
+            }
+        ],
+        "m_IsReadable": false
+    },
+    "meshes": {
+        "m_LODScreenPercentages": [],
+        "m_GlobalScale": 1.0,
+        "m_MeshCompression": 0,
+        "m_AddColliders": false,
+        "m_UseSRGBMaterialColor": true,
+        "m_SortHierarchyByName": true,
+        "m_ImportPhysicalCameras": true,
+        "m_ImportVisibility": true,
+        "m_ImportBlendShapes": true,
+        "m_ImportCameras": true,
+        "m_ImportLights": true,
+        "m_NodeNameCollisionStrategy": 1,
+        "swapUVChannels": false,
+        "generateSecondaryUV": false,
+        "m_UseFileUnits": true,
+        "keepQuads": false,
+        "weldVertices": true,
+        "bakeAxisConversion": false,
+        "m_PreserveHierarchy": false,
+        "skinWeightsMode": 0,
+        "maxBonesPerVertex": 4,
+        "minBoneWeight": 0.0010000000474974514,
+        "optimizeBones": true,
+        "generateMeshLods": false,
+        "meshLodGenerationFlags": 0,
+        "maximumMeshLod": -1,
+        "meshOptimizationFlags": -1,
+        "indexFormat": 0,
+        "secondaryUVAngleDistortion": 8.0,
+        "secondaryUVAreaDistortion": 15.000000953674317,
+        "secondaryUVHardAngle": 88.0,
+        "secondaryUVMarginMethod": 1,
+        "secondaryUVMinLightmapResolution": 40.0,
+        "secondaryUVMinObjectScale": 1.0,
+        "secondaryUVPackMargin": 4.0,
+        "m_UseFileScale": true,
+        "m_FileScale": 0.009999999776482582,
+        "m_FileScaleUnit": "cm",
+        "m_FileScaleFactor": 0.009999999776482582,
+        "m_StrictVertexDataChecks": false
+    },
+    "tangentSpace": {
+        "normalSmoothAngle": 60.0,
+        "normalImportMode": 0,
+        "tangentImportMode": 3,
+        "normalCalculationMode": 4,
+        "legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes": false,
+        "blendShapeNormalImportMode": 1,
+        "normalSmoothingSource": 0
+    },
+    "m_ImportedTakeInfos": [
+        {
+            "name": "1_Pose",
+            "defaultClipName": "1_Pose",
+            "internalID": 0,
+            "startTime": 0.0,
+            "stopTime": 0.0416666679084301,
+            "bakeStartTime": 0.0,
+            "bakeStopTime": 0.0416666679084301,
+            "sampleRate": 24.0,
+            "clip": {
+                "fileID": 110800000,
+                "guid": "d3c50663596491c4d900b09366fee397",
+                "type": 3
+            }
+        },
+        {
+            "name": "Idle",
+            "defaultClipName": "Idle",
+            "internalID": 0,
+            "startTime": 0.0,
+            "stopTime": 1.0,
+            "bakeStartTime": 0.0,
+            "bakeStopTime": 1.0,
+            "sampleRate": 24.0,
+            "clip": {
+                "fileID": 110800002,
+                "guid": "d3c50663596491c4d900b09366fee397",
+                "type": 3
+            }
+        },
+        {
+            "name": "Take Damage",
+            "defaultClipName": "Take Damage",
+            "internalID": 0,
+            "startTime": 0.0,
+            "stopTime": 0.5,
+            "bakeStartTime": 0.0,
+            "bakeStopTime": 0.5,
+            "sampleRate": 24.0,
+            "clip": {
+                "fileID": 110800004,
+                "guid": "d3c50663596491c4d900b09366fee397",
+                "type": 3
+            }
+        },
+        {
+            "name": "Spawn",
+            "defaultClipName": "Spawn",
+            "internalID": 0,
+            "startTime": 0.0,
+            "stopTime": 1.0,
+            "bakeStartTime": 0.0,
+            "bakeStopTime": 1.0,
+            "sampleRate": 24.0,
+            "clip": {
+                "fileID": 110800006,
+                "guid": "d3c50663596491c4d900b09366fee397",
+                "type": 3
+            }
+        },
+        {
+            "name": "Death",
+            "defaultClipName": "Death",
+            "internalID": 0,
+            "startTime": 0.0,
+            "stopTime": 1.0,
+            "bakeStartTime": 0.0,
+            "bakeStopTime": 1.0,
+            "sampleRate": 24.0,
+            "clip": {
+                "fileID": 110800008,
+                "guid": "d3c50663596491c4d900b09366fee397",
+                "type": 3
+            }
+        },
+        {
+            "name": "Walk",
+            "defaultClipName": "Walk",
+            "internalID": 0,
+            "startTime": 0.0,
+            "stopTime": 1.0,
+            "bakeStartTime": 0.0,
+            "bakeStopTime": 1.0,
+            "sampleRate": 24.0,
+            "clip": {
+                "fileID": 110800010,
+                "guid": "d3c50663596491c4d900b09366fee397",
+                "type": 3
+            }
+        },
+        {
+            "name": "Attack_01",
+            "defaultClipName": "Attack_01",
+            "internalID": 0,
+            "startTime": 0.0,
+            "stopTime": 1.0,
+            "bakeStartTime": 0.0,
+            "bakeStopTime": 1.0,
+            "sampleRate": 24.0,
+            "clip": {
+                "fileID": 110800012,
+                "guid": "d3c50663596491c4d900b09366fee397",
+                "type": 3
+            }
+        }
+    ],
+    "m_ImportedRoots": [
+        {
+            "fileID": 919132149155446097,
+            "guid": "d3c50663596491c4d900b09366fee397",
+            "type": 3
+        }
+    ],
+    "m_HasExtraRoot": true,
+    "m_HasEmbeddedTextures": false,
+    "m_ContainsAnimation": true,
+    "m_ReferencedClips": [],
+    "m_ImportAnimation": true,
+    "m_HumanDescription": {
+        "serializedVersion": "3",
+        "m_Human": [],
+        "m_Skeleton": [
+            {
+                "m_Name": "Skeleton(Clone)",
+                "m_ParentName": "",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Arm_L",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Arm_R",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Body",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Eyes",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Hand_L",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Hand_R",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Head",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Jaw",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Legs_L",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Legs_R",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Skeleton",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -0.7071068286895752,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 0.7071067094802856
+                },
+                "m_Scale": {
+                    "x": 109.56287384033203,
+                    "y": 109.56287384033203,
+                    "z": 109.56287384033203
+                }
+            },
+            {
+                "m_Name": "Root",
+                "m_ParentName": "Skeleton",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": -2.9802322387695315e-8,
+                    "y": -0.7071067690849304,
+                    "z": -5.960464477539063e-8,
+                    "w": -0.7071068286895752
+                },
+                "m_Scale": {
+                    "x": 0.9999998211860657,
+                    "y": 0.9999996423721314,
+                    "z": 0.9999997019767761
+                }
+            },
+            {
+                "m_Name": "Hips",
+                "m_ParentName": "Root",
+                "m_Position": {
+                    "x": -0.009889361448585987,
+                    "y": 0.0008384090615436435,
+                    "z": -4.364362204967165e-10
+                },
+                "m_Rotation": {
+                    "x": 0.6866302490234375,
+                    "y": 0.7270067930221558,
+                    "z": -1.33691102632838e-7,
+                    "w": 8.940696716308594e-8
+                },
+                "m_Scale": {
+                    "x": 0.9999987483024597,
+                    "y": 0.9999970197677612,
+                    "z": 0.9999994039535523
+                }
+            },
+            {
+                "m_Name": "Leg.L",
+                "m_ParentName": "Hips",
+                "m_Position": {
+                    "x": 0.00001374706334900111,
+                    "y": 0.0022858423180878164,
+                    "z": 0.0015630745328962803
+                },
+                "m_Rotation": {
+                    "x": 0.06596651673316956,
+                    "y": -0.0012280010851100088,
+                    "z": 0.11437100917100907,
+                    "w": 0.9912447929382324
+                },
+                "m_Scale": {
+                    "x": 1.0000016689300538,
+                    "y": 1.0000056028366089,
+                    "z": 1.000002384185791
+                }
+            },
+            {
+                "m_Name": "Knee.L",
+                "m_ParentName": "Leg.L",
+                "m_Position": {
+                    "x": 7.916241967498294e-11,
+                    "y": 0.0032497826032340528,
+                    "z": -2.578599278546534e-10
+                },
+                "m_Rotation": {
+                    "x": -0.06511176377534867,
+                    "y": -0.004363085143268108,
+                    "z": -0.1566396951675415,
+                    "w": 0.9854975342750549
+                },
+                "m_Scale": {
+                    "x": 1.0000003576278687,
+                    "y": 1.0000059604644776,
+                    "z": 1.000001311302185
+                }
+            },
+            {
+                "m_Name": "Ankle.L",
+                "m_ParentName": "Knee.L",
+                "m_Position": {
+                    "x": 1.0011717149760457e-10,
+                    "y": 0.0038012799341231586,
+                    "z": 2.2439053393163989e-10
+                },
+                "m_Rotation": {
+                    "x": -0.14424695074558259,
+                    "y": -0.12190607190132141,
+                    "z": -0.6825929880142212,
+                    "w": -0.7059735059738159
+                },
+                "m_Scale": {
+                    "x": 1.0000009536743165,
+                    "y": 1.000001072883606,
+                    "z": 1.0000027418136597
+                }
+            },
+            {
+                "m_Name": "Foot.L",
+                "m_ParentName": "Ankle.L",
+                "m_Position": {
+                    "x": -4.656612768993984e-12,
+                    "y": 0.0012241704389452935,
+                    "z": 3.2596289556430238e-10
+                },
+                "m_Rotation": {
+                    "x": -0.042192503809928897,
+                    "y": 0.0207023024559021,
+                    "z": -0.006560945883393288,
+                    "w": 0.9988735318183899
+                },
+                "m_Scale": {
+                    "x": 1.0000009536743165,
+                    "y": 1.0000015497207642,
+                    "z": 1.0000017881393433
+                }
+            },
+            {
+                "m_Name": "Foot.L_end",
+                "m_ParentName": "Foot.L",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.001767790294252336,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Leg.R",
+                "m_ParentName": "Hips",
+                "m_Position": {
+                    "x": 0.00001374606290482916,
+                    "y": 0.0022858427837491037,
+                    "z": -0.0015630745328962803
+                },
+                "m_Rotation": {
+                    "x": 0.11437100917100907,
+                    "y": -0.9912447929382324,
+                    "z": 0.06596649438142777,
+                    "w": 0.0012283400865271688
+                },
+                "m_Scale": {
+                    "x": 1.0000022649765015,
+                    "y": 1.0000063180923463,
+                    "z": 1.0000022649765015
+                }
+            },
+            {
+                "m_Name": "Knee.R",
+                "m_ParentName": "Leg.R",
+                "m_Position": {
+                    "x": -1.1408701067194826e-10,
+                    "y": 0.0032497828360646965,
+                    "z": -2.341403182448687e-10
+                },
+                "m_Rotation": {
+                    "x": -0.06511173397302628,
+                    "y": 0.0043630897998809818,
+                    "z": 0.15663979947566987,
+                    "w": 0.9854975342750549
+                },
+                "m_Scale": {
+                    "x": 1.0000007152557374,
+                    "y": 1.0000073909759522,
+                    "z": 1.0000016689300538
+                }
+            },
+            {
+                "m_Name": "Ankle.R",
+                "m_ParentName": "Knee.R",
+                "m_Position": {
+                    "x": -1.3271346521737116e-10,
+                    "y": 0.0038012799341231586,
+                    "z": 1.032458354921495e-10
+                },
+                "m_Rotation": {
+                    "x": 0.14424704015254975,
+                    "y": -0.1219063550233841,
+                    "z": -0.6825929284095764,
+                    "w": 0.7059735059738159
+                },
+                "m_Scale": {
+                    "x": 0.9999992251396179,
+                    "y": 0.9999991655349731,
+                    "z": 1.0000011920928956
+                }
+            },
+            {
+                "m_Name": "Foot.R",
+                "m_ParentName": "Ankle.R",
+                "m_Position": {
+                    "x": 3.958120983749147e-11,
+                    "y": 0.001224170671775937,
+                    "z": 5.587935322792781e-11
+                },
+                "m_Rotation": {
+                    "x": -0.04219243675470352,
+                    "y": -0.020702242851257325,
+                    "z": 0.006561098620295525,
+                    "w": 0.9988735318183899
+                },
+                "m_Scale": {
+                    "x": 1.000005841255188,
+                    "y": 1.0000048875808716,
+                    "z": 1.0000056028366089
+                }
+            },
+            {
+                "m_Name": "Foot.R_end",
+                "m_ParentName": "Foot.R",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.001767790294252336,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Spine_1",
+                "m_ParentName": "Hips",
+                "m_Position": {
+                    "x": 1.490116086078075e-10,
+                    "y": -1.8626450382086546e-10,
+                    "z": -4.6629365578418699e-17
+                },
+                "m_Rotation": {
+                    "x": 0.706608235836029,
+                    "y": 0.02652249112725258,
+                    "z": -0.7066101431846619,
+                    "w": 0.026522014290094377
+                },
+                "m_Scale": {
+                    "x": 1.000007152557373,
+                    "y": 1.0000035762786866,
+                    "z": 1.0000005960464478
+                }
+            },
+            {
+                "m_Name": "Spine_2",
+                "m_ParentName": "Spine_1",
+                "m_Position": {
+                    "x": -4.529709855767344e-16,
+                    "y": 0.0007745187031105161,
+                    "z": 7.450552674814759e-11
+                },
+                "m_Rotation": {
+                    "x": -0.045293889939785007,
+                    "y": -2.2549649258962746e-7,
+                    "z": 9.313226456697521e-8,
+                    "w": 0.9989737272262573
+                },
+                "m_Scale": {
+                    "x": 1.0000015497207642,
+                    "y": 0.9999989867210388,
+                    "z": 0.9999998807907105
+                }
+            },
+            {
+                "m_Name": "Spine_3",
+                "m_ParentName": "Spine_2",
+                "m_Position": {
+                    "x": 1.5987210866387985e-16,
+                    "y": 0.0008798518683761358,
+                    "z": -5.981326333409794e-16
+                },
+                "m_Rotation": {
+                    "x": -0.0137302465736866,
+                    "y": 2.6654370799406026e-7,
+                    "z": 4.00593647142955e-9,
+                    "w": 0.9999058246612549
+                },
+                "m_Scale": {
+                    "x": 0.9999999403953552,
+                    "y": 1.0000009536743165,
+                    "z": 0.9999997615814209
+                }
+            },
+            {
+                "m_Name": "Spine_4",
+                "m_ParentName": "Spine_3",
+                "m_Position": {
+                    "x": 1.4210854397564649e-16,
+                    "y": 0.0007619307143613696,
+                    "z": -7.745193036728069e-16
+                },
+                "m_Rotation": {
+                    "x": 0.10582579672336579,
+                    "y": -3.546255129549536e-7,
+                    "z": -1.3057822911832773e-7,
+                    "w": 0.9943847060203552
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 0.9999995231628418,
+                    "z": 1.0000001192092896
+                }
+            },
+            {
+                "m_Name": "Neck_1",
+                "m_ParentName": "Spine_4",
+                "m_Position": {
+                    "x": 1.4210854397564649e-16,
+                    "y": 0.0018237344920635224,
+                    "z": -3.430589050800527e-16
+                },
+                "m_Rotation": {
+                    "x": 0.1312449872493744,
+                    "y": -8.509349669338917e-8,
+                    "z": -3.484157105049235e-7,
+                    "w": 0.991349995136261
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.000001072883606,
+                    "z": 0.9999987483024597
+                }
+            },
+            {
+                "m_Name": "Neck_2",
+                "m_ParentName": "Neck_1",
+                "m_Position": {
+                    "x": -9.126033558880319e-16,
+                    "y": 0.0006244330434128642,
+                    "z": -7.45059083873123e-11
+                },
+                "m_Rotation": {
+                    "x": -0.223082035779953,
+                    "y": 1.0059557808972386e-7,
+                    "z": 6.960100336073083e-7,
+                    "w": 0.9747997522354126
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 0.9999963045120239,
+                    "z": 1.000003695487976
+                }
+            },
+            {
+                "m_Name": "Head",
+                "m_ParentName": "Neck_2",
+                "m_Position": {
+                    "x": 1.6431300976210554e-16,
+                    "y": 0.0006273109465837479,
+                    "z": 1.4901174738568557e-10
+                },
+                "m_Rotation": {
+                    "x": 0.1787182241678238,
+                    "y": -4.93509730858932e-7,
+                    "z": -6.167354626995802e-7,
+                    "w": 0.9839003682136536
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 0.9999986886978149,
+                    "z": 1.0000015497207642
+                }
+            },
+            {
+                "m_Name": "Jaw",
+                "m_ParentName": "Head",
+                "m_Position": {
+                    "x": 1.6374879230340867e-9,
+                    "y": -0.000047272900701500475,
+                    "z": 0.000462049909401685
+                },
+                "m_Rotation": {
+                    "x": 0.773554801940918,
+                    "y": -1.8382155531071477e-7,
+                    "z": -0.0000031623142149328489,
+                    "w": 0.6337293982505798
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0000063180923463,
+                    "z": 0.9999991655349731
+                }
+            },
+            {
+                "m_Name": "Jaw_end",
+                "m_ParentName": "Jaw",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.001280600088648498,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Shoulder.L",
+                "m_ParentName": "Spine_4",
+                "m_Position": {
+                    "x": -0.0006667649722658098,
+                    "y": 0.0012692457530647517,
+                    "z": -0.00009670230065239593
+                },
+                "m_Rotation": {
+                    "x": 0.04199523851275444,
+                    "y": -0.004609894473105669,
+                    "z": 0.608642041683197,
+                    "w": 0.7923194169998169
+                },
+                "m_Scale": {
+                    "x": 1.0000014305114747,
+                    "y": 1.0000001192092896,
+                    "z": 0.9999991059303284
+                }
+            },
+            {
+                "m_Name": "Arm.L",
+                "m_ParentName": "Shoulder.L",
+                "m_Position": {
+                    "x": 8.288770780850996e-10,
+                    "y": 0.001728106988593936,
+                    "z": -3.4458935704861917e-10
+                },
+                "m_Rotation": {
+                    "x": -0.01249599363654852,
+                    "y": -0.06201775372028351,
+                    "z": 0.1412247270345688,
+                    "w": 0.9879541397094727
+                },
+                "m_Scale": {
+                    "x": 1.0000030994415284,
+                    "y": 1.0000052452087403,
+                    "z": 1.0000005960464478
+                }
+            },
+            {
+                "m_Name": "Elbow.L",
+                "m_ParentName": "Arm.L",
+                "m_Position": {
+                    "x": 2.0489096530518226e-10,
+                    "y": 0.0035482943058013918,
+                    "z": 1.1175870645585562e-10
+                },
+                "m_Rotation": {
+                    "x": 0.028185570612549783,
+                    "y": -0.0012723723193630577,
+                    "z": -0.03184974938631058,
+                    "w": 0.9990944266319275
+                },
+                "m_Scale": {
+                    "x": 1.0000051259994507,
+                    "y": 0.9999950528144836,
+                    "z": 0.9999988079071045
+                }
+            },
+            {
+                "m_Name": "Hand.L",
+                "m_ParentName": "Elbow.L",
+                "m_Position": {
+                    "x": -1.490116086078075e-10,
+                    "y": 0.0027343304827809335,
+                    "z": 3.725290215195187e-11
+                },
+                "m_Rotation": {
+                    "x": -0.0025437765289098026,
+                    "y": -0.01776142790913582,
+                    "z": 0.17403028905391694,
+                    "w": 0.9845768213272095
+                },
+                "m_Scale": {
+                    "x": 0.9999895095825195,
+                    "y": 1.0000121593475342,
+                    "z": 0.9999983310699463
+                }
+            },
+            {
+                "m_Name": "Fingers_01.L",
+                "m_ParentName": "Hand.L",
+                "m_Position": {
+                    "x": 3.3993272086085826e-10,
+                    "y": 0.0010406669462099672,
+                    "z": 3.725290215195187e-11
+                },
+                "m_Rotation": {
+                    "x": -0.000703836209140718,
+                    "y": 0.023372692987322809,
+                    "z": -0.0823708027601242,
+                    "w": 0.9963274002075195
+                },
+                "m_Scale": {
+                    "x": 1.0000038146972657,
+                    "y": 0.9999950528144836,
+                    "z": 1.0000017881393433
+                }
+            },
+            {
+                "m_Name": "Fingers_02.L",
+                "m_ParentName": "Fingers_01.L",
+                "m_Position": {
+                    "x": -1.303851610012785e-10,
+                    "y": 0.0005127595504745841,
+                    "z": 5.587935322792781e-11
+                },
+                "m_Rotation": {
+                    "x": 0.0037960989866405727,
+                    "y": 0.00618841964751482,
+                    "z": 0.034504156559705737,
+                    "w": 0.9993782639503479
+                },
+                "m_Scale": {
+                    "x": 1.000011682510376,
+                    "y": 0.999997615814209,
+                    "z": 0.9999997019767761
+                }
+            },
+            {
+                "m_Name": "Fingers_02.L_end",
+                "m_ParentName": "Fingers_02.L",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0005083178402855992,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Tumb_01.L",
+                "m_ParentName": "Hand.L",
+                "m_Position": {
+                    "x": 0.00006400953134289011,
+                    "y": 0.00039834625204093754,
+                    "z": 0.0006154169677756727
+                },
+                "m_Rotation": {
+                    "x": 0.030962161719799043,
+                    "y": 0.15137527883052827,
+                    "z": -0.0927354171872139,
+                    "w": 0.9836294651031494
+                },
+                "m_Scale": {
+                    "x": 0.9999944567680359,
+                    "y": 0.9999967217445374,
+                    "z": 1.0000098943710328
+                }
+            },
+            {
+                "m_Name": "Tumb_02.L",
+                "m_ParentName": "Tumb_01.L",
+                "m_Position": {
+                    "x": 2.0954757373736755e-10,
+                    "y": 0.0006557366577908397,
+                    "z": -1.9557773456302386e-10
+                },
+                "m_Rotation": {
+                    "x": -0.03582974523305893,
+                    "y": -0.05923180654644966,
+                    "z": -0.004515454173088074,
+                    "w": 0.9975908994674683
+                },
+                "m_Scale": {
+                    "x": 1.0000003576278687,
+                    "y": 0.9999813437461853,
+                    "z": 1.0000172853469849
+                }
+            },
+            {
+                "m_Name": "Tumb_02.L_end",
+                "m_ParentName": "Tumb_02.L",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0004997662617824972,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Shoulder.R",
+                "m_ParentName": "Spine_4",
+                "m_Position": {
+                    "x": 0.0006667639827355742,
+                    "y": 0.0012692463351413608,
+                    "z": -0.00009670634608482942
+                },
+                "m_Rotation": {
+                    "x": 0.04199345037341118,
+                    "y": 0.004612291231751442,
+                    "z": -0.6086411476135254,
+                    "w": 0.792320191860199
+                },
+                "m_Scale": {
+                    "x": 1.0000016689300538,
+                    "y": 1.0000004768371583,
+                    "z": 1.000001311302185
+                }
+            },
+            {
+                "m_Name": "Arm.R",
+                "m_ParentName": "Shoulder.R",
+                "m_Position": {
+                    "x": 1.210719302591201e-10,
+                    "y": 0.001728107687085867,
+                    "z": 4.6566125955216367e-11
+                },
+                "m_Rotation": {
+                    "x": 0.01249577198177576,
+                    "y": -0.06201821193099022,
+                    "z": 0.14122503995895387,
+                    "w": -0.9879539608955383
+                },
+                "m_Scale": {
+                    "x": 0.9999997615814209,
+                    "y": 1.0000042915344239,
+                    "z": 0.9999968409538269
+                }
+            },
+            {
+                "m_Name": "Elbow.R",
+                "m_ParentName": "Arm.R",
+                "m_Position": {
+                    "x": -1.303851610012785e-10,
+                    "y": 0.00354829546995461,
+                    "z": -1.490116086078075e-10
+                },
+                "m_Rotation": {
+                    "x": 0.02818552777171135,
+                    "y": 0.0012721529928967357,
+                    "z": 0.03184942901134491,
+                    "w": 0.9990943670272827
+                },
+                "m_Scale": {
+                    "x": 1.0000056028366089,
+                    "y": 0.9999951720237732,
+                    "z": 0.9999985694885254
+                }
+            },
+            {
+                "m_Name": "Hand.R",
+                "m_ParentName": "Elbow.R",
+                "m_Position": {
+                    "x": -1.7695128695649488e-10,
+                    "y": 0.0027343295514583589,
+                    "z": -3.725290215195187e-11
+                },
+                "m_Rotation": {
+                    "x": -0.0025437313597649338,
+                    "y": 0.017761196941137315,
+                    "z": -0.1740303933620453,
+                    "w": 0.9845767617225647
+                },
+                "m_Scale": {
+                    "x": 0.9999932050704956,
+                    "y": 1.0000120401382447,
+                    "z": 0.9999995231628418
+                }
+            },
+            {
+                "m_Name": "Fingers_01.R",
+                "m_ParentName": "Hand.R",
+                "m_Position": {
+                    "x": 1.5832483934996589e-10,
+                    "y": 0.0010406672954559327,
+                    "z": 1.8626450382086546e-10
+                },
+                "m_Rotation": {
+                    "x": -0.0007032863213680685,
+                    "y": -0.023372571915388109,
+                    "z": 0.08237187564373017,
+                    "w": 0.9963274002075195
+                },
+                "m_Scale": {
+                    "x": 1.0000083446502686,
+                    "y": 1.000001072883606,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Fingers_02.R",
+                "m_ParentName": "Fingers_01.R",
+                "m_Position": {
+                    "x": -6.519258050063925e-11,
+                    "y": 0.0005127604817971587,
+                    "z": 7.450580430390375e-11
+                },
+                "m_Rotation": {
+                    "x": 0.0037938114255666734,
+                    "y": -0.00618858402594924,
+                    "z": -0.03450319170951843,
+                    "w": 0.9993782639503479
+                },
+                "m_Scale": {
+                    "x": 1.0000059604644776,
+                    "y": 0.9999929666519165,
+                    "z": 0.9999997019767761
+                }
+            },
+            {
+                "m_Name": "Fingers_02.R_end",
+                "m_ParentName": "Fingers_02.R",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0005083178402855992,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Tumb_01.R",
+                "m_ParentName": "Hand.R",
+                "m_Position": {
+                    "x": -0.00006400886195478961,
+                    "y": 0.00039834732888266444,
+                    "z": 0.0006154171423986554
+                },
+                "m_Rotation": {
+                    "x": 0.030962307006120683,
+                    "y": -0.1513756960630417,
+                    "z": 0.09273567795753479,
+                    "w": 0.9836294054985046
+                },
+                "m_Scale": {
+                    "x": 0.9999955296516419,
+                    "y": 1.0,
+                    "z": 1.0000088214874268
+                }
+            },
+            {
+                "m_Name": "Tumb_02.R",
+                "m_ParentName": "Tumb_01.R",
+                "m_Position": {
+                    "x": 8.556525626923772e-11,
+                    "y": 0.0006557379383593798,
+                    "z": -1.210719302591201e-10
+                },
+                "m_Rotation": {
+                    "x": -0.03583025559782982,
+                    "y": 0.05923245847225189,
+                    "z": 0.004516887478530407,
+                    "w": 0.9975908398628235
+                },
+                "m_Scale": {
+                    "x": 1.0000094175338746,
+                    "y": 0.999988853931427,
+                    "z": 1.0000195503234864
+                }
+            },
+            {
+                "m_Name": "Tumb_02.R_end",
+                "m_ParentName": "Tumb_02.R",
+                "m_Position": {
+                    "x": 0.0,
+                    "y": 0.0004997662617824972,
+                    "z": 0.0
+                },
+                "m_Rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "m_Scale": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            {
+                "m_Name": "Sword",
+                "m_ParentName": "Skeleton(Clone)",
+                "m_Position": {
+                    "x": 0.45246395468711855,
+                    "y": 0.9162584543228149,
+                    "z": -0.08176779747009278
+                },
+                "m_Rotation": {
+                    "x": -0.14385811984539033,
+                    "y": 0.03204911947250366,
+                    "z": 0.9890783429145813,
+                    "w": 0.0013463328359648586
+                },
+                "m_Scale": {
+                    "x": 120.04108428955078,
+                    "y": 120.04026794433594,
+                    "z": 120.04032135009766
+                }
+            }
+        ],
+        "m_ArmTwist": 0.5,
+        "m_ForeArmTwist": 0.5,
+        "m_UpperLegTwist": 0.5,
+        "m_LegTwist": 0.5,
+        "m_ArmStretch": 0.05000000074505806,
+        "m_LegStretch": 0.05000000074505806,
+        "m_FeetSpacing": 0.0,
+        "m_GlobalScale": 1.0,
+        "m_RootMotionBoneName": "",
+        "m_HasTranslationDoF": false,
+        "m_HasExtraRoot": true,
+        "m_SkeletonHasParents": true
+    },
+    "m_LastHumanDescriptionAvatarSource": {
+        "instanceID": 0
+    },
+    "m_AutoGenerateAvatarMappingIfUnspecified": true,
+    "m_AnimationType": 2,
+    "m_HumanoidOversampling": 1,
+    "m_AvatarSetup": 1,
+    "m_AddHumanoidExtraRootOnlyWhenUsingAvatar": true,
+    "m_ImportBlendShapeDeformPercent": true,
+    "m_RemapMaterialsIfMaterialImportModeIsNone": false,
+    "m_AdditionalBone": false,
+    "m_UserData": "",
+    "m_AssetBundleName": "",
+    "m_AssetBundleVariant": "",
+    "ModelImporter": {
+        "serializedVersion": "24200",
+        "m_Name": "",
+        "m_ExternalObjects": [],
+        "m_UsedFileIDs": [
+            -6272888870037225011,
+            -807899436383823013,
+            -6247814676056638803,
+            -259972160606440404,
+            6657560127643677590,
+            7621869289906196317,
+            -974737410055190900,
+            -2187112608524307504,
+            -7646984823093700347,
+            -2683168392879345072,
+            100100000,
+            4400133177041809192,
+            919132149155446097,
+            110800006,
+            -2155719856938517628,
+            6202745424700853723,
+            -9142984126858685179,
+            885284574531928182,
+            110800004,
+            4167280743394806330,
+            -786630648897004619,
+            -3189595122676651536,
+            110800010,
+            -6247875450178545260,
+            -8839368762345780380,
+            -7933205989634994717,
+            871110383322641012,
+            -8557252647059416558,
+            -4706452340541456491,
+            -5986186516984792579,
+            672030038935006313,
+            5590104711287046281,
+            -8662838082219774323,
+            -6861061182087022009,
+            -3948182041154512275,
+            5976995395909674990,
+            5172544778340915956,
+            635547659545568360,
+            2184083781522879631,
+            4808719413471705621,
+            -6985898625530409193,
+            4888830922091850411,
+            1315542014083076160,
+            5586149293693130290,
+            110800000,
+            1923829190665987630,
+            -5400516454811953253,
+            1888714584135737371,
+            -8825110405995067793,
+            -4609501501685250347,
+            4797066931450377413,
+            -2694260949983524311,
+            794376398759392688,
+            2321523695958950486,
+            3747952384392305130,
+            4269399218538217790,
+            -1815771757166286507,
+            -2775328518312601444,
+            -905690159841262435,
+            -3981065676529349206,
+            7330204662243007036,
+            -828615749679731997,
+            -4430718573825621020,
+            -3139233969456445721,
+            585850710320547750,
+            -4200667187138786107,
+            -7258941048049314421,
+            -4396642182433536433,
+            -898114430156232691,
+            4316933400395402682,
+            4686849319519084627,
+            -2547432785466189782,
+            7318144332183968316,
+            8696784750756512204,
+            -9006652649445441987,
+            -4940578195844286254,
+            -4440275790325519699,
+            -2600343779017349698,
+            -9089251081239633261,
+            -8856377375871620426,
+            -3713465393802623610,
+            -6679986889934805661,
+            -389060815399261467,
+            -4478827242864143255,
+            -3216226533256584667,
+            -1888370289416899458,
+            763761914541602554,
+            8460033161460304827,
+            6098924145076851180,
+            110800002,
+            -6682791651602616799,
+            2558272899704984371,
+            3254086250651452113,
+            8602972521105827334,
+            7852931700138113700,
+            -3814853637886741634,
+            -3435551653685810725,
+            9000000,
+            -9141735197031073235,
+            110800008,
+            2246994074354755396,
+            3231743272298130792,
+            2989626104254836569,
+            -8679921383154817045,
+            6701942193873503675,
+            3797827965873457234,
+            -8546084028899612232,
+            4928492724515802338,
+            5948786344776720875,
+            3928202944219410502,
+            591666685771081806,
+            -6276066695837516367,
+            -5670110725648251265,
+            -1721037865036995630,
+            -3841441604646290998,
+            -6488112946839175006,
+            530510732816156819,
+            110800012,
+            -9036393155958998629,
+            -6449877773396069706,
+            4021282537895724159,
+            -7857014130743179745,
+            -4682356745110606889,
+            4026327028868840561,
+            8192366353810138949,
+            792107790464373523,
+            -7525417134089427270,
+            2959467708922500008,
+            -2750778173828062384,
+            5018552564924849943,
+            -7350349834373808020,
+            5653519914247303419,
+            605023108400592649,
+            -4377140140577612734,
+            1106170554486702850,
+            3359138182758997695,
+            5866666021909216657,
+            6524843967714326363,
+            7876023681238672744,
+            -6335937766108612707,
+            4897732020326289315,
+            -7819745082475713181,
+            7300910436876739303,
+            -7921590501025025234,
+            -2916193143945001143,
+            1630794972795428178
+        ]
+    }
+}

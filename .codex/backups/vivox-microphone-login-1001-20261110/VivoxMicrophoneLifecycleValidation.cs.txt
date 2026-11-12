@@ -1,0 +1,74 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
+
+[InitializeOnLoad]
+internal static class VivoxMicrophoneLifecycleValidation
+{
+    private const string Request = "Temp/VivoxMicrophoneLifecycleValidation.request";
+    private const string Results = ".codex/diagnostics/vivox-microphone-login-1001-20261110.txt";
+
+    static VivoxMicrophoneLifecycleValidation() { EditorApplication.update += Update; }
+
+    private static void Update()
+    {
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating
+            || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        File.Delete(Request);
+        Scene original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        Scene validation = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(validation);
+        try
+        {
+            Log("ORIGINAL " + original.path + " dirty=" + dirty);
+            Tests(typeof(VivoxMicrophoneLifecycleTests));
+            Tests(typeof(VoiceTransmissionTests));
+            Tests(typeof(VoiceActivityIndicatorTests));
+            Tests(typeof(VivoxVoiceOutputTests));
+            Log("SERVICES=" + Unity.Services.Core.UnityServices.State);
+        }
+        catch (Exception error) { Log("VALIDATION FAILED " + error); }
+        finally
+        {
+            SceneManager.SetActiveScene(original);
+            EditorSceneManager.CloseScene(validation, true);
+            if (dirty && !original.isDirty) EditorSceneManager.MarkSceneDirty(original);
+            Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        }
+    }
+
+    private static void Tests(Type type)
+    {
+        int passed = 0, failed = 0, skipped = 0;
+        foreach (MethodInfo method in type.GetMethods())
+        {
+            var cases = method.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().ToArray();
+            if (cases.Length == 0 && method.GetCustomAttributes(typeof(TestAttribute), false).Length == 0) continue;
+            var arguments = cases.Length > 0 ? cases.Select(c => c.Arguments) : new[] { Array.Empty<object>() };
+            foreach (object[] args in arguments)
+            {
+                object fixture = Activator.CreateInstance(type);
+                string name = type.Name + "." + method.Name + "(" + string.Join(",", args) + ")";
+                try { type.GetMethod("SetUp")?.Invoke(fixture, null); method.Invoke(fixture, args); passed++; Log("PASS " + name); }
+                catch (Exception error)
+                {
+                    Exception cause = error.InnerException ?? error;
+                    if (cause is IgnoreException) { skipped++; Log("SKIP " + name + " " + cause.Message); }
+                    else { failed++; Log("FAIL " + name + " " + cause); }
+                }
+                finally { type.GetMethod("TearDown")?.Invoke(fixture, null); }
+            }
+        }
+        Log("TESTS " + type.Name + " passed=" + passed + " failed=" + failed + " skipped=" + skipped);
+    }
+
+    private static void Log(string value)
+    {
+        Directory.CreateDirectory(".codex/diagnostics"); File.AppendAllText(Results, value + Environment.NewLine);
+    }
+}

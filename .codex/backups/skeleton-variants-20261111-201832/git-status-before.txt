@@ -1,0 +1,110 @@
+ M .claude/napkin.md
+ M Assets/Resources/UI/InGameSettingsMenu.prefab
+ M Assets/Resources/Voice/VivoxVoiceSettings.asset
+ M Assets/Scripts/GameplaySceneRoot.cs
+ M Assets/Scripts/Settings/InGameSettingsMenuController.cs
+ M Assets/Scripts/Settings/SettingsMenu.cs
+ M Assets/Scripts/Voice/VivoxVoiceManager.AudioOutput.cs
+ M Assets/Scripts/Voice/VivoxVoiceManager.cs
+ M Assets/Scripts/Voice/VivoxVoiceSettings.cs
+ M Assets/Tests/EditMode/Editor/VivoxVoiceOutputTests.cs
+ M ProjectSettings/TimeManager.asset
+?? .codex/backups/skeleton-variants-20261111-201832/
+?? .codex/backups/vivox-microphone-login-1001-20261110/
+?? .codex/backups/voice-activity-hud-20261110/
+?? .codex/backups/voice-dynamic-range-monitor-20261110/
+?? .codex/backups/voice-intensity-calibration-20261110/
+?? .codex/backups/voice-intensity-display-clarity-20261110/
+?? .codex/backups/voice-intensity-sensitive-input-20261110/
+?? .codex/backups/voice-loud-range-16-32-20261110/
+?? .codex/backups/voice-participant-controls-20261110/
+?? .codex/backups/voice-transmission-settings-20261110/
+?? .codex/diagnostics/vivox-microphone-login-1001-20261110.txt
+?? .codex/diagnostics/voice-activity-hud-20261110.txt
+?? .codex/diagnostics/voice-activity-hud-preview-20261110.png
+?? .codex/diagnostics/voice-dynamic-range-monitor-20261110.txt
+?? .codex/diagnostics/voice-dynamic-range-monitor-preview-20261110.png
+?? .codex/diagnostics/voice-intensity-calibration-20261110.txt
+?? .codex/diagnostics/voice-intensity-dialog-preview-20261110.png
+?? .codex/diagnostics/voice-intensity-display-clarity-20261110.txt
+?? .codex/diagnostics/voice-intensity-display-clarity-preview-20261110.png
+?? .codex/diagnostics/voice-intensity-sensitive-input-20261110.txt
+?? .codex/diagnostics/voice-intensity-settings-preview-20261110.png
+?? .codex/diagnostics/voice-loud-range-16-32-20261110.txt
+?? .codex/diagnostics/voice-loud-range-16-32-preview-20261110.png
+?? .codex/diagnostics/voice-participant-controls-20261110.txt
+?? .codex/diagnostics/voice-participant-controls-preview-20261110.png
+?? .codex/diagnostics/voice-sensitive-input-calibrated-preview-20261110.png
+?? .codex/diagnostics/voice-sensitive-input-calibrating-preview-20261110.png
+?? .codex/diagnostics/voice-sensitive-input-settings-preview-20261110.png
+?? .codex/diagnostics/voice-sensitive-input-uncalibrated-preview-20261110.png
+?? .codex/diagnostics/voice-transmission-settings-20261110.txt
+?? .codex/diagnostics/voice-transmission-settings-preview-20261110.png
+?? .codex/skeleton_checkpoint.py
+?? Assets/Resources/UI/RoomVoiceSettingsPanel.prefab
+?? Assets/Resources/UI/RoomVoiceSettingsPanel.prefab.meta
+?? Assets/Resources/UI/VoiceActivityHUD.prefab
+?? Assets/Resources/UI/VoiceActivityHUD.prefab.meta
+?? Assets/Resources/UI/VoiceIntensitySettingsPanel.prefab
+?? Assets/Resources/UI/VoiceIntensitySettingsPanel.prefab.meta
+?? Assets/Scripts/Settings/RoomVoiceSettingsPanel.cs
+?? Assets/Scripts/Settings/RoomVoiceSettingsPanel.cs.meta
+?? Assets/Scripts/Settings/VoiceIntensitySettingsPanel.cs
+?? Assets/Scripts/Settings/VoiceIntensitySettingsPanel.cs.meta
+?? Assets/Scripts/Settings/VoiceParticipantRow.cs
+?? Assets/Scripts/Settings/VoiceParticipantRow.cs.meta
+?? Assets/Scripts/Settings/VoiceSettingsPanel.cs
+?? Assets/Scripts/Settings/VoiceSettingsPanel.cs.meta
+?? Assets/Scripts/Voice/MicrophoneActivityGraphic.cs
+?? Assets/Scripts/Voice/MicrophoneActivityGraphic.cs.meta
+?? Assets/Scripts/Voice/VivoxVoiceManager.Activity.cs
+?? Assets/Scripts/Voice/VivoxVoiceManager.Activity.cs.meta
+?? Assets/Scripts/Voice/VivoxVoiceManager.DynamicRange.cs
+?? Assets/Scripts/Voice/VivoxVoiceManager.DynamicRange.cs.meta
+?? Assets/Scripts/Voice/VivoxVoiceManager.Intensity.cs
+?? Assets/Scripts/Voice/VivoxVoiceManager.Intensity.cs.meta
+?? Assets/Scripts/Voice/VivoxVoiceManager.Monitoring.cs
+?? Assets/Scripts/Voice/VivoxVoiceManager.Monitoring.cs.meta
+?? Assets/Scripts/Voice/VivoxVoiceManager.Participants.cs
+?? Assets/Scripts/Voice/VivoxVoiceManager.Participants.cs.meta
+?? Assets/Scripts/Voice/VivoxVoiceManager.Transmission.cs
+?? Assets/Scripts/Voice/VivoxVoiceManager.Transmission.cs.meta
+?? Assets/Scripts/Voice/VoiceActivityIndicator.cs
+?? Assets/Scripts/Voice/VoiceActivityIndicator.cs.meta
+?? Assets/Scripts/Voice/VoiceActivitySnapshot.cs
+?? Assets/Scripts/Voice/VoiceActivitySnapshot.cs.meta
+?? Assets/Scripts/Voice/VoiceDynamicRange.cs
+?? Assets/Scripts/Voice/VoiceDynamicRange.cs.meta
+?? Assets/Scripts/Voice/VoiceIntensityCalibration.cs
+?? Assets/Scripts/Voice/VoiceIntensityCalibration.cs.meta
+?? Assets/Scripts/Voice/VoiceIntensityProfileStore.cs
+?? Assets/Scripts/Voice/VoiceIntensityProfileStore.cs.meta
+?? Assets/Scripts/Voice/VoiceListeningPreferences.cs
+?? Assets/Scripts/Voice/VoiceListeningPreferences.cs.meta
+?? Assets/Scripts/Voice/VoiceRangeSignal.cs
+?? Assets/Scripts/Voice/VoiceRangeSignal.cs.meta
+?? Assets/Scripts/Voice/VoiceTransmissionGate.cs
+?? Assets/Scripts/Voice/VoiceTransmissionGate.cs.meta
+?? Assets/Scripts/Voice/VoiceTransmissionPreferences.cs
+?? Assets/Scripts/Voice/VoiceTransmissionPreferences.cs.meta
+?? Assets/Tests/EditMode/Editor/VivoxMicrophoneLifecycleTests.cs
+?? Assets/Tests/EditMode/Editor/VivoxMicrophoneLifecycleTests.cs.meta
+?? Assets/Tests/EditMode/Editor/VoiceActivityIndicatorTests.cs
+?? Assets/Tests/EditMode/Editor/VoiceActivityIndicatorTests.cs.meta
+?? Assets/Tests/EditMode/Editor/VoiceDynamicProximityTests.cs
+?? Assets/Tests/EditMode/Editor/VoiceDynamicProximityTests.cs.meta
+?? Assets/Tests/EditMode/Editor/VoiceIntensityCalibrationTests.cs
+?? Assets/Tests/EditMode/Editor/VoiceIntensityCalibrationTests.cs.meta
+?? Assets/Tests/EditMode/Editor/VoiceParticipantControlsTests.cs
+?? Assets/Tests/EditMode/Editor/VoiceParticipantControlsTests.cs.meta
+?? Assets/Tests/EditMode/Editor/VoiceTransmissionTests.cs
+?? Assets/Tests/EditMode/Editor/VoiceTransmissionTests.cs.meta
+?? "Assets/WorstKnights/Models/Enemies/New Skeleton.meta"
+?? CON
+?? Docs/SkeletonVariantsImplementation.md
+?? Docs/VoiceActivityHUD.md
+?? Docs/VoiceControlsImplementationPlan.md
+?? Docs/VoiceDynamicProximity.md
+?? Docs/VoiceIntensityCalibration.md
+?? Docs/VoiceParticipantControls.md
+?? Docs/VoiceTransmissionSettings.md

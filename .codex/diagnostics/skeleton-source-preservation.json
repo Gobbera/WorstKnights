@@ -1,0 +1,15 @@
+{
+  "checkpoint": "C:\\Git\\Unity\\WorstKnights\\.codex\\backups\\skeleton-variants-20261111-201832",
+  "original_file_count": 149,
+  "unchanged_original_file_count": 143,
+  "expected_runtime_integration_changes": [
+    "Assets/Scripts/Enemy/AI/EnemyAttackState.cs",
+    "Assets/Scripts/Enemy/AI/EnemyBrain.cs",
+    "Assets/Scripts/Enemy/AI/EnemyChaseState.cs",
+    "Assets/Scripts/Enemy/Animation/EnemyAnimationController.cs",
+    "Assets/Scripts/Enemy/Networking/EnemyNetworkSync.cs",
+    "Assets/Scripts/Enemy/Setup/EnemySetup.cs"
+  ],
+  "unexpected_original_changes": [],
+  "original_model_controller_prefabs_preserved": true
+}

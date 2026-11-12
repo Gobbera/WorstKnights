@@ -27,7 +27,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
     private const int MaximumVivoxLoginsPerUser = 4;
     private const int MinimumVivoxLocalVolume = -50;
     private const int MaximumVivoxLocalVolume = 0;
-    private const float ProximityMuteThreshold = 0.01f;
+    private const float ProximityMuteThreshold = 0f;
     private const float InitialPositionUpdateDelaySeconds = 1f;
     private const float InitialChannelReconnectDelaySeconds = 2f;
     private const float MaximumChannelReconnectDelaySeconds = 30f;
@@ -117,6 +117,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
         CurrentMode = settings.InitialMode;
         desiredVoiceMode = CurrentMode;
+        InitializeVoiceTransmission();
         DontDestroyOnLoad(gameObject);
     }
 
@@ -128,13 +129,21 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
     private void Update()
     {
         UpdateChannelRecovery();
+        UpdateVoiceTransmission();
+        UpdateLocalVoiceActivity();
+        UpdateLocalVoiceIntensity(Time.unscaledDeltaTime);
+        UpdateVoiceRangeNetwork(Time.unscaledDeltaTime);
+        UpdateMicrophoneMonitoring();
+        RefreshListeningIdentities();
         UpdateVoiceSpatialization();
+        UpdateParticipantListeningMixes();
         UpdateUnityVoiceOutputs();
     }
 
     private void OnApplicationQuit()
     {
         applicationIsQuitting = true;
+        SuspendVoiceTransmission();
     }
 
     private void OnDestroy()
@@ -142,14 +151,19 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
         if (Instance != this)
             return;
 
+        VoiceTransmissionPreferences.Changed -= OnVoiceTransmissionPreferenceChanged;
+        SuspendVoiceTransmission();
         UnsubscribeFromVivoxEvents();
         ClearUnityVoiceOutputs();
+        ResetLocalVoiceActivity();
         Instance = null;
     }
 
     public override void OnJoinedRoom()
     {
         base.OnJoinedRoom();
+        listeningPreferences.ResetRoomActors();
+        ResetDynamicVoiceRoomState();
         PublishVivoxIdentityToPhotonPlayer();
         RequestSynchronizationForCurrentRoom();
     }
@@ -157,6 +171,10 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
     public override void OnLeftRoom()
     {
         base.OnLeftRoom();
+        listeningPreferences.ResetRoomActors();
+        ResetDynamicVoiceRoomState();
+        SuspendVoiceTransmission();
+        ResetLocalVoiceActivity();
         ClearLocalPlayerReference();
         RequestSynchronization(null, CurrentMode);
     }
@@ -164,6 +182,10 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
     public override void OnDisconnected(DisconnectCause cause)
     {
         base.OnDisconnected(cause);
+        listeningPreferences.ResetRoomActors();
+        ResetDynamicVoiceRoomState();
+        SuspendVoiceTransmission();
+        ResetLocalVoiceActivity();
         ClearLocalPlayerReference();
         RequestSynchronization(null, CurrentMode);
     }
@@ -177,6 +199,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
             return;
 
         CurrentMode = mode;
+        SuspendVoiceTransmission();
         RequestSynchronizationForCurrentRoom();
     }
 
@@ -266,6 +289,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
             return;
 
         IVivoxService service = VivoxService.Instance;
+        SuspendVoiceTransmission();
         if (service.ActiveChannels.ContainsKey(targetChannelName))
         {
             MarkChannelConnected(targetChannelName, targetVoiceMode);
@@ -361,7 +385,8 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
         {
             LoginOptions loginOptions = new LoginOptions
             {
-                DisplayName = ResolveDisplayName()
+                DisplayName = ResolveDisplayName(),
+                ParticipantUpdateFrequency = IntensityUpdateFrequency
             };
 
             await service.LoginAsync(loginOptions);
@@ -370,6 +395,8 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
                 + $"identity '{ResolveAuthenticationIdentityFingerprint()}', and Vivox login completed.",
                 this);
         }
+        await ApplySavedInputDeviceAsync(service);
+        ApplySavedInputProcessing();
     }
 
     private void PublishVivoxIdentityToPhotonPlayer()
@@ -438,6 +465,8 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
         service.ChannelLeft += OnVivoxChannelLeft;
         service.ParticipantAddedToChannel += OnVivoxParticipantAddedToChannel;
         service.ParticipantRemovedFromChannel += OnVivoxParticipantRemovedFromChannel;
+        service.AvailableInputDevicesChanged += OnAvailableInputDevicesChanged;
+        service.EffectiveInputDeviceChanged += OnEffectiveInputDeviceChanged;
         vivoxEventsSubscribed = true;
     }
 
@@ -453,11 +482,14 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
         service.ChannelLeft -= OnVivoxChannelLeft;
         service.ParticipantAddedToChannel -= OnVivoxParticipantAddedToChannel;
         service.ParticipantRemovedFromChannel -= OnVivoxParticipantRemovedFromChannel;
+        service.AvailableInputDevicesChanged -= OnAvailableInputDevicesChanged;
+        service.EffectiveInputDeviceChanged -= OnEffectiveInputDeviceChanged;
         vivoxEventsSubscribed = false;
     }
 
     private void OnVivoxConnectionRecovering()
     {
+        SuspendVoiceTransmission();
         activeChannelConfirmed = false;
         positionUpdatesSuspended = true;
         Debug.LogWarning("VivoxVoiceManager: voice connection interrupted; Vivox is attempting to recover.", this);
@@ -471,6 +503,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void OnVivoxConnectionFailedToRecover()
     {
+        SuspendVoiceTransmission();
         activeChannelConfirmed = false;
         positionUpdatesSuspended = true;
         LastError = "Vivox could not recover the voice connection.";
@@ -492,6 +525,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void OnVivoxChannelLeft(string channelName)
     {
+        SuspendVoiceTransmission();
         activeChannelConfirmed = false;
         positionUpdatesSuspended = true;
         channelConnectedAtTime = -1f;
@@ -515,6 +549,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void OnVivoxParticipantAddedToChannel(VivoxParticipant participant)
     {
+        RefreshListeningIdentities();
         if (!TryResolveParticipantChannelName(participant, out string channelName)
             || !string.Equals(channelName, activeChannelName, StringComparison.Ordinal))
         {
@@ -532,6 +567,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void OnVivoxParticipantRemovedFromChannel(VivoxParticipant participant)
     {
+        if (participant != null) appliedParticipantMixes.Remove(participant);
         RemoveUnityVoiceOutput(participant);
         TryResolveParticipantPlayerId(participant, out string participantPlayerId);
         if (!TryResolveParticipantChannelName(participant, out string channelName))
@@ -550,6 +586,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void MarkChannelConnected(string channelName, VivoxVoiceMode voiceMode)
     {
+        transmissionGate.Reset();
         activeChannelName = channelName;
         activeVoiceMode = voiceMode;
         activeChannelConfirmed = true;
@@ -664,7 +701,9 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
             return;
         }
 
-        nextPositionUpdateTime = Time.unscaledTime + settings.PositionUpdateInterval;
+        float updateInterval = ShouldUseDynamicVoiceRange(settings, activeVoiceMode)
+            ? Mathf.Min(settings.PositionUpdateInterval, 0.05f) : settings.PositionUpdateInterval;
+        nextPositionUpdateTime = Time.unscaledTime + updateInterval;
 
         if (ShouldUseNativeVivoxPositionalAudio(activeVoiceMode))
         {
@@ -721,6 +760,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
             if (!TryResolveRemoteVoiceAnchor(participantPlayerId, out Transform speakerAnchor))
             {
+                ApplyParticipantMix(participant, participantPlayerId, MinimumVivoxLocalVolume, true);
                 LogUnresolvedParticipantOnce(participantPlayerId);
                 continue;
             }
@@ -757,77 +797,34 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void ApplySimulatedProximityMix(VivoxParticipant participant, string participantPlayerId, float distance)
     {
-        float volume = CalculateSimulatedProximityVolume(distance);
-        bool shouldMute = volume <= ProximityMuteThreshold || distance >= settings.AudibleDistance;
+        float audibleDistance = ResolveRemoteAudibleDistance(participantPlayerId);
+        float volume = VoiceDynamicRange.Fade(settings, distance, audibleDistance);
+        bool shouldMute = ShouldMuteSimulatedProximity(volume, distance, audibleDistance);
         int localVolume = shouldMute
             ? MinimumVivoxLocalVolume
-            : Mathf.RoundToInt(Mathf.Lerp(MinimumVivoxLocalVolume, MaximumVivoxLocalVolume, volume));
+            : VoiceDynamicRange.AmplitudeToDecibels(volume, MinimumVivoxLocalVolume);
 
         ApplyParticipantMix(participant, participantPlayerId, localVolume, shouldMute);
     }
 
+    private static bool ShouldMuteSimulatedProximity(float amplitude, float distance,
+        float audibleDistance)
+    {
+        return float.IsNaN(amplitude) || amplitude <= ProximityMuteThreshold
+            || distance >= audibleDistance;
+    }
+
     private float CalculateSimulatedProximityVolume(float distance)
     {
-        int conversationalDistance = settings.ConversationalDistance;
-        int audibleDistance = settings.AudibleDistance;
-        if (distance <= conversationalDistance)
-            return 1f;
-
-        if (distance >= audibleDistance)
-            return 0f;
-
-        float fadeRange = Mathf.Max(0.001f, audibleDistance - conversationalDistance);
-        float normalizedDistance = Mathf.Clamp01((distance - conversationalDistance) / fadeRange);
-        float intensity = settings.AudioFadeIntensity;
-        if (intensity <= Mathf.Epsilon)
-            return 1f;
-
-        switch (settings.FadeModel)
-        {
-            case AudioFadeModel.LinearByDistance:
-                return Mathf.Clamp01(1f - normalizedDistance * intensity);
-
-            case AudioFadeModel.ExponentialByDistance:
-                return Mathf.Clamp01(Mathf.Pow(1f - normalizedDistance, Mathf.Max(0.01f, intensity * 2f)));
-
-            case AudioFadeModel.InverseByDistance:
-            default:
-                float scaledIntensity = Mathf.Max(0.01f, intensity) * 6f;
-                float rawVolume = 1f / (1f + normalizedDistance * scaledIntensity);
-                float farVolume = 1f / (1f + scaledIntensity);
-                return Mathf.Clamp01(Mathf.InverseLerp(farVolume, 1f, rawVolume));
-        }
+        return VoiceDynamicRange.Fade(settings, distance, settings.AudibleDistance);
     }
 
     private void ApplyParticipantMix(VivoxParticipant participant, string participantPlayerId, int localVolume, bool shouldMute)
     {
-        try
-        {
-            if (shouldMute)
-            {
-                if (proximityMutedPlayerIds.Add(participantPlayerId))
-                    participant.MutePlayerLocally();
-            }
-            else if (proximityMutedPlayerIds.Remove(participantPlayerId))
-            {
-                participant.UnmutePlayerLocally();
-            }
-
-            if (!participantVolumeByPlayerId.TryGetValue(participantPlayerId, out int previousVolume)
-                || previousVolume != localVolume)
-            {
-                participant.SetLocalVolume(localVolume);
-                participantVolumeByPlayerId[participantPlayerId] = localVolume;
-            }
-        }
-        catch (InvalidOperationException)
-        {
-            ClearParticipantMixState(participantPlayerId);
-        }
-        catch (NullReferenceException)
-        {
-            ClearParticipantMixState(participantPlayerId);
-        }
+        participantVolumeByPlayerId[participantPlayerId] = localVolume;
+        if (shouldMute) proximityMutedPlayerIds.Add(participantPlayerId);
+        else proximityMutedPlayerIds.Remove(participantPlayerId);
+        ApplyListenerMixToParticipant(participant, participantPlayerId);
     }
 
     private void ResetParticipantMix(VivoxParticipant participant)
@@ -835,27 +832,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
         if (!TryResolveRemoteParticipantPlayerId(participant, out string participantPlayerId))
             return;
 
-        try
-        {
-            if (proximityMutedPlayerIds.Remove(participantPlayerId))
-                participant.UnmutePlayerLocally();
-
-            if (!participantVolumeByPlayerId.TryGetValue(participantPlayerId, out int previousVolume)
-                || previousVolume != MaximumVivoxLocalVolume)
-            {
-                participant.SetLocalVolume(MaximumVivoxLocalVolume);
-            }
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (NullReferenceException)
-        {
-        }
-        finally
-        {
-            ClearParticipantMixState(participantPlayerId);
-        }
+        ApplyParticipantMix(participant, participantPlayerId, MaximumVivoxLocalVolume, false);
     }
 
     private void ClearParticipantMixState(string participantPlayerId)
@@ -870,7 +847,10 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
 
     private void ClearProximityMixState()
     {
+        StopMicrophoneMonitoring();
+        ClearRemoteVoiceAnchorCache();
         ClearUnityVoiceOutputs();
+        appliedParticipantMixes.Clear();
         participantVolumeByPlayerId.Clear();
         proximityMutedPlayerIds.Clear();
         unresolvedParticipantWarnings.Clear();
@@ -928,23 +908,7 @@ public sealed partial class VivoxVoiceManager : MonoBehaviourPunCallbacks
         if (photonPlayer == null)
             return false;
 
-        PlayerSetup[] players = FindObjectsByType<PlayerSetup>(FindObjectsInactive.Exclude);
-        for (int i = 0; i < players.Length; i++)
-        {
-            PlayerSetup player = players[i];
-            if (player == null)
-                continue;
-
-            PhotonView playerView = player.GetComponent<PhotonView>();
-            if (playerView == null || playerView.OwnerActorNr != photonPlayer.ActorNumber)
-                continue;
-
-            FP_Camera cameraMarker = player.GetComponentInChildren<FP_Camera>(true);
-            anchor = cameraMarker != null ? cameraMarker.transform : player.transform;
-            return anchor != null;
-        }
-
-        return false;
+        return TryGetCachedRemoteVoiceAnchor(photonPlayer.ActorNumber, out anchor);
     }
 
     private static Player ResolvePhotonPlayerByVivoxPlayerId(string vivoxPlayerId)

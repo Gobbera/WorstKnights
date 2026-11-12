@@ -1,0 +1,196 @@
+playing=False paused=False
+SCENE Assets/Scenes/Map3.unity dirty=True
+CAMERA FP_Camera enabled=True active=True mask=13887 rendersEnemy=False position=(12.00, -1.24, 29.45) type=Game display=0
+CAMERA Hands Camera enabled=True active=True mask=256 rendersEnemy=False position=(12.00, -1.24, 29.45) type=Game display=0
+CAMERA TP_Camera enabled=True active=False mask=-1 rendersEnemy=True position=(12.02, -0.19, 23.83) type=Game display=0
+ENEMY Enemy scene=Map3 position=(2.94, 0.00, 8.93) active=True state=Idle alive=True
+ RENDERER  enabled=False active=True layer=Enemy visible=False forcedOff=False shadows=TwoSided bounds=Center: (2.94, 0.00, 8.93), Extents: (0.50, 1.00, 0.50) materials=Mesh2D-Lit-Default
+  CAMERA FP_Camera maskAllows=False frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Arm_L enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (2.57, 1.31, 8.81), Extents: (0.17, 0.37, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Arm_R enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (3.32, 1.31, 8.81), Extents: (0.17, 0.37, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Body enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (2.94, 1.33, 8.85), Extents: (0.36, 0.53, 0.21) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Eyes enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (2.94, 1.90, 9.01), Extents: (0.09, 0.03, 0.02) materials=WK_Knight_Eyes
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Hand_L enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (2.49, 0.83, 8.86), Extents: (0.07, 0.14, 0.10) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Hand_R enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (3.40, 0.83, 8.86), Extents: (0.07, 0.14, 0.10) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Head enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (2.94, 1.95, 8.89), Extents: (0.14, 0.18, 0.21) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Jaw enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (2.94, 1.80, 8.95), Extents: (0.11, 0.10, 0.12) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Legs_L enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (2.65, 0.47, 8.95), Extents: (0.20, 0.52, 0.25) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Legs_R enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (3.24, 0.47, 8.95), Extents: (0.20, 0.52, 0.25) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/Skeleton/Sword enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (3.31, 0.53, 9.45), Extents: (0.49, 0.35, 0.74) materials=WK_Gray,WK_Light_Gray,WK_Brown
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ENEMY Skeleton Base scene=Map3 position=(8.53, 0.00, 10.63) active=True state=Idle alive=True
+ RENDERER  enabled=False active=True layer=Enemy visible=False forcedOff=False shadows=TwoSided bounds=Center: (8.53, 0.00, 10.63), Extents: (0.50, 1.00, 0.50) materials=Mesh2D-Lit-Default
+  CAMERA FP_Camera maskAllows=False frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Arm_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.19, 1.20, 10.53), Extents: (0.15, 0.34, 0.08) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Arm_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.88, 1.20, 10.53), Extents: (0.15, 0.34, 0.08) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Body enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.53, 1.22, 10.57), Extents: (0.33, 0.47, 0.20) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Hand_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.12, 0.76, 10.58), Extents: (0.07, 0.13, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Hand_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.94, 0.76, 10.58), Extents: (0.07, 0.13, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Head enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.53, 1.78, 10.60), Extents: (0.13, 0.17, 0.19) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Jaw enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.53, 1.64, 10.66), Extents: (0.10, 0.08, 0.10) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Legs_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.26, 0.43, 10.65), Extents: (0.18, 0.47, 0.23) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Legs_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.80, 0.43, 10.65), Extents: (0.18, 0.47, 0.23) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ENEMY Skeleton Archer scene=Map3 position=(8.58, 0.00, 6.60) active=True state=Idle alive=True
+ RENDERER  enabled=False active=True layer=Enemy visible=False forcedOff=False shadows=TwoSided bounds=Center: (8.58, 0.00, 6.60), Extents: (0.50, 1.00, 0.50) materials=Mesh2D-Lit-Default
+  CAMERA FP_Camera maskAllows=False frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Arm_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.24, 1.20, 6.50), Extents: (0.15, 0.34, 0.08) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Arm_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.92, 1.20, 6.50), Extents: (0.15, 0.34, 0.08) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Body enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.58, 1.22, 6.54), Extents: (0.33, 0.47, 0.20) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Hand_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.17, 0.76, 6.55), Extents: (0.07, 0.13, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Hand_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.99, 0.76, 6.55), Extents: (0.07, 0.13, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Head enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.58, 1.78, 6.57), Extents: (0.13, 0.17, 0.19) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Jaw enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.58, 1.64, 6.63), Extents: (0.10, 0.08, 0.10) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Legs_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.31, 0.43, 6.63), Extents: (0.18, 0.47, 0.23) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Legs_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.85, 0.43, 6.63), Extents: (0.18, 0.47, 0.23) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.L/Arm.L/Elbow.L/Hand.L/LeftHandSocket/Bow/Bow/Bow_Export/Bow_Geometry enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.22, 1.22, 6.47), Extents: (0.15, 0.59, 0.70) materials=Material.001
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/RightHandSocket/ArrowVisual/Arrow/Arrow_Export/Arrow_IA_Geometry enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.48, 1.30, 6.12), Extents: (0.12, 0.44, 0.16) materials=Arrow_IA_Wood,Arrow_IA_Fletching,Arrow_IA_Steel
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Skeleton/Root/Hips/Spine_1/Spine_2/BackSocket/Quiver/Quiver/Quiver_Export/Quiver_Arrows_IA_Geometry enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.54, 1.25, 6.24), Extents: (0.06, 0.48, 0.09) materials=Arrow_IA_Wood,Arrow_IA_Fletching,Arrow_IA_Steel
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Skeleton/Root/Hips/Spine_1/Spine_2/BackSocket/Quiver/Quiver/Quiver_Export/Quiver_IA_Geometry enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.54, 1.12, 6.25), Extents: (0.11, 0.34, 0.10) materials=Quiver_IA_Leather,Quiver_IA_Trim,Quiver_IA_Inside
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ENEMY Beholder scene=Map3 position=(-1.35, -3.00, 41.29) active=True state=Idle alive=True
+ RENDERER Beholder enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-1.17, -1.61, 41.29), Extents: (1.24, 1.39, 1.44) materials=WK_Bh_1,WK_Bh_2,Eyes,WK_Light_Gray,WK_Bh_Tongue
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Beholder_Armature/Root/Hip/Center Eye/Center Eye_end/WK Fake Volume/WK Fake Volume Visual/Volume Cone enabled=True active=True layer=Default visible=True forcedOff=False shadows=Off bounds=Center: (2.46, -1.91, 41.29), Extents: (3.36, 2.92, 0.42) materials=WK_VolumeCone
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Center Eye enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-0.83, -1.37, 41.29), Extents: (0.61, 0.37, 0.36) materials=WK_Bh_Eye
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Eye_01.L.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-1.34, -2.47, 42.67), Extents: (0.15, 0.20, 0.18) materials=WK_Bh_Eye
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Eye_01.R.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-1.22, -2.49, 39.73), Extents: (0.14, 0.16, 0.17) materials=WK_Bh_Eye
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Eye_02.L.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-0.80, -1.08, 42.83), Extents: (0.15, 0.18, 0.19) materials=WK_Bh_Eye
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Eye_02.R.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-0.47, -1.52, 39.75), Extents: (0.14, 0.15, 0.16) materials=WK_Bh_Eye
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Eye_03.L.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (0.08, -0.68, 41.91), Extents: (0.17, 0.18, 0.18) materials=WK_Bh_Eye
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Eye_03.R.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (0.35, -0.76, 40.65), Extents: (0.21, 0.18, 0.18) materials=WK_Bh_Eye
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Tentacule_01.L.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-1.96, -2.34, 42.37), Extents: (0.81, 0.49, 0.90) materials=WK_Bh_1
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Tentacule_01.R.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-1.92, -2.33, 40.12), Extents: (0.87, 0.48, 0.92) materials=WK_Bh_1
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Tentacule_02.L.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-1.55, -1.30, 42.48), Extents: (0.94, 0.56, 0.76) materials=WK_Bh_1
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Tentacule_02.R.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-1.32, -1.41, 40.02), Extents: (1.00, 0.44, 0.84) materials=WK_Bh_1
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Tentacule_03.L.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-0.82, -0.53, 41.99), Extents: (1.08, 0.67, 0.57) materials=WK_Bh_1
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ RENDERER Tentacule_03.R.Mesh enabled=True active=True layer=Default visible=True forcedOff=False shadows=On bounds=Center: (-0.66, -0.64, 40.51), Extents: (1.16, 0.64, 0.65) materials=WK_Bh_1
+  CAMERA FP_Camera maskAllows=True frustum=True
+  CAMERA Hands Camera maskAllows=False frustum=True
+ENEMY Skeleton Swordsman scene=Map3 position=(7.67, 0.00, 12.41) active=True state=Idle alive=True
+ RENDERER  enabled=False active=True layer=Enemy visible=False forcedOff=False shadows=TwoSided bounds=Center: (7.67, 0.00, 12.41), Extents: (0.50, 1.00, 0.50) materials=Mesh2D-Lit-Default
+  CAMERA FP_Camera maskAllows=False frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Arm_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (7.33, 1.20, 12.30), Extents: (0.15, 0.34, 0.08) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Arm_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.01, 1.20, 12.30), Extents: (0.15, 0.34, 0.08) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Body enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (7.67, 1.22, 12.35), Extents: (0.33, 0.47, 0.20) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Hand_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (7.26, 0.76, 12.35), Extents: (0.07, 0.13, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Hand_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.08, 0.76, 12.35), Extents: (0.07, 0.13, 0.09) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Head enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (7.67, 1.78, 12.38), Extents: (0.13, 0.17, 0.19) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Jaw enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (7.67, 1.64, 12.43), Extents: (0.10, 0.08, 0.10) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Legs_L enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (7.40, 0.43, 12.43), Extents: (0.18, 0.47, 0.23) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Legs_R enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (7.94, 0.43, 12.43), Extents: (0.18, 0.47, 0.23) materials=WK_Skeleton_Bones
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False
+ RENDERER Model/SkeletonTesteIA/Skeleton/Root/Hips/Spine_1/Spine_2/Spine_3/Spine_4/Shoulder.R/Arm.R/Elbow.R/Hand.R/RightHandSocket/Sword/Sword/Sword_Export/Sword_Geometry enabled=True active=True layer=Default visible=False forcedOff=False shadows=On bounds=Center: (8.07, 0.85, 12.69), Extents: (0.34, 0.21, 0.60) materials=Gold,Edge,Grip
+  CAMERA FP_Camera maskAllows=True frustum=False
+  CAMERA Hands Camera maskAllows=False frustum=False

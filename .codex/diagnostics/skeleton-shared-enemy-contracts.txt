@@ -1,0 +1,73 @@
+Existing enemy contracts executed on the Unity main thread in Play Mode.
+PASS EnemyPerceptionTests.EnemyBrain_CurrentRoomTracksColliderMembershipWithoutDetectingPlayers
+PASS EnemyPerceptionTests.SearchArea_UsesAllAttachedBoundsAndExplicitChildBounds
+PASS EnemyPerceptionTests.EnemySearch_StalledWithKnownAreaStartsRoomSweep
+PASS EnemyPerceptionTests.InvestigationMemory_VisitsOtherPlayerBeforeSearchingOriginalAndNextRoom
+PASS EnemyPerceptionTests.InvestigationMemory_IgnoresBriefBorderCrossingAndExpiresOldEvidence
+PASS EnemyPerceptionTests.InvestigationMemory_OverlappingRoomBoundsDoNotTriggerEarlyTransition
+PASS EnemyPerceptionTests.EnemyBrain_HeardSecondPlayerBecomesNextPointWithoutRestartingChase
+PASS EnemyPerceptionTests.EnemyBrain_ChaseDoesNotAbandonHiddenPrimaryForVisibleSecondary
+PASS EnemyPerceptionTests.EnemySearch_HeardPlayerResumesChaseWithoutAnotherAlert
+PASS EnemyPerceptionTests.EnemyHearing_CrouchRadiusStartsAtBodyEdge
+PASS EnemyPerceptionTests.PlayerMovementNoiseSource_UsesMovementRadiiOnlyWhileMovingOnGround
+PASS EnemyPerceptionTests.EnemyHearing_ConsumesNoiseWhenEventIsAudible
+PASS EnemyPerceptionTests.EnemyVision_DoesNotSeeTargetThroughObstacle
+PASS EnemyPerceptionTests.EnemyVision_MoodRangeAndAngleChangeActualDetection
+PASS EnemyPerceptionTests.EnemyVision_CanSenseCloseTargetOutsideViewCone
+PASS EnemyPerceptionTests.EnemyAttack_Disabled_DoesNotStartCommonAttack
+PASS EnemyPerceptionTests.EnemyBrain_LastSeenSearch_DoesNotTreatCloseAwarenessAsVision
+PASS EnemyPerceptionTests.EnemyBrain_LastSeenSearch_SwitchesToClearlyCloserVisiblePlayer
+PASS EnemyPerceptionTests.EnemySearch_ReacquiringVisiblePlayerTriggersAlertDespiteCombatMemory
+PASS EnemyPerceptionTests.EnemyBrain_ContactAlertsOnceUntilReflectionCompletes
+PASS EnemyPerceptionTests.EnemySearch_MovementNoiseDoesNotRestartAlertCycle
+PASS EnemyPerceptionTests.EnemyAlert_SeeingPlayerAfterHearingKeepsSingleAlert
+PASS EnemyPerceptionTests.EnemySearch_ReacquiringVisiblePlayerAfterAlertChasesWithoutAnotherAlert
+PASS EnemyPerceptionTests.EnemySearch_StalledBeforeLastSeenPointGoesDirectlyToReflection
+PASS EnemyPerceptionTests.EnemySearch_LongLastSeenRouteDoesNotTimeoutWhileMakingProgress
+PASS EnemyPerceptionTests.EnemyMotor_DesiredVelocityBelowStopDistanceStillMoves
+PASS EnemyTraversalTests.Route_KeepsTheChosenDirection
+FAIL EnemyTraversalTests.DoorProbe_IgnoresTheLeafBehindTheEnemyButFindsItAhead NUnit.Framework.AssertionException:   Expected: False
+  But was:  True
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at EnemyTraversalTests.DoorProbe_IgnoresTheLeafBehindTheEnemyButFindsItAhead () [0x0005b] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\EnemyTraversalTests.cs:54 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+PASS EnemyTraversalTests.Traversal_PreservesTheNavigationDestination
+PASS EnemyTraversalTests.Traversal_UsesTheNarrowCapsuleAndRestoresTheBodyBox
+PASS EnemyTraversalTests.Traversal_IgnoresOnlyTheOpenDoorLeafUntilItEnds
+PASS EnemyTraversalTests.Traversal_StallTimerUsesProgressTowardTheCurrentPoint
+PASS EnemyTraversalTests.ClosedDoorRetry_AllowsReverseAfterCrossingButNotSameDirection
+PASS EnemyTraversalTests.ClosedDoorWithDestinationAcross_OpensEvenWhenLeafProbeMisses
+PASS EnemyTraversalTests.CancelledTraversal_DoesNotRequireExitWhenEnemyStayedOnEntrySide
+FAIL EnemyTraversalTests.ChaseWithoutSight_ApproachesLastKnownPositionBeforeSearching NUnit.Framework.AssertionException:   Expected: 4.0f
+  But was:  0.0f
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at EnemyTraversalTests.ChaseWithoutSight_ApproachesLastKnownPositionBeforeSearching () [0x000e9] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\EnemyTraversalTests.cs:331 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+FAIL EnemyTraversalTests.LostTarget_RemainsInChaseUntilTheLastKnownPositionIsReached NUnit.Framework.AssertionException:   Expected: 4.0f
+  But was:  0.0f
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at EnemyTraversalTests.LostTarget_RemainsInChaseUntilTheLastKnownPositionIsReached () [0x000db] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\EnemyTraversalTests.cs:365 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+PASS EnemyTraversalTests.StalledChaseWithSearchAreaEntersSearchInsteadOfReflection
+PASS EnemyTraversalTests.RegainedContact_UpdatesPursuitWithoutLeavingChase
+FAIL EnemyTraversalTests.Search_DoesNotStartRoomSweepBeforeReachingTheObservedPosition NUnit.Framework.AssertionException:   Expected: True
+  But was:  False
+
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <f577cd9686154d6ab10efd7e65e64366>:0 
+  at EnemyTraversalTests.Search_DoesNotStartRoomSweepBeforeReachingTheObservedPosition () [0x000ce] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\EnemyTraversalTests.cs:478 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <f713e1c3c5f545ce9b1df47230f4f853>:0 
+PASS EnemyTraversalTests.TargetLostDuringAlert_ContinuesToLastSeenPositionInChase
+PASS EnemyTraversalTests.SearchArea_UsesChildPointsInHierarchyOrder
+PASS EnemyTraversalTests.RoomSearch_UsesLinkedDoorSideAndRejectsLockedDoor
+passed=39 failed=4

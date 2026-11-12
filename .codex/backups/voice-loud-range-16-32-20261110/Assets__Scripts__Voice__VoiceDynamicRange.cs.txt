@@ -1,0 +1,32 @@
+using Unity.Services.Vivox;
+using UnityEngine;
+
+public static class VoiceDynamicRange
+{
+    public static float Distance(VivoxVoiceSettings settings, float intensity)
+    {
+        float maximum = settings.AudibleDistance;
+        float minimum = Mathf.Min(maximum, Mathf.Max(settings.MinimumDynamicDistance, settings.ConversationalDistance + 0.1f));
+        float safe = float.IsNaN(intensity) || float.IsInfinity(intensity) ? 0f : Mathf.Clamp01(intensity);
+        return Mathf.Lerp(minimum, maximum, Mathf.Pow(safe, settings.DynamicRangeExponent));
+    }
+
+    public static float Fade(VivoxVoiceSettings settings, float distance, float audibleDistance)
+    {
+        float conversation = Mathf.Min(settings.ConversationalDistance, audibleDistance);
+        if (distance <= conversation) return 1f;
+        if (distance >= audibleDistance) return 0f;
+        float normalized = Mathf.Clamp01((distance - conversation) / Mathf.Max(0.001f, audibleDistance - conversation));
+        float intensity = settings.AudioFadeIntensity;
+        if (intensity <= Mathf.Epsilon) return 1f;
+        switch (settings.FadeModel)
+        {
+            case AudioFadeModel.LinearByDistance: return Mathf.Clamp01(1f - normalized * intensity);
+            case AudioFadeModel.ExponentialByDistance:
+                return Mathf.Clamp01(Mathf.Pow(1f - normalized, Mathf.Max(0.01f, intensity * 2f)));
+            default:
+                float scaled = Mathf.Max(0.01f, intensity) * 6f;
+                return Mathf.Clamp01(Mathf.InverseLerp(1f / (1f + scaled), 1f, 1f / (1f + normalized * scaled)));
+        }
+    }
+}

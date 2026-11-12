@@ -1,0 +1,41 @@
+using Photon.Pun;
+using Unity.Services.Vivox;
+
+public sealed partial class VivoxVoiceManager
+{
+    public VoiceActivitySnapshot LocalVoiceActivity { get; private set; }
+
+    private void UpdateLocalVoiceActivity()
+    {
+        bool voiceEnabled = CurrentMode != VivoxVoiceMode.Disabled;
+        if (!voiceEnabled || !PhotonNetwork.InRoom || !IsVoiceConnected
+            || !TryGetVivoxService(out IVivoxService service)
+            || !service.ActiveChannels.TryGetValue(activeChannelName, out var participants))
+        {
+            LocalVoiceActivity = VoiceActivitySnapshot.FromInput(voiceEnabled, false, false,
+                false, false, false, 0d);
+            return;
+        }
+
+        for (int i = 0; i < participants.Count; i++)
+        {
+            VivoxParticipant participant = participants[i];
+            if (participant == null || !participant.IsSelf)
+                continue;
+
+            LocalVoiceActivity = VoiceActivitySnapshot.FromInput(true, true, true,
+                !IsMicrophoneTransmissionAllowed || service.IsInputDeviceMuted || participant.IsMuted,
+                service.TransmittingChannels.Contains(activeChannelName),
+                participant.SpeechDetected, participant.AudioEnergy);
+            return;
+        }
+
+        ResetLocalVoiceActivity();
+    }
+
+    private void ResetLocalVoiceActivity()
+    {
+        LocalVoiceActivity = VoiceActivitySnapshot.FromInput(CurrentMode != VivoxVoiceMode.Disabled,
+            false, false, false, false, false, 0d);
+    }
+}

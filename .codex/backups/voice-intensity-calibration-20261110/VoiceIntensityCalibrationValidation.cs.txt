@@ -1,0 +1,225 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using TMPro;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class VoiceIntensityCalibrationValidation
+{
+    private const string Request = "Temp/VoiceIntensityCalibrationValidation.request";
+    private const string Results = ".codex/diagnostics/voice-intensity-calibration-20261110.txt";
+    private const string Prefab = "Assets/Resources/UI/VoiceIntensitySettingsPanel.prefab";
+    private static TMP_FontAsset font;
+
+    static VoiceIntensityCalibrationValidation() { EditorApplication.update += Update; }
+
+    private static void Update()
+    {
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating
+            || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        Scene original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        Scene validation = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(validation);
+        try
+        {
+            Log("ORIGINAL " + original.path + " dirty=" + dirty);
+            if (command == "setup-tests") BuildPrefab();
+            if (command != "preview")
+            {
+                Tests(typeof(VoiceIntensityCalibrationTests)); Tests(typeof(VoiceParticipantControlsTests));
+                Tests(typeof(VivoxMicrophoneLifecycleTests)); Tests(typeof(VoiceTransmissionTests));
+                Tests(typeof(VoiceActivityIndicatorTests)); Tests(typeof(VivoxVoiceOutputTests));
+            }
+            Preview(); Log("SERVICES=" + Unity.Services.Core.UnityServices.State);
+        }
+        catch (Exception error) { Log("VALIDATION FAILED " + error); }
+        finally
+        {
+            SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(validation, true);
+            if (dirty && !original.isDirty) EditorSceneManager.MarkSceneDirty(original);
+            Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        }
+    }
+
+    private static void BuildPrefab()
+    {
+        if (File.Exists(Prefab)) return;
+        var shared = Resources.Load<GameObject>("UI/InGameSettingsMenu");
+        font = shared.GetComponent<SettingsMenu>().resolutionDropdown.captionText.font;
+        var root = Rect("Voice Intensity Settings", null, Vector2.zero, Vector2.zero, Vector2.zero);
+        Stretch(root); root.gameObject.SetActive(false);
+        var panel = root.gameObject.AddComponent<VoiceIntensitySettingsPanel>();
+        Transform template = shared.transform.Find("Background/TXT_Push-to-Talk Key");
+        var row = Object.Instantiate(template.gameObject, root, false);
+        row.name = "TXT_Microphone Test"; row.GetComponent<TMP_Text>().text = "Microphone Test";
+        var open = row.GetComponentInChildren<Button>(true); open.interactable = true;
+        open.GetComponentInChildren<TMP_Text>(true).text = "Open test";
+        var backdrop = Rect("Microphone Test Dialog", root, Vector2.zero, Vector2.zero, Vector2.zero); Stretch(backdrop);
+        backdrop.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.8f);
+        var box = Rect("Test Panel", backdrop, new Vector2(0.5f, 0.5f), new Vector2(780f, 600f), Vector2.zero);
+        box.gameObject.AddComponent<Image>().color = new Color(0.055f, 0.065f, 0.085f, 1f);
+        var title = Label("Microphone Test", box, new Vector2(0f, -38f), new Vector2(680f, 42f), 32f);
+        title.fontStyle = FontStyles.Bold; title.alignment = TextAlignmentOptions.Center;
+        var input = Label("System microphone\nAutomatic input level: Unavailable", box,
+            new Vector2(0f, -100f), new Vector2(680f, 60f), 21f);
+        input.alignment = TextAlignmentOptions.Center;
+        var profile = Label("Provisional levels - calibrate before comparing voices", box,
+            new Vector2(0f, -156f), new Vector2(680f, 30f), 19f);
+        profile.color = new Color(0.65f, 0.7f, 0.76f); profile.alignment = TextAlignmentOptions.Center;
+        var level = Label("Silent 0%", box, new Vector2(0f, -204f), new Vector2(680f, 32f), 25f);
+        level.alignment = TextAlignmentOptions.Center;
+        var meter = Bar("Input Intensity", box, new Vector2(0f, -244f), new Vector2(680f, 30f), out Image fill);
+        Label("Quiet                         Normal                           Loud", box,
+            new Vector2(0f, -278f), new Vector2(680f, 28f), 18f).alignment = TextAlignmentOptions.Center;
+        var instruction = Label("Join a room with voice connected to test your microphone.", box,
+            new Vector2(0f, -354f), new Vector2(680f, 100f), 22f);
+        instruction.textWrappingMode = TextWrappingModes.Normal;
+        instruction.alignment = TextAlignmentOptions.Center;
+        var progress = Bar("Calibration Progress", box, new Vector2(0f, -424f), new Vector2(680f, 10f), out Image progressFill);
+        progressFill.color = new Color(0.4f, 0.7f, 1f);
+        Button measure = Button("Calibrate", box, new Vector2(-245f, -478f), new Vector2(180f, 42f));
+        Button cancel = Button("Cancel", box, new Vector2(-68f, -478f), new Vector2(140f, 42f));
+        Button reset = Button("Reset profile", box, new Vector2(100f, -478f), new Vector2(170f, 42f));
+        Button close = Button("Close", box, new Vector2(270f, -478f), new Vector2(110f, 42f));
+        var footer = Label("Keep your usual microphone distance for consistent readings.", box,
+            new Vector2(0f, -551f), new Vector2(700f, 40f), 18f);
+        footer.alignment = TextAlignmentOptions.Center; footer.color = new Color(0.65f, 0.7f, 0.76f);
+        Wire(panel, "openRow", row.GetComponent<RectTransform>()); Wire(panel, "openButton", open);
+        Wire(panel, "dialog", backdrop.gameObject); Wire(panel, "meter", meter); Wire(panel, "meterFill", fill);
+        Wire(panel, "levelLabel", level); Wire(panel, "inputLabel", input); Wire(panel, "profileLabel", profile);
+        Wire(panel, "instruction", instruction); Wire(panel, "progress", progress);
+        Wire(panel, "measureButton", measure); Wire(panel, "measureLabel", measure.GetComponentInChildren<TMP_Text>());
+        Wire(panel, "cancelButton", cancel); Wire(panel, "resetButton", reset); Wire(panel, "closeButton", close);
+        backdrop.gameObject.SetActive(false); root.gameObject.SetActive(true);
+        PrefabUtility.SaveAsPrefabAsset(root.gameObject, Prefab); Object.DestroyImmediate(root.gameObject);
+        Log("CREATED " + Prefab);
+    }
+
+    private static RectTransform Rect(string name, Transform parent, Vector2 anchor, Vector2 size, Vector2 position)
+    {
+        var root = new GameObject(name, typeof(RectTransform)); root.layer = 5;
+        var rect = (RectTransform)root.transform; if (parent != null) rect.SetParent(parent, false);
+        rect.anchorMin = rect.anchorMax = anchor; rect.sizeDelta = size; rect.anchoredPosition = position;
+        return rect;
+    }
+    private static void Stretch(RectTransform rect)
+    { rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = rect.offsetMax = Vector2.zero; }
+    private static TMP_Text Label(string text, Transform parent, Vector2 position, Vector2 size, float fontSize)
+    {
+        var rect = Rect(text, parent, new Vector2(0.5f, 1f), size, position);
+        var label = rect.gameObject.AddComponent<TextMeshProUGUI>();
+        label.font = font; label.text = text; label.fontSize = fontSize; label.color = Color.white;
+        label.richText = false; label.textWrappingMode = TextWrappingModes.NoWrap; label.raycastTarget = false;
+        return label;
+    }
+    private static Button Button(string text, Transform parent, Vector2 position, Vector2 size)
+    {
+        var rect = Rect(text, parent, new Vector2(0.5f, 1f), size, position);
+        var image = rect.gameObject.AddComponent<Image>(); image.color = new Color(0.9f, 0.92f, 0.95f);
+        var button = rect.gameObject.AddComponent<Button>(); button.targetGraphic = image;
+        var label = Label(text, rect, Vector2.zero, Vector2.zero, 21f); Stretch(label.rectTransform);
+        label.alignment = TextAlignmentOptions.Center; label.color = new Color(0.1f, 0.12f, 0.15f);
+        return button;
+    }
+    private static Slider Bar(string name, Transform parent, Vector2 position, Vector2 size, out Image fillImage)
+    {
+        var rect = Rect(name, parent, new Vector2(0.5f, 1f), size, position);
+        rect.gameObject.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.08f);
+        var fill = Rect("Fill", rect, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero); Stretch(fill);
+        fillImage = fill.gameObject.AddComponent<Image>(); fillImage.color = new Color(0.45f, 1f, 0.65f);
+        var slider = rect.gameObject.AddComponent<Slider>(); slider.fillRect = fill;
+        slider.interactable = false; slider.transition = Selectable.Transition.None; slider.value = 0f;
+        return slider;
+    }
+    private static void Wire(Object target, string field, Object value)
+    {
+        var data = new SerializedObject(target); data.FindProperty(field).objectReferenceValue = value;
+        data.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void Tests(Type type)
+    {
+        int passed = 0, failed = 0, skipped = 0;
+        foreach (var method in type.GetMethods())
+        {
+            var cases = method.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().ToArray();
+            if (cases.Length == 0 && method.GetCustomAttributes(typeof(TestAttribute), false).Length == 0) continue;
+            var arguments = cases.Length > 0 ? cases.Select(c => c.Arguments) : new[] { Array.Empty<object>() };
+            foreach (object[] args in arguments)
+            {
+                object fixture = Activator.CreateInstance(type);
+                string name = type.Name + "." + method.Name + "(" + string.Join(",", args) + ")";
+                try { type.GetMethod("SetUp")?.Invoke(fixture, null); method.Invoke(fixture, args); passed++; Log("PASS " + name); }
+                catch (Exception error)
+                {
+                    Exception cause = error.InnerException ?? error;
+                    if (cause is IgnoreException) { skipped++; Log("SKIP " + name); }
+                    else { failed++; Log("FAIL " + name + " " + cause); }
+                }
+                finally { type.GetMethod("TearDown")?.Invoke(fixture, null); }
+            }
+        }
+        Log("TESTS " + type.Name + " passed=" + passed + " failed=" + failed + " skipped=" + skipped);
+    }
+
+    private static void Preview()
+    {
+        var camera = new GameObject("Microphone test preview camera").AddComponent<Camera>();
+        camera.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>().renderShadows = false;
+        camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(0.08f, 0.09f, 0.11f);
+        camera.cullingMask = 1 << 31; camera.orthographic = true; camera.nearClipPlane = 0.01f;
+        var target = new RenderTexture(1280, 720, 24); camera.targetTexture = target;
+        var root = Object.Instantiate(Resources.Load<GameObject>("UI/InGameSettingsMenu"));
+        var settings = root.GetComponent<SettingsMenu>(); VoiceSettingsPanel.EnsureForMenu(settings);
+        var panel = VoiceIntensitySettingsPanel.EnsureForMenu(settings);
+        var room = RoomVoiceSettingsPanel.EnsureForMenu(settings);
+        typeof(RoomVoiceSettingsPanel).GetMethod("PresentParticipants", BindingFlags.Instance | BindingFlags.NonPublic)
+            .Invoke(room, new object[] { new[] { new RoomVoiceParticipant(2, "Archer", true, false, VoiceListeningPreference.Default) } });
+        room.GetComponent<CanvasGroup>().alpha = 1f;
+        var canvas = root.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = camera; canvas.planeDistance = 1f; root.GetComponent<CanvasGroup>().alpha = 1f;
+        settings.resolutionDropdown.ClearOptions(); settings.resolutionDropdown.AddOptions(new System.Collections.Generic.List<string> { "1280 x 720" });
+        Layer(root); Capture(camera, target, "voice-intensity-settings-preview-20261110.png");
+        panel.Open();
+        var monitor = new VoiceIntensityMonitor();
+        VoiceIntensityProfile.TryCreate(0.005f, 0.025f, 0.1f, 0.4f, out var profile); monitor.SetProfile(profile);
+        monitor.Calibration.Begin();
+        for (int stage = 0; stage < 3; stage++)
+        {
+            if (stage > 0) monitor.Calibration.Continue();
+            float energy = stage == 0 ? 0.005f : stage == 1 ? 0.025f : 0.1f;
+            for (int i = 0; i < (stage == 2 ? 12 : 30); i++)
+                monitor.Update(VoiceActivitySnapshot.FromInput(true, true, true, false, true, stage > 0, energy), 0.1f);
+        }
+        typeof(VoiceIntensitySettingsPanel).GetMethod("Present", BindingFlags.Instance | BindingFlags.NonPublic)
+            .Invoke(panel, new object[] { monitor, true, "Synthetic microphone", (bool?)true });
+        Layer(root); Capture(camera, target, "voice-intensity-dialog-preview-20261110.png");
+        panel.Close(); camera.targetTexture = null; Object.DestroyImmediate(target);
+        Log("PREVIEWS synthetic metadata only; no microphone capture, playback or voice login");
+    }
+    private static void Layer(GameObject root)
+    { foreach (Transform child in root.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 31; }
+    private static void Capture(Camera camera, RenderTexture target, string filename)
+    {
+        foreach (var label in Object.FindObjectsByType<TMP_Text>())
+            if (label.gameObject.scene == camera.gameObject.scene) label.ForceMeshUpdate();
+        Canvas.ForceUpdateCanvases(); camera.Render();
+        Canvas.ForceUpdateCanvases(); camera.Render();
+        RenderTexture previous = RenderTexture.active; RenderTexture.active = target;
+        var image = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+        image.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0); image.Apply();
+        File.WriteAllBytes(".codex/diagnostics/" + filename, image.EncodeToPNG());
+        RenderTexture.active = previous; Object.DestroyImmediate(image);
+    }
+    private static void Log(string value)
+    { Directory.CreateDirectory(".codex/diagnostics"); File.AppendAllText(Results, value + Environment.NewLine); }
+}

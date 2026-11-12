@@ -1,0 +1,252 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using TMPro;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using Object = UnityEngine.Object;
+
+[InitializeOnLoad]
+internal static class VoiceLoudRangeValidation
+{
+    private const string Request = "Temp/VoiceLoudRangeValidation.request";
+    private const string Results = ".codex/diagnostics/voice-loud-range-16-32-20261110.txt";
+    private const string Prefab = "Assets/Resources/UI/VoiceIntensitySettingsPanel.prefab";
+    private static TMP_FontAsset font;
+
+    static VoiceLoudRangeValidation() { EditorApplication.update += Update; }
+
+    private static void Update()
+    {
+        if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating
+            || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
+        Scene original = SceneManager.GetActiveScene(); bool dirty = original.isDirty;
+        Scene validation = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(validation);
+        try
+        {
+            Log("ORIGINAL " + original.path + " dirty=" + dirty);
+            
+            if (command != "preview" && command != "calibrated-preview")
+            {
+                Tests(typeof(VoiceDynamicProximityTests)); Tests(typeof(VoiceIntensityCalibrationTests)); Tests(typeof(VoiceParticipantControlsTests));
+                Tests(typeof(VivoxMicrophoneLifecycleTests)); Tests(typeof(VoiceTransmissionTests));
+                Tests(typeof(VoiceActivityIndicatorTests)); Tests(typeof(VivoxVoiceOutputTests));
+            }
+            Preview(command == "calibrated-preview"); Log("SERVICES=" + Unity.Services.Core.UnityServices.State);
+        }
+        catch (Exception error) { Log("VALIDATION FAILED " + error); }
+        finally
+        {
+            SceneManager.SetActiveScene(original); EditorSceneManager.CloseScene(validation, true);
+            if (dirty && !original.isDirty) EditorSceneManager.MarkSceneDirty(original);
+            Log("RESTORED " + original.path + " dirty=" + original.isDirty);
+        }
+    }
+
+    private static void BuildPrefab()
+    {
+        var root = PrefabUtility.LoadPrefabContents(Prefab);
+        try
+        {
+            var panel = root.GetComponent<VoiceIntensitySettingsPanel>();
+            var data = new SerializedObject(panel);
+            font = ((TMP_Text)data.FindProperty("inputLabel").objectReferenceValue).font;
+            var box = (RectTransform)root.transform.Find("Microphone Test Dialog/Test Panel");
+            box.sizeDelta = new Vector2(780f, 780f);
+            Transform existing = box.Find("Hear Myself");
+            var monitor = existing != null ? existing.GetComponent<Button>()
+                : Button("Hear myself: Off", box, new Vector2(0f, -620f), new Vector2(400f, 36f));
+            monitor.name = "Hear Myself";
+            var help = box.Find("Microphone Playback Help")?.GetComponent<TMP_Text>();
+            if (help == null) help = Label("Local microphone playback. Use headphones to avoid feedback.", box,
+                new Vector2(0f, -661f), new Vector2(680f, 32f), 18f);
+            help.name = "Microphone Playback Help"; help.alignment = TextAlignmentOptions.Center;
+            help.color = new Color(0.65f, 0.7f, 0.76f);
+            var range = box.Find("Voice Range")?.GetComponent<TMP_Text>();
+            if (range == null) range = Label("Voice range: Join a room to test", box,
+                new Vector2(0f, -361f), new Vector2(680f, 28f), 21f);
+            range.name = "Voice Range"; range.alignment = TextAlignmentOptions.Center;
+            Wire(panel, "monitorButton", monitor); Wire(panel, "monitorLabel", monitor.GetComponentInChildren<TMP_Text>(true));
+            Wire(panel, "monitorHelp", help); Wire(panel, "rangeLabel", range);
+            Position(data, "instruction", -430f); Position(data, "progress", -500f);
+            foreach (string field in new[] { "measureButton", "cancelButton", "resetButton", "closeButton" })
+                Position(data, field, -554f);
+            box.Find("Calibration Tip").GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -730f);
+            PrefabUtility.SaveAsPrefabAsset(root, Prefab);
+            Log("UPDATED " + Prefab);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+    private static void Position(SerializedObject data, string field, float y)
+    {
+        var component = (Component)data.FindProperty(field).objectReferenceValue;
+        var rect = component.GetComponent<RectTransform>();
+        rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
+    }
+
+    private static RectTransform Rect(string name, Transform parent, Vector2 anchor, Vector2 size, Vector2 position)
+    {
+        var root = new GameObject(name, typeof(RectTransform)); root.layer = 5;
+        var rect = (RectTransform)root.transform; if (parent != null) rect.SetParent(parent, false);
+        rect.anchorMin = rect.anchorMax = anchor; rect.sizeDelta = size; rect.anchoredPosition = position;
+        return rect;
+    }
+    private static void Stretch(RectTransform rect)
+    { rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = rect.offsetMax = Vector2.zero; }
+    private static TMP_Text Label(string text, Transform parent, Vector2 position, Vector2 size, float fontSize)
+    {
+        var rect = Rect(text, parent, new Vector2(0.5f, 1f), size, position);
+        var label = rect.gameObject.AddComponent<TextMeshProUGUI>();
+        label.font = font; label.text = text; label.fontSize = fontSize; label.color = Color.white;
+        label.richText = false; label.textWrappingMode = TextWrappingModes.NoWrap; label.raycastTarget = false;
+        return label;
+    }
+    private static Button Button(string text, Transform parent, Vector2 position, Vector2 size)
+    {
+        var rect = Rect(text, parent, new Vector2(0.5f, 1f), size, position);
+        var image = rect.gameObject.AddComponent<Image>(); image.color = new Color(0.9f, 0.92f, 0.95f);
+        var button = rect.gameObject.AddComponent<Button>(); button.targetGraphic = image;
+        var label = Label(text, rect, Vector2.zero, Vector2.zero, 21f); Stretch(label.rectTransform);
+        label.alignment = TextAlignmentOptions.Center; label.color = new Color(0.1f, 0.12f, 0.15f);
+        return button;
+    }
+    private static Slider Bar(string name, Transform parent, Vector2 position, Vector2 size, out Image fillImage)
+    {
+        var rect = Rect(name, parent, new Vector2(0.5f, 1f), size, position);
+        rect.gameObject.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.08f);
+        var fill = Rect("Fill", rect, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero); Stretch(fill);
+        fillImage = fill.gameObject.AddComponent<Image>(); fillImage.color = new Color(0.45f, 1f, 0.65f);
+        var slider = rect.gameObject.AddComponent<Slider>(); slider.fillRect = fill;
+        slider.interactable = false; slider.transition = Selectable.Transition.None; slider.value = 0f;
+        return slider;
+    }
+    private static void Wire(Object target, string field, Object value)
+    {
+        var data = new SerializedObject(target); data.FindProperty(field).objectReferenceValue = value;
+        data.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void Tests(Type type)
+    {
+        int passed = 0, failed = 0, skipped = 0;
+        foreach (var method in type.GetMethods())
+        {
+            var cases = method.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().ToArray();
+            if (cases.Length == 0 && method.GetCustomAttributes(typeof(TestAttribute), false).Length == 0) continue;
+            var arguments = cases.Length > 0 ? cases.Select(c => c.Arguments) : new[] { Array.Empty<object>() };
+            foreach (object[] args in arguments)
+            {
+                object fixture = Activator.CreateInstance(type);
+                string name = type.Name + "." + method.Name + "(" + string.Join(",", args) + ")";
+                try { type.GetMethod("SetUp")?.Invoke(fixture, null); method.Invoke(fixture, args); passed++; Log("PASS " + name); }
+                catch (Exception error)
+                {
+                    Exception cause = error.InnerException ?? error;
+                    if (cause is IgnoreException) { skipped++; Log("SKIP " + name); }
+                    else { failed++; Log("FAIL " + name + " " + cause); }
+                }
+                finally { type.GetMethod("TearDown")?.Invoke(fixture, null); }
+            }
+        }
+        Log("TESTS " + type.Name + " passed=" + passed + " failed=" + failed + " skipped=" + skipped);
+    }
+
+    private static void Preview(bool ignored)
+    {
+        // Copies of the standalone profile's saved numeric anchors; no user preferences are written.
+        Assert.That(VoiceIntensityProfile.TryCreate(0f, 0.4820393919944763f, 0.5403960347175598f,
+            0.6392102241516113f, out var profile), Is.True);
+        var monitor = new VoiceIntensityMonitor(); monitor.SetProfile(profile);
+        foreach (var entry in new[] { (profile.Quiet, 0.25f, VoiceIntensityBand.Quiet),
+            (profile.Normal, 0.6f, VoiceIntensityBand.Normal), (profile.Loud, 1f, VoiceIntensityBand.Loud) })
+        {
+            for (int i = 0; i < 120; i++) monitor.Update(Activity(entry.Item1), 1f / 60f);
+            Assert.That(monitor.Intensity, Is.EqualTo(entry.Item2).Within(0.001f));
+            Assert.That(monitor.Band, Is.EqualTo(entry.Item3));
+            Log("SAVED ANCHOR energy=" + entry.Item1 + " intensity=" + monitor.Intensity + " band=" + monitor.Band);
+        }
+        var camera = new GameObject("Calibration display preview").AddComponent<Camera>();
+        camera.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>().renderShadows = false;
+        camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(0.08f, 0.09f, 0.11f);
+        camera.cullingMask = 1 << 31; camera.orthographic = true; camera.nearClipPlane = 0.01f;
+        var target = new RenderTexture(1280, 720, 24); camera.targetTexture = target;
+        var root = Object.Instantiate(Resources.Load<GameObject>("UI/InGameSettingsMenu"));
+        var settings = root.GetComponent<SettingsMenu>(); VoiceSettingsPanel.EnsureForMenu(settings);
+        var panel = VoiceIntensitySettingsPanel.EnsureForMenu(settings);
+        var canvas = root.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = camera; canvas.planeDistance = 1f; root.GetComponent<CanvasGroup>().alpha = 1f;
+        settings.resolutionDropdown.ClearOptions();
+        settings.resolutionDropdown.AddOptions(new System.Collections.Generic.List<string> { "1280 x 720" });
+        panel.Open();
+        var present = typeof(VoiceIntensitySettingsPanel).GetMethod("Present", BindingFlags.Instance | BindingFlags.NonPublic);
+        var serialized = new SerializedObject(panel);
+        var references = (TMP_Text)serialized.FindProperty("profileLabel").objectReferenceValue;
+        var live = (TMP_Text)serialized.FindProperty("levelLabel").objectReferenceValue;
+        monitor.Calibration.Begin();
+        foreach (float energy in new[] { 0f, 0.7f, 0.8f, 0.805f })
+        {
+            if (monitor.Calibration.Stage != VoiceCalibrationStage.Silence) monitor.Calibration.Continue();
+            for (int i = 0; i < 30; i++) monitor.Update(Activity(energy, energy > 0f), 0.1f);
+        }
+        Assert.That(monitor.Calibration.Stage, Is.EqualTo(VoiceCalibrationStage.Failed));
+        present.Invoke(panel, new object[] { monitor, true, "Saved microphone profile (validation)", (bool?)false });
+        Assert.That(references.text, Does.StartWith("Saved input:").And.Contain("Quiet 48.2%"));
+        Assert.That(((TMP_Text)serialized.FindProperty("instruction").objectReferenceValue).text,
+            Does.Contain("previous calibration is still active"));
+        Log("UI failed attempt preserves active saved references: PASS");
+        monitor.Calibration.Begin(); monitor.Update(Activity(0f, false), 0.1f);
+        present.Invoke(panel, new object[] { monitor, true, "Saved microphone profile (validation)", (bool?)false });
+        Assert.That(references.text, Does.StartWith("Measured input:"));
+        monitor.Calibration.Cancel();
+        present.Invoke(panel, new object[] { monitor, true, "Saved microphone profile (validation)", (bool?)false });
+        Assert.That(references.text, Does.StartWith("Saved input:").And.Contain("Quiet 48.2%"));
+        Log("UI canceled attempt restores saved reference presentation: PASS");
+        monitor.SetProfile(profile);
+        for (int i = 0; i < 120; i++) monitor.Update(Activity(profile.Quiet), 1f / 60f);
+        present.Invoke(panel, new object[] { monitor, true, "Saved microphone profile (validation)", (bool?)false });
+        Assert.That(live.text, Is.EqualTo("Calibrated intensity: Quiet  25%"));
+        var managerRoot = new GameObject("Inactive range preview state"); managerRoot.SetActive(false);
+        var manager = managerRoot.AddComponent<VivoxVoiceManager>();
+        typeof(VivoxVoiceManager).GetField("settings", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetValue(manager, Resources.Load<VivoxVoiceSettings>("Voice/VivoxVoiceSettings"));
+        manager.LocalVoiceIntensity.SetProfile(profile);
+        for (int i = 0; i < 120; i++) manager.LocalVoiceIntensity.Update(Activity(profile.Quiet), 1f / 60f);
+        manager.SetMicrophoneTestOpen(true);
+        typeof(VoiceIntensitySettingsPanel).GetMethod("RefreshTestOptions", BindingFlags.Instance | BindingFlags.NonPublic)
+            .Invoke(panel, new object[] { manager, true });
+        ((Button)serialized.FindProperty("monitorButton").objectReferenceValue).interactable = true;
+        Layer(root); Capture(camera, target, "voice-loud-range-16-32-preview-20261110.png");
+        Assert.That(references.isTextOverflowing, Is.False);
+        Assert.That(live.isTextOverflowing, Is.False);
+        Log("UI saved input 48.2% and live calibrated intensity Quiet 25%: PASS; labels fit");
+        panel.Close(); camera.targetTexture = null; Object.DestroyImmediate(target);
+        Log("PREVIEW uses saved numeric anchors and synthetic speech only; no microphone or login");
+    }
+    private static VoiceActivitySnapshot Activity(float energy, bool speech = true)
+        => VoiceActivitySnapshot.FromInput(true, true, true, false, true, speech, energy);
+    private static void Layer(GameObject root)
+    { foreach (Transform child in root.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 31; }
+    private static void Capture(Camera camera, RenderTexture target, string filename)
+    {
+        foreach (var graphic in Object.FindObjectsByType<Graphic>())
+            if (graphic.gameObject.scene == camera.gameObject.scene) graphic.SetAllDirty();
+        foreach (var label in Object.FindObjectsByType<TMP_Text>())
+            if (label.gameObject.scene == camera.gameObject.scene) label.ForceMeshUpdate();
+        Canvas.ForceUpdateCanvases(); camera.Render();
+        Canvas.ForceUpdateCanvases(); camera.Render();
+        RenderTexture previous = RenderTexture.active; RenderTexture.active = target;
+        var image = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+        image.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0); image.Apply();
+        File.WriteAllBytes(".codex/diagnostics/" + filename, image.EncodeToPNG());
+        RenderTexture.active = previous; Object.DestroyImmediate(image);
+    }
+    private static void Log(string value)
+    { Directory.CreateDirectory(".codex/diagnostics"); File.AppendAllText(Results, value + Environment.NewLine); }
+}

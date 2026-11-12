@@ -1,0 +1,81 @@
+Arrow impact validation on the Unity main thread.
+Before scene=Assets/Scenes/Map3.unity dirty=True
+PASS Edit PlayerWorldCameraIncludesTheVariantBodyAndEquipmentLayers False
+PASS Edit PlayerWorldCameraIncludesTheVariantBodyAndEquipmentLayers True
+PASS Edit BallisticLowArcReachesTheRequestedPoint 8,0
+PASS Edit BallisticLowArcReachesTheRequestedPoint 16,2
+PASS Edit BallisticLowArcReachesTheRequestedPoint 12,-3
+PASS Edit UnreachableOrInvalidBallisticsCannotCreateProjectiles 
+PASS Edit RetreatHysteresisDoesNotOscillateAtThePreferredMinimum 
+PASS Edit VariantsShareTheBaseAndAllControllerBindingsResolve False
+PASS Edit VariantsShareTheBaseAndAllControllerBindingsResolve True
+PASS Edit BowDrawAndPresentationArrowMatchExportedTimingAfterMovingTheActor 
+PASS Edit SweptArrowHitsAThinWallAndIgnoresItsOwner 
+RUN ArcherPreparesThenReleasesOneArrowThatDamagesThePlayerOnce
+PASS Runtime ArcherPreparesThenReleasesOneArrowThatDamagesThePlayerOnce
+RUN StunDuringPreparationCannotReleaseADelayedArrow
+FAIL Runtime StunDuringPreparationCannotReleaseADelayedArrow System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN AWallAddedDuringPreparationPreventsTheShotFromHittingThePlayer
+FAIL Runtime AWallAddedDuringPreparationPreventsTheShotFromHittingThePlayer System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN AClosePlayerMakesTheArcherRetreatAlongTheNavMesh
+FAIL Runtime AClosePlayerMakesTheArcherRetreatAlongTheNavMesh System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN AClosePlayerDuringCooldownDoesNotResetTheRetreatPathEveryTick
+FAIL Runtime AClosePlayerDuringCooldownDoesNotResetTheRetreatPathEveryTick System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN ExistingPerceptionAndCombatContractsStillPassWithRuntimeInitialization
+FAIL Runtime ExistingPerceptionAndCombatContractsStillPassWithRuntimeInitialization System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN AGuardingShieldStopsTheArrowWithoutPlayerDamage
+FAIL Runtime AGuardingShieldStopsTheArrowWithoutPlayerDamage System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN APlayerHitEmbedsFollowsAndFadesBeforeCleanup
+FAIL Runtime APlayerHitEmbedsFollowsAndFadesBeforeCleanup System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN AReplicatedEmbeddedArrowFollowsWithoutApplyingDamage
+FAIL Runtime AReplicatedEmbeddedArrowFollowsWithoutApplyingDamage System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+RUN AReplicatedVisualArrowCannotDealDamageLocally
+FAIL Runtime AReplicatedVisualArrowCannotDealDamageLocally System.ArgumentException: Scene with name "Skeleton Archer Runtime Validation" already exists
+  at (wrapper managed-to-native) UnityEngine.SceneManagement.SceneManager.CreateScene_Injected(UnityEngine.Bindings.ManagedSpanWrapper&,UnityEngine.SceneManagement.CreateSceneParameters&,UnityEngine.SceneManagement.Scene&)
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName, UnityEngine.SceneManagement.CreateSceneParameters parameters) [0x00039] in <5ea200363ab142a582463089d51cabd3>:0 
+  at UnityEngine.SceneManagement.SceneManager.CreateScene (System.String sceneName) [0x00008] in <5ea200363ab142a582463089d51cabd3>:0 
+  at SkeletonArcherPlayModeTests+<EnterIsolatedRuntime>d__5.MoveNext () [0x00089] in C:\Git\Unity\WorstKnights\Assets\Tests\EditMode\Editor\Enemy\SkeletonArcherPlayModeTests.cs:29 
+  at ArrowImpactValidationProbe.Tick () [0x00035] in C:\Git\Unity\WorstKnights\Assets\Editor\ArrowImpactValidationProbe.cs:134 
+Runtime passed=1 failed=9
+After scene=Assets/Scenes/Map3.unity dirty=True
+RESTORED

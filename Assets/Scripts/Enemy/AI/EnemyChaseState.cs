@@ -69,6 +69,9 @@ public sealed class EnemyChaseState : EnemyAIState
                 return;
             }
 
+            if (Brain.TryMaintainArcherDistance())
+                return;
+
             if (Brain.IsCurrentTargetInsideAttackStartRange())
             {
                 Brain.ChangeState(EnemyState.Attack);
@@ -113,6 +116,9 @@ public sealed class EnemyChaseState : EnemyAIState
                 Brain.ChangeState(EnemyState.Return);
                 return;
             }
+
+            if (Brain.TryMaintainArcherDistance())
+                return;
 
             if (Brain.IsCurrentTargetInsideAttackStartRange())
             {

@@ -13,6 +13,7 @@ public class EnemyNetworkSync : MonoBehaviour, IPunObservable
     [SerializeField] private EnemyHealth enemyHealth;
     [SerializeField] private BeholderMoodController beholderMood;
     [SerializeField] private BeholderDialogueController beholderDialogue;
+    [SerializeField] private EnemyArcherCombat archerCombat;
 
     [Header("Remote Interpolation")]
     [SerializeField] [Min(0.01f)] private float remotePositionLerpSpeed = 12f;
@@ -54,6 +55,11 @@ public class EnemyNetworkSync : MonoBehaviour, IPunObservable
     private float networkDialogueVolume;
     private float networkDialoguePitch;
     private double networkDialogueStartedAt;
+    private bool networkHasArcher;
+    private int networkArcherSequence;
+    private double networkArcherStartedAt;
+    private bool networkArcherAttacking;
+    private Vector3 networkArcherAim;
     private RigidbodyInterpolation initialInterpolation;
 
     private void Awake()
@@ -78,6 +84,9 @@ public class EnemyNetworkSync : MonoBehaviour, IPunObservable
 
         if (beholderDialogue == null)
             beholderDialogue = GetComponent<BeholderDialogueController>();
+
+        if (archerCombat == null)
+            archerCombat = GetComponent<EnemyArcherCombat>();
 
         Rigidbody rb = enemySetup != null ? enemySetup.Rigidbody : GetComponent<Rigidbody>();
         if (rb != null)
@@ -189,6 +198,14 @@ public class EnemyNetworkSync : MonoBehaviour, IPunObservable
                 stream.SendNext(beholderDialogue.CuePitch);
                 stream.SendNext(beholderDialogue.CueStartedAt);
             }
+            stream.SendNext(archerCombat != null && archerCombat.isActiveAndEnabled);
+            if (archerCombat != null && archerCombat.isActiveAndEnabled)
+            {
+                stream.SendNext(archerCombat.ShotSequence);
+                stream.SendNext(archerCombat.ShotStartedAtServer);
+                stream.SendNext(archerCombat.IsAttacking);
+                stream.SendNext(archerCombat.VisibleAimPoint);
+            }
             return;
         }
 
@@ -246,6 +263,15 @@ public class EnemyNetworkSync : MonoBehaviour, IPunObservable
             networkDialogueVolume = (float)stream.ReceiveNext();
             networkDialoguePitch = (float)stream.ReceiveNext();
             networkDialogueStartedAt = (double)stream.ReceiveNext();
+        }
+
+        networkHasArcher = (bool)stream.ReceiveNext();
+        if (networkHasArcher)
+        {
+            networkArcherSequence = (int)stream.ReceiveNext();
+            networkArcherStartedAt = (double)stream.ReceiveNext();
+            networkArcherAttacking = (bool)stream.ReceiveNext();
+            networkArcherAim = (Vector3)stream.ReceiveNext();
         }
 
         if (!hasNetworkState)
@@ -338,6 +364,9 @@ public class EnemyNetworkSync : MonoBehaviour, IPunObservable
 
         enemyMotor?.ApplyReplicatedPlanarSpeed(networkPlanarSpeed);
         enemyAttack?.ApplyReplicatedAttackSequence(networkAttackSequence);
+        if (networkHasArcher)
+            archerCombat?.ApplyReplicatedShot(networkArcherSequence, networkArcherStartedAt,
+                networkArcherAttacking, networkArcherAim);
     }
 
     private void InterpolateRemoteTransform(float deltaTime)

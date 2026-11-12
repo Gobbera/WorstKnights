@@ -33,17 +33,41 @@ public sealed class VivoxVoiceOutputTests
     public void UnityVoiceParticipatesInEnvironmentReverbWithoutADuplicateDistanceRolloff()
     {
         source.bypassEffects = source.bypassListenerEffects = source.bypassReverbZones = true;
-        source.spatialBlend = 1f; source.dopplerLevel = 2f; source.panStereo = 1f; source.pitch = 1.3f;
+        source.spatialBlend = 0f; source.dopplerLevel = 2f; source.panStereo = 1f; source.pitch = 1.3f;
         Configure();
-        Assert.That(source.spatialBlend, Is.Zero);
+        Assert.That(source.spatialBlend, Is.EqualTo(1f));
         Assert.That(source.dopplerLevel, Is.Zero);
         Assert.That(source.panStereo, Is.Zero);
+        Assert.That(source.spread, Is.Zero);
+        Assert.That(source.rolloffMode, Is.EqualTo(AudioRolloffMode.Custom));
+        AnimationCurve rolloff = source.GetCustomCurve(AudioSourceCurveType.CustomRolloff);
+        Assert.That(rolloff.Evaluate(0f), Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(rolloff.Evaluate(1f), Is.EqualTo(1f).Within(0.0001f));
         Assert.That(source.pitch, Is.EqualTo(1f));
         Assert.That(source.bypassEffects || source.bypassListenerEffects || source.bypassReverbZones, Is.False);
         Assert.That(source.reverbZoneMix, Is.EqualTo(1f));
         Assert.That(source.loop, Is.True);
         Assert.That(source.playOnAwake, Is.False);
         Assert.That(source.outputAudioMixerGroup, Is.Null);
+    }
+
+    [Test]
+    public void NonDirectionalVoiceRemainsCentredWhileDirectionalVoiceFollowsTheSpeaker()
+    {
+        var listener = new GameObject("Voice listener"); objects.Add(listener);
+        var speaker = new GameObject("Remote voice anchor"); objects.Add(speaker);
+        listener.transform.position = new Vector3(1f, 2f, 3f);
+        speaker.transform.position = new Vector3(8f, 4f, -2f);
+
+        Position(listener.transform, speaker.transform, false);
+        Configure(directional: false);
+        Assert.That(source.transform.position, Is.EqualTo(listener.transform.position));
+        Assert.That(source.spatialBlend, Is.Zero);
+
+        Position(listener.transform, speaker.transform, true);
+        Configure(directional: true);
+        Assert.That(source.transform.position, Is.EqualTo(speaker.transform.position));
+        Assert.That(source.spatialBlend, Is.EqualTo(1f));
     }
 
     [Test]
@@ -119,9 +143,11 @@ public sealed class VivoxVoiceOutputTests
         Assert.That(authored.UnityVoiceOutput, Is.True);
         Assert.That(authored.EnvironmentReverbSend, Is.EqualTo(1f));
         Assert.That(authored.UseNativeVivoxPositionalAudio, Is.False);
-        Assert.That(authored.AudibleDistance, Is.EqualTo(25));
-        Assert.That(authored.ConversationalDistance, Is.EqualTo(1));
-        Assert.That(authored.AudioFadeIntensity, Is.EqualTo(1.4f).Within(0.001f));
+        Assert.That(authored.AllowDirectionalPanning, Is.True);
+        Assert.That(authored.AudibleDistance, Is.GreaterThan(authored.ConversationalDistance));
+        Assert.That(authored.NormalVoiceDistance, Is.InRange(
+            authored.ConversationalDistance, authored.AudibleDistance));
+        Assert.That(authored.AudioFadeIntensity, Is.GreaterThan(0f));
         Assert.That(authored.PositionUpdateInterval, Is.EqualTo(0.3f).Within(0.001f));
     }
 
@@ -135,7 +161,10 @@ public sealed class VivoxVoiceOutputTests
     }
 
     private void Set(string field, object value) => typeof(VivoxVoiceSettings).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(settings, value);
-    private void Configure() => Invoke("ConfigureUnityVoiceSource", source, settings);
+    private void Configure(bool directional = true)
+        => Invoke("ConfigureUnityVoiceSource", source, settings, directional);
+    private void Position(Transform listener, Transform speaker, bool directional)
+        => Invoke("PositionUnityVoiceSource", source, listener, speaker, directional);
     private void Mix(int volume, bool muted) => Invoke("ApplyUnityVoiceSourceMix", source, volume, muted);
     private bool Route(VivoxVoiceMode mode) => (bool)Invoke("ShouldUseUnityVoiceOutput", settings, mode);
     private static object Invoke(string method, params object[] args) => typeof(VivoxVoiceManager).GetMethod(method, StaticPrivate).Invoke(null, args);

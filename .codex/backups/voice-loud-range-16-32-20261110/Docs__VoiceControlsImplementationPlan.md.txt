@@ -1,0 +1,148 @@
+# Voice Controls Implementation Plan
+
+## Scope and sequence
+
+Implement and review one stage at a time. Preserve the working Vivox proximity route and Unity environment reverb throughout.
+
+1. **Local speech activity HUD (implemented):** a reusable microphone icon with smooth idle/speaking opacity, a red muted state and a gray unavailable state. Read the local Vivox participant and actual transmission state; do not open another microphone or change voice processing.
+2. **Transmission settings (implemented):** open microphone or push-to-talk, configurable binding, saved preference and safe release across focus loss/channel recovery.
+3. **In-game participant settings (implemented):** room membership and display names, listener-local volume/mute, and explicit composition with proximity mute so distance updates cannot undo a manual choice.
+4. **Intensity measurement prototype (implemented; live microphone review pending):** calibrate silence/quiet/normal/loud speech, inspect automatic gain status, reject overlapping levels and smooth the local meter before using intensity as gameplay input.
+5. **Dynamic proximity (implemented; rebuilt-client listening review pending):** derive a bounded range from sender-side calibrated intensity and share only that small value through gameplay networking. Keep received audio on Vivox and apply listener-local volume after distance attenuation. The microphone-test dialog also provides optional local playback. Test matching standalone builds with different microphones.
+
+## Stage 1 checkpoint and setup
+
+Checkpoint: `.codex/backups/voice-activity-hud-20261110/` contains the affected saved-on-disk sources before implementation. Do not save or replace the user's open scenes.
+
+- Add a read-only local activity snapshot to `VivoxVoiceManager`, isolated from audio playback and distance mixing.
+- Instantiate `Resources/UI/VoiceActivityHUD.prefab` through `GameplaySceneRoot`, following the existing settings overlay bootstrap. Repeated bootstrap must reuse the scene's existing HUD. Non-gameplay scenes must not acquire one.
+- Author the microphone as a Unity UI vector graphic so the prefab needs no external icon/font dependency. Make the indicator non-interactive and render below the settings overlay.
+- Expose idle opacity, speaking color, transition time and a short visual release hold on the prefab. Use unscaled time and avoid a clock-driven blinking loop.
+- Preserve the SDK's speech detection policy and participant update frequency in this stage. The activity snapshot's energy is the latest SDK value, not calibrated loudness; continuous intensity sampling belongs to stage 4.
+
+## Stage 1 acceptance
+
+- Speech highlights the local microphone; silence returns to a subdued idle icon.
+- Mute, disabled voice, missing local participant, lost connection and disabled transmission cannot display active speech from stale SDK values.
+- Remote speech and received reverb do not drive the local icon.
+- Visual fading behaves consistently at different frame rates and continues when gameplay time is paused.
+- Scene transitions and repeated setup do not duplicate the HUD; it does not consume pointer input.
+- Compile runtime/Editor, run focused activity/HUD tests and existing voice-output regressions, and inspect a rendered preview without connecting voice or capturing a microphone.
+
+## Validation results
+
+- Stage 1: 22 focused native Editor activity/HUD cases passed, plus all 16 existing voice-output regression cases (38 total, zero failures on the final run).
+- Runtime and Editor CLI compilation passed. The initial clean dependency build reported existing Photon warnings; the subsequent focused incremental build passed with zero warnings/errors.
+- A native camera render confirmed the four visual presentations using synthetic states. No voice connection or microphone capture was started. Diagnostics and preview: `.codex/diagnostics/voice-activity-hud-20261110.txt` and `.codex/diagnostics/voice-activity-hud-preview-20261110.png`.
+- The original Map3 scene was restored with `dirty=False`; no gameplay scene or Player prefab was modified.
+- Live microphone/Vivox detection still needs a check in rebuilt clients. Stage 5 remains pending; stage 4 implementation and validation are recorded below.
+
+## Stage 2 checkpoint and setup
+
+Checkpoint: `.codex/backups/voice-transmission-settings-20261110/` preserves stage 1 and the affected saved settings UI before implementation. Do not save the open gameplay scene.
+
+- Add `Voice Mode` (Open Microphone / Push to Talk) and `Push-to-Talk Key` to the shared settings prefab used by both the Settings scene and the in-game overlay. Default to open microphone and keyboard V; save both choices in local PlayerPrefs.
+- Control only microphone input through the synchronous initialized Vivox mute/unmute APIs. Gate input before joining a channel and reconcile after joining/recovery. Never initialize Vivox or acquire a microphone just to configure settings.
+- Close input on focus loss, application pause, disconnect, manager disable and key capture. Push-to-talk requires a release before another press after any interruption, binding change or mode change.
+- Rebinding accepts keyboard keys, waits for initiating keys to be released, and cancels on Escape, focus loss or closing the menu. Escape must cancel capture without also closing the in-game settings overlay. Ordinary settings use keeps voice available; key capture temporarily closes input in either mode.
+- Feed the existing activity HUD with the effective input gate so blocked transmission cannot show stale speech. Preserve received voice proximity/reverb and all listener-local output settings.
+- Validate stateful hold/release/recovery scenarios, persistence, rebind lifecycle and shared UI wiring, then rerun existing activity/output regressions and render the settings UI. Live transport still needs matching client builds.
+
+## Stage 2 validation results
+
+- Final runtime/Editor CLI compilation passed with zero warnings and zero errors after the temporary helper was removed.
+- All 19 transmission cases passed in native Play Mode, including synthetic keyboard press/release, rebind arming and Escape consumption. The pure state/UI cases also run in Edit Mode; the two frame-edge integration cases explicitly require the native Play probe because the installed Input System's Editor update buffer does not provide reliable frame-edge counters.
+- All 22 existing activity/HUD cases and 16 voice-output regressions passed: 57 distinct validated cases across this stage.
+- The shared settings UI was rendered at 1280 x 720 and inspected; the new controls use readable caption sizes. Existing prefab objects retain their prior data and YAML order, apart from the root component list and background child list needed for the added UI.
+- The keyboard probe kept Unity Services uninitialized. No voice channel, microphone capture or network session was started; original keyboard and local preferences were restored by the fixtures.
+- Map3 returned loaded and clean (`dirty=False`) after the additive validation scene was removed. No gameplay scene or Player prefab was changed. The Editor's automatic TimeManager serialization migration was backed up and restored independently of this feature.
+- Diagnostics: `.codex/diagnostics/voice-transmission-settings-20261110.txt`; rendered preview: `.codex/diagnostics/voice-transmission-settings-preview-20261110.png`. The temporary validation helper is archived with the checkpoint and removed from Assets after validation.
+- Check live speech in matching rebuilt clients for hold/release, mode switching, Alt-Tab, key rebinding and reconnecting while holding the key.
+
+## Stage 2 follow-up: pre-login mute (1001)
+
+Editor logs identified microphone mute requests issued before login completion. SDK initialization alone did not guarantee a valid native account. `ApplyMicrophoneGate` now requires both initialized SDK and confirmed login, while preserving the logical suppression and the post-login/pre-join mute. Ten lifecycle regressions plus 55 applicable existing Editor cases pass without starting voice; repeat live login after restarting Play/rebuilding to discard any mute cache left by the old failed request. Checkpoint: `.codex/backups/vivox-microphone-login-1001-20261110/`.
+
+## Stage 3 checkpoint and setup
+
+Checkpoint: `.codex/backups/voice-participant-controls-20261110/` preserves the current voice/UI sources and saved settings prefab. Preserve the microphone login guard and open gameplay scenes.
+
+- Add a scrollable `Players in Room` section to shared settings, visible only while in a Photon room. List remote room members by actor identity, including members whose Vivox identity/connection is still pending. Never key controls by display name.
+- Each row has a name, voice connection status, listener-local volume slider (0–100%, default 100%) and mute/unmute button. Preserve the slider when muted. Hide the local player; reconcile joining/leaving and identity publication while the menu is open.
+- Store choices locally in the persistent voice manager for the running game session. Bind pending actor edits to the published Vivox identity and retain known-identity choices across voice/Photon reconnects. Reset actor associations when joining a new room so reused actor numbers cannot inherit another player's settings. Do not add network traffic or store transient identities in PlayerPrefs.
+- Keep proximity gain and distance mute separate from listener preferences. Combine distance mute, manual mute and zero volume before SDK playback; apply the same user gain to Unity Audio Taps after distance attenuation. Cache SDK requests per participant instance and restore preferences on new participant objects after reconnect.
+- Preserve the current distance curve/range, output-device mute, native positional fallback, reverb route and input/PTT behavior. Unresolved simulated-proximity speakers remain silent until their distance is known.
+- Validate membership/identity rebinding, independent listeners, manual mute surviving distance resets, unchanged audible boundaries, source gain/reverb and shared UI callbacks. Render a synthetic multi-player preview without connecting voice or capturing a microphone.
+
+## Stage 3 validation results
+
+- Final runtime/Editor CLI compilation passed with zero warnings and zero errors after removing temporary validation tooling.
+- 21 new native Editor cases passed, including real in-memory Photon room/actor data and actual UI callbacks. Coverage includes delayed voice identities, rejoin with a new actor, duplicate names, independent listeners, pending overrides, stale mappings, unchanged cached distance, mute composition, reverb sends, row reuse and 15 remote rows in a full room.
+- All 65 applicable existing voice/input/HUD/lifecycle regressions passed (86 total, zero failures). The two keyboard frame-edge integration cases are skipped in Edit Mode and retain their earlier native Play validation; this change does not alter their input logic.
+- A rendered 1280 x 720 preview confirmed the scrollable list, different volumes and manual mute. Slider thumbs fit their rows and the voice-mode caption stays on one line.
+- Unity Services remained uninitialized. Fixtures restored the original Photon client room/state, voice-manager singleton and preferences. Map3 stayed loaded and clean (`dirty=False`).
+- The existing proximity calculation and authored range settings are preserved. Existing shared settings asset data, the Player prefab, gameplay scenes and TimeManager are not changed by this stage; the room section uses its own Resources prefab.
+- Diagnostics: `.codex/diagnostics/voice-participant-controls-20261110.txt`; preview: `.codex/diagnostics/voice-participant-controls-preview-20261110.png`. Validation tooling is archived in the checkpoint and removed from Assets after use.
+- Live received speech still needs a check in matching rebuilt clients: set one peer to a lower volume, mute/unmute while walking across the range boundary, and reconnect that peer. Other listeners should retain their own choices.
+
+## Stage 4 checkpoint and setup
+
+Checkpoint: `.codex/backups/voice-intensity-calibration-20261110/` preserves the saved voice/settings sources before this stage. Do not change voice range or listener mixing.
+
+- Request ten-per-second Vivox participant updates at login and measure only the local participant's existing audio-energy metadata. Do not start an additional microphone, echo input locally, override PTT or change SDK gain/noise processing.
+- Add a microphone-test dialog to settings with a smoothed intensity meter and quiet/normal/loud classification. Show when input is unavailable and how to hold the configured PTT key. The dialog requires an existing connected voice session; opening settings alone must not initialize voice.
+- Guide calibration through silence, quiet speech, normal speech and comfortably louder speech. Collect timed samples with noise rejection and robust percentiles. Pause collection while PTT/input is closed; reject absent speech or insufficient separation. Failed/canceled attempts preserve the previous valid profile.
+- Persist calibration per effective microphone and SDK input gain/automatic-gain/noise-processing context. Reset the envelope on device/context changes, disconnect and mute. Display automatic-level status without changing it; report compressed or overlapping measurements rather than pretending they are usable.
+- Normalize against calibrated anchors, gate background noise with hysteresis/persistence, and use distinct attack/release smoothing. Expose the local result for the later range stage, but do not publish it or consume it for proximity yet.
+- Validate deterministic signals, background noise, brief spikes, pauses/mute, frame rates, failed/retried calibration, profile persistence and dialog lifecycle. Inspect rendered settings/dialog previews without recording a microphone. Real-device calibration remains a user listening/input check.
+
+## Stage 4 validation results
+
+- Final runtime/Editor CLI compilation passed with zero warnings and zero errors after archiving and removing temporary validation tooling.
+- 22 new native Editor cases and all 86 applicable existing regressions passed (108 total, zero failures). The two keyboard frame-edge cases retain their earlier native Play validation and are explicitly skipped in Edit Mode.
+- Coverage includes different microphone energy scales, noise and isolated spikes, 30/60/120 fps, input/PTT gating, unavailable-input labels, calibration timeouts and overlap rejection, canceled attempts, profile persistence and dialog/menu lifecycle.
+- Settings and calibration-dialog previews use synthetic metadata at 1280 x 720. Unity Services stayed uninitialized; no voice connection or microphone capture was started. Map3 remained loaded and clean.
+- Voice output, participant controls and transmission source files match their pre-stage checkpoint byte for byte. The microphone-login guard, distance function and configured ranges are preserved. Intensity is neither networked nor used for attenuation in this stage.
+- The dialog and form row use their own Resources prefab. The original shared settings prefab, Player prefab and gameplay scenes were not edited by this stage.
+- See [Voice Intensity Calibration](VoiceIntensityCalibration.md) for usage, processing limitations and the live-device checklist. Stage 5 should follow real-microphone review of the measured level separation.
+
+## Stage 4 follow-up: sensitive microphone readings
+
+The initial uncalibrated meter could label quiet speech as Loud because it used arbitrary absolute anchors. Ratio-based noise/separation checks could also reject clearly separated observations near the top of the SDK's bounded energy scale. Checkpoint: `.codex/backups/voice-intensity-sensitive-input-20261110/`.
+
+- Show input energy while uncalibrated or collecting calibration, reserving Quiet/Normal/Loud classification for a completed profile.
+- Derive usable anchor spacing from the observed range and reject overlap without requiring each already-high value to be 15% larger. Interpolate directly between observed SDK energy anchors; do not assume the SDK's normalized VU value is linear PCM amplitude.
+- Derive a collection threshold from measured silence and its variation so low speech is not rejected merely because the silence value is high. Guided speech steps can collect clear energy above that threshold even when the speech detector misses soft speech.
+- Show measured step values and a specific failure reason so compressed/saturated readings can be distinguished from an uncalibrated scale. Preserve prior profiles and the working microphone/output settings.
+- The user's follow-up confirmed automatic input level On and completed calibration still reading Loud for quiet speech. Add an explicit saved On/Off control for Vivox automatic gain, guarded by SDK initialization/login and unavailable when unsupported. Preserve SDK defaults until the user chooses a value; show that switching affects sent voice volume and requires calibration in the new context.
+- Validate high-offset signals, soft speech, real noise variation, narrow/overlapping levels, raw-meter presentation, and the existing input/voice regressions.
+
+Follow-up validation: 33 intensity cases and 86 applicable existing regressions passed (119 total); two previously validated Play-only keyboard cases are skipped in Edit Mode. Rendered synthetic previews confirm raw-level presentation and the automatic-input-level control. Unity Services stayed uninitialized and Map3 stayed loaded and clean. Microphone processing in tests was represented by a managed fixture; real-device confirmation remains pending. See [Voice Intensity Calibration](VoiceIntensityCalibration.md) for the updated usage and limits.
+
+## Stage 4 follow-up: distinguish saved input from calibrated intensity
+
+Read-only inspection of the standalone game's saved profile found noise 0, quiet 0.48203939, normal 0.54039603 and loud 0.63921022, matching the user's reported 48%/54%/64%. These are saved input anchors, which the profile maps to quiet 25%, normal 60% and loud 100%. The UI used the same speech labels for these references and the live calibrated meter, making the two scales ambiguous.
+
+Checkpoint: `.codex/backups/voice-intensity-display-clarity-20261110/`. Label the reference row Measured input while collecting and Saved input for the active valid profile. Label the live normalized meter Calibrated intensity. After failed/canceled attempts, show the active saved profile's anchors rather than the discarded attempt. Keep measurement, profiles, microphone processing, voice output and range unchanged. Validate the mapping using the actual saved anchors and render the clarified UI.
+
+Validation: 119 applicable existing native Editor cases passed, with the two previously validated Play-only keyboard cases skipped in Edit Mode. A native probe copied the actual standalone profile's numeric anchors, confirmed stable Quiet 25% / Normal 60% / Loud 100% output, checked active-profile references after failed/canceled attempts, and rendered the clarified panel with both labels fitting. No user profile was written and no native microphone or voice connection was started. Unity Services stayed uninitialized; Map3 stayed loaded and clean. Diagnostics: `.codex/diagnostics/voice-intensity-display-clarity-20261110.txt`; preview uses the same prefix with `-preview`.
+
+## Stage 5 checkpoint and setup
+
+Requested: connect calibrated sender intensity to multiplayer voice range, and add optional local microphone playback while testing. Checkpoint: `.codex/backups/voice-dynamic-range-monitor-20261110/`. Preserve existing user settings, open scenes, microphone login guards, reverb and per-listener controls.
+
+- Dynamic range applies to simulated 3D proximity only. Keep the authored audible distance as the maximum; add a configurable minimum distance and response exponent. Map sender intensity to this bounded outer limit. Retain the existing distance fade models and conversation gain; 2D/native positional behavior remains unchanged.
+- Calibrated senders publish a quantized intensity with a protocol version, sequence and synchronized Photon timestamp using transient event 74, at most five times per second with change filtering and periodic heartbeat. Send no microphone audio through Photon and do not alter the existing player serialization stream. Validate current-room sender identity, packet shape, sequence and age; expire lost samples toward the minimum range rather than retaining a loud value indefinitely. Uncalibrated/legacy peers retain the previous fixed range.
+- Smooth remote intensity with unscaled time and refresh simulated proximity at a suitable rate. Cache remote voice anchors to avoid per-speaker scene scans at the higher update rate. Keep listener volume/mute after distance attenuation; it never feeds the sender intensity or range.
+- Add Hear myself to the existing microphone-test dialog, Off on every opening. Use one owned Vivox Capture Source Tap for the existing selected microphone/session; no Unity Microphone capture and no network loopback. Gate playback with the actual input/PTT state. Keep it local, dry, at a moderate configurable volume, and stop on panel close, focus loss, disconnect, manager disable/destroy or channel change. Opening settings offline must not initialize voice. Mention headphones in the local monitoring control.
+- Show the local dynamic range limit in the test dialog, clearly identifying fixed-range fallback when calibration is absent or the mode is unsupported. Preserve Measured/Saved input versus Calibrated intensity labels.
+- Validate packet decoding/ordering/expiry/wrap, send-rate filtering, independent speakers/listeners, range bounds/curves, cache cleanup, fallback behavior, monitor gating/cleanup/source configuration and UI lifecycle; rerun voice regressions and inspect a native rendered panel. Native tests must not open a microphone or voice session. Real audio, delay and network reach still require matching rebuilt clients.
+
+## Stage 5 validation results
+
+- Final runtime/Editor CLI compilation after archiving and removing the temporary helper passed with zero warnings and zero errors.
+- All 29 new dynamic-range/monitor cases and 119 applicable existing voice/input/HUD/calibration/listening/reverb regressions passed (148 total, zero failures). The two previously validated Play-only keyboard frame-edge cases are skipped in Edit Mode.
+- Coverage includes nine-byte packet validation, server timestamp and sequence wrap, stale/reordered/duplicate packets, metadata age counted before receipt, rate/change filtering, expiry to minimum, room sender validation, listener-independent range, fallback modes, leaving actors, inactive camera anchors, source reverb/gain, offline SDK guards and monitor/dialog cleanup.
+- Native preview confirms Saved input, Calibrated intensity, the dynamic range limit and Hear myself. It uses synthetic speech and a managed monitor state; no microphone, native voice processing or network session was started. Map3 stayed loaded and clean and Unity Services stayed uninitialized.
+- Shared settings asset, Player prefab and TimeManager match the checkpoint byte for byte. The microphone login guard and existing player movement serialization are preserved. Default authored maximum/conversation range, fade model and received reverb settings remain intact.
+- Check [Dynamic Voice Proximity](VoiceDynamicProximity.md) for the rebuilt-client listening procedure and tuning. Actual sidetone sound/delay, metadata/audio timing and two-client reach remain a live test.

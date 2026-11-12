@@ -103,7 +103,7 @@ public sealed class InGameSettingsMenuController : MonoBehaviour
 
     private void Update()
     {
-        if (!allowToggleInput)
+        if (!allowToggleInput || VoiceSettingsPanel.BlocksMenuToggleThisFrame || VoiceIntensitySettingsPanel.BlocksMenuToggleThisFrame)
             return;
 
         if (!WasTogglePressedThisFrame() || IsAnyEmoteWheelOpen())
@@ -131,10 +131,13 @@ public sealed class InGameSettingsMenuController : MonoBehaviour
         openMenuCount++;
         StoreAndApplyMenuCursorState();
         SetMenuVisible(true);
+        RoomVoiceSettingsPanel.RefreshForMenu(settingsMenuRoot);
     }
 
     public void CloseMenu()
     {
+        VoiceIntensitySettingsPanel.CloseForMenu(settingsMenuRoot != null ? settingsMenuRoot : gameObject);
+        VoiceSettingsPanel.CancelRebindingForMenu(settingsMenuRoot != null ? settingsMenuRoot : gameObject);
         if (!isOpen)
         {
             SetMenuVisible(false);

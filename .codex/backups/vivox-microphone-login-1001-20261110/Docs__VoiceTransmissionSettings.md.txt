@@ -1,0 +1,46 @@
+# Voice Transmission Settings
+
+Stage 2 of [Voice Controls Implementation Plan](VoiceControlsImplementationPlan.md).
+
+## Player controls
+
+The shared settings menu now contains `Voice Mode` and `Push-to-Talk Key` below the existing display options. It is used both in the Settings scene and in the gameplay overlay.
+
+- **Open Microphone** is the default. Input is enabled while the voice channel is ready and the application has focus.
+- **Push to Talk** transmits only while the configured keyboard key is held. The default is **V**. The key button becomes available in this mode.
+- Click the binding button, release any initiating keys, then press a new key. **Escape** cancels capture. Capture also cancels on focus loss, menu closure, component disable or after ten seconds.
+- Mode and binding are local preferences, saved immediately under `voice.transmissionMode` and `voice.pushToTalkKey`. Invalid stored values fall back to open microphone and V.
+- Ordinary settings use allows conversation. Capturing a binding closes microphone input in either mode. Escape used for capture does not also close the in-game overlay.
+
+The first binding implementation accepts keyboard keys. Mouse/gamepad bindings can be added separately if requested.
+
+## Input lifecycle
+
+`VoiceTransmissionGate` tracks release requirements independently of SDK output. It closes on loss of channel readiness, focus loss, application pause or binding capture. In push-to-talk mode, reconnecting while holding the key cannot resume transmission: release and press again. Mode/binding changes and manager disable also reset this requirement. Open microphone resumes automatically once the channel and focus are available.
+
+`VivoxVoiceManager.Transmission` applies the gate through initialized Vivox `MuteInputDevice` / `UnmuteInputDevice` calls. It closes input before channel joins and from synchronous interruption callbacks, including when Unity stops running Update in the background. It reconciles on subsequent updates and after channel recovery. It does not change channel names, receive volume, proximity attenuation, Audio Taps or environment reverb.
+
+The SDK queues initialization if mute is called before initialization. The manager explicitly checks initialization state before issuing microphone APIs, so opening settings or rebinding offline does not initialize a voice session or start capture.
+
+The existing activity HUD additionally checks `IsMicrophoneTransmissionAllowed`, preventing stale SDK speech detection from highlighting the icon while input is blocked.
+
+## UI authoring
+
+The controls and their references are saved in `Assets/Resources/UI/InGameSettingsMenu.prefab` on `VoiceSettingsPanel`. `SettingsMenu` also calls `EnsureForMenu` to support older menu instances without the new component, using their existing resolution row as the UI template. Repeated setup reuses controls and listeners.
+
+`VoiceSettingsPanel` processes capture before the gameplay settings toggle. It records the frame consuming the capture key so Escape cannot cancel capture and close the overlay in the same frame. The panel releases its static capture reference and subscriptions on disable; the settings controller also cancels capture before hiding its CanvasGroup.
+
+## Validation
+
+All 19 transmission cases passed in a native Play Mode probe, including keyboard frame edges, rebind arming, Escape consumption, saved choices, input interruption/recovery, offline suspension and older-menu setup. The state/UI cases also run in Edit Mode; the two frame-edge cases defer to Play Mode because the installed Input System's Editor buffer has unreliable frame-edge counters. The checkpoint archives the temporary probe helper for reproducibility.
+
+All 22 existing activity/HUD cases and 16 voice-output regressions passed. The shared settings UI was rendered and inspected at 1280 x 720. Synthetic input fixtures restored the original keyboard and local preferences. Unity Services remained uninitialized, and the user's Map3 scene returned loaded and clean after the temporary additive validation scene was removed.
+
+Results: `.codex/diagnostics/voice-transmission-settings-20261110.txt`. Live speech and native transport still need a check in matching rebuilt clients.
+
+Final runtime/Editor CLI compilation passed with zero warnings and zero errors after temporary validation tooling was removed.
+
+## References
+
+- [Vivox microphone and channel APIs](https://docs.unity.com/en-us/vivox-unity/v16-upgrade-guide)
+- [Input System keyboard API](https://docs.unity3d.com/Packages/com.unity.inputsystem@1.19/api/UnityEngine.InputSystem.Keyboard.html)

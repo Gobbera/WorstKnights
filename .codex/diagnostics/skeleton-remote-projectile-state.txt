@@ -1,0 +1,2 @@
+time=0,1601403 position=(10000.00, 1.00, 10000.00) velocity=(0.00, 0.00, 22.00) enabled=True active=True scene=Skeleton Archer Runtime Validation launched=True age=0 terminal=False
+time=0,8102879 position=(10000.00, 1.00, 10014.09) velocity=(0.00, 0.00, 22.00) enabled=True active=True scene=Skeleton Archer Runtime Validation launched=True age=0,6399996 terminal=False

@@ -16,6 +16,7 @@ public class EnemySetup : MonoBehaviour
     [SerializeField] private EnemyNavigation enemyNavigation;
     [SerializeField] private EnemyPerception enemyPerception;
     [SerializeField] private EnemyAttack enemyAttack;
+    [SerializeField] private EnemyArcherCombat archerCombat;
     [SerializeField] private EnemyAnimationController enemyAnimationController;
     [SerializeField] private EnemyNetworkSync enemyNetworkSync;
     [SerializeField] private Transform attackOrigin;
@@ -80,6 +81,9 @@ public class EnemySetup : MonoBehaviour
         if (enemyAttack == null)
             enemyAttack = GetComponent<EnemyAttack>();
 
+        if (archerCombat == null)
+            archerCombat = GetComponent<EnemyArcherCombat>();
+
         if (enemyAnimationController == null)
             enemyAnimationController = GetComponent<EnemyAnimationController>();
 
@@ -123,6 +127,7 @@ public class EnemySetup : MonoBehaviour
         enemyNavigation?.SetSimulationEnabled(hasAuthority && isAlive);
         enemyMotor?.SetAliveState(isAlive);
         enemyAttack?.SetAliveState(isAlive);
+        archerCombat?.SetAliveState(isAlive);
         EnsurePhysicsDefaults(hasAuthority, isAlive);
     }
 

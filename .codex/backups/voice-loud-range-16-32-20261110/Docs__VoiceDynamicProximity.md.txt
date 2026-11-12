@@ -1,0 +1,64 @@
+# Dynamic Voice Proximity and Microphone Playback
+
+Stage 5 of [Voice Controls Implementation Plan](VoiceControlsImplementationPlan.md). Calibrated sender intensity now changes the outer range limit of simulated 3D voice. Settings > Microphone Test also provides optional Hear myself playback for testing the existing microphone.
+
+## Testing with two rebuilt clients
+
+1. Rebuild both clients from the same project revision and join the same Photon room. Wait for voice to connect. Use the existing calibration on each microphone, or run Calibrate in Settings > Microphone Test. Automatic input level retains the user's saved choice.
+2. To hear the local microphone, select Hear myself: On. Use headphones to avoid acoustic feedback. With push-to-talk, hold the configured key; the monitor respects the same actual input gate and never forces the microphone open. Closing the test or settings stops monitoring; it starts Off on the next opening.
+3. Watch Calibrated intensity and Voice range limit while speaking quietly, normally and comfortably louder. Have the other client walk away and compare the received voice at the same positions. The limit varies continuously and the existing distance fade still applies within it.
+4. On the receiving client, reduce the speaker's individual volume and mute/unmute them. The user's hearing preference changes the received amplitude; it cannot increase the speaker's range or undo distance mute. A third client retains its own listening choices.
+5. Test PTT release, Alt-Tab, closing/reopening the dialog, reconnecting voice, leaving/rejoining the room and a peer joining late. The local monitor must stop on focus/channel loss. Old loud metadata must expire; the next valid heartbeat restores current range.
+
+An uncalibrated speaker retains the previous fixed-range behavior until a valid profile is available. Resetting the current profile therefore returns that speaker to fixed range. Non-positional 2D and optional native Vivox positional mode keep their existing distance behavior. Calibrated range limiting is implemented for the project's default simulated 3D route.
+
+## Range tuning
+
+Tune `Assets/Resources/Voice/VivoxVoiceSettings.asset`:
+
+| Setting | Default | Meaning |
+| --- | ---: | --- |
+| Dynamic Proximity | On | Apply calibrated intensity to simulated 3D range |
+| Audible Distance | 25 m | Maximum outer range limit |
+| Conversational Distance | 1 m | Existing full-volume inner distance |
+| Minimum Dynamic Distance | 3 m | Smallest range limit, bounded above the conversation distance |
+| Dynamic Range Exponent | 1.3 | Values above one keep quiet speech closer |
+| Microphone Monitor Volume | 0.35 | Local test playback gain only |
+
+The outer limit is `minimum + (maximum - minimum) * intensity ^ exponent`. With the defaults, the calibrated quiet/normal/loud anchors produce limits of approximately 6.6 / 14.3 / 25 metres. Silence or blocked input moves a calibrated speaker toward the minimum; it does not generate speech audio.
+
+Voice range limit is an outer bound, not a promise of intelligible speech throughout the circle. The existing authored fade model/intensity and local listening volume still determine audibility inside it. In particular, Linear By Distance with fade intensity above one reaches silence before the displayed outer limit. Received audio keeps its existing Unity reverb route.
+
+## Multiplayer signal
+
+`VivoxVoiceManager.DynamicRange` implements `IOnEventCallback` using the inherited Photon callback registration. Custom event 74 is transient, sent to other room members with unreliable delivery and no room cache. The manager does not add fields to player movement serialization, modify room/player properties for each sample, or send PCM through Photon.
+
+The nine-byte payload contains version 1, a calibrated flag, quantized intensity (0..255), a wrapping 16-bit sequence and the synchronized Photon server timestamp. Changed signals are sent at most five times per second; changes below three quantization steps are filtered, with a half-second heartbeat for unchanged state. Focus/disable suppression may immediately send zero outside that rate cap. The sequence continues across room-state resets to avoid reconnect ordering regressions.
+
+Receivers validate payload length/version/flags, current room membership, remote active sender, timestamp freshness and ordering. Sender identity comes from the Photon event envelope. Samples older than two seconds or more than one second in the future are rejected; timestamp arithmetic supports signed clock wrap. Accepted packet age counts against the two-second freshness window. Sequence checks reject duplicates/reordering and support sequence wrap.
+
+Remote intensity uses unscaled attack/release smoothing (0.1/0.35 seconds). Expired calibrated signals decay toward minimum range and retain their calibrated status, rather than reverting to the longer fixed-range fallback. Unknown or explicitly uncalibrated peers retain the old fixed range. Leaving actors and room transitions clear the appropriate state.
+
+Dynamic simulated proximity refreshes at up to 20 Hz. Remote anchors are cached by actor and scene scans are throttled to half a second when resolving missing entries. An inactive remote camera remains a usable transform while its owning player root is active. Destroyed/inactive players are not reused. Distance gain/mute is still composed with listener preferences after range evaluation on both SDK and Unity output paths.
+
+## Local microphone monitoring
+
+The test dialog explicitly enables one owned `VivoxCaptureSourceTap`, bound to the active voice channel. It uses the microphone already selected/captured by Vivox. Monitoring never starts an extra Unity microphone, joins another channel, or loops received network voice back to the sender.
+
+The source is 2D, dry, at the configured local monitoring gain, with environment reverb disabled. Tap registration requires an existing connected/logged-in Vivox session on a supported platform. Playback additionally requires the active input/PTT gate and an available self-participant observation. The user can keep Hear myself On while releasing/holding PTT; output is muted while input is blocked.
+
+Panel close, focus loss, application pause, channel changes, voice loss, manager disable/destroy and quitting stop monitoring and release the owned tap. Monitoring is not persisted. Unsupported WebGL monitoring is disabled; start failures are reported in the panel. The playback is local and can have device/Unity buffering delay; it does not simulate the sound heard by a distant player or prove server round-trip audio quality.
+
+The integration follows Photon [RaiseEvent and callback documentation](https://doc.photonengine.com/pun/current/gameplay/rpcsandraiseevent/) and Unity's [Audio Tap scripting documentation](https://docs.unity.com/en-us/vivox-unity/developer-guide/audio-taps/audio-taps-in-c-sharp).
+
+## Validation
+
+Native Editor tests cover range bounds and fade models, packet decoding/age/clock wrap, rate/change filtering, sequence wrap and reordering, expiry, room actor validation, independent listener controls, fallback and room cleanup, inactive camera anchors, monitor input gates, dry source configuration, offline guards and dialog cleanup. Existing voice, input, calibration, participant controls and reverb cases are rerun together.
+
+The rendered preview uses synthetic speech and saved numeric calibration anchors, without microphone capture, voice login or a network session. Real sidetone audio/delay and two-client distance behavior still require the rebuilt-client test above.
+
+Final native validation: 29 new dynamic-range/monitor cases and all 119 applicable existing voice regressions passed (148 total, zero failures). The two keyboard frame-edge cases remain skipped in Edit Mode and retain their previous native Play validation. The original Map3 scene stayed loaded and clean, Unity Services remained uninitialized, and no native microphone processing was started. The shared settings prefab, Player prefab and TimeManager match the checkpoint byte for byte.
+
+Final runtime/Editor CLI compilation after removing temporary validation tooling passed with zero warnings and zero errors.
+
+Diagnostics: `.codex/diagnostics/voice-dynamic-range-monitor-20261110.txt`; rendered panel: `.codex/diagnostics/voice-dynamic-range-monitor-preview-20261110.png`. Validation tooling is archived with the checkpoint and removed from Assets after validation. Voice audio and intensity metadata use independent transports; their arrival timing and short speech attacks require live-client listening checks.

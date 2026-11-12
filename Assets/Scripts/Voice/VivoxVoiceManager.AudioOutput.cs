@@ -6,6 +6,8 @@ using UnityEngine;
 
 public sealed partial class VivoxVoiceManager
 {
+    private static readonly AnimationCurve FlatVoiceRolloff = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+
     private sealed class ParticipantVoiceOutput
     {
         public VivoxParticipant Participant;
@@ -21,7 +23,9 @@ public sealed partial class VivoxVoiceManager
 
     public override void OnDisable()
     {
+        if (Instance == this) SuspendVoiceTransmission();
         ClearUnityVoiceOutputs();
+        ResetLocalVoiceActivity();
         base.OnDisable();
     }
 
@@ -57,15 +61,19 @@ public sealed partial class VivoxVoiceManager
             ParticipantVoiceOutput output = EnsureUnityVoiceOutput(participant);
             if (output == null) continue;
 
-            if (listener != null) output.Source.transform.position = listener.position;
-            ConfigureUnityVoiceSource(output.Source, settings);
+            bool wantsDirection = activeVoiceMode == VivoxVoiceMode.Positional3D
+                && settings.AllowDirectionalPanning;
+            bool hasSpeakerAnchor = TryResolveRemoteVoiceAnchor(playerId, out Transform speakerAnchor);
+            bool directional = wantsDirection && hasSpeakerAnchor;
+            PositionUnityVoiceSource(output.Source, listener, speakerAnchor, directional);
+            ConfigureUnityVoiceSource(output.Source, settings, directional);
 
-            int localVolume = MaximumVivoxLocalVolume;
-            bool proximityReady = activeVoiceMode != VivoxVoiceMode.Positional3D
-                || participantVolumeByPlayerId.TryGetValue(playerId, out localVolume);
-            bool muted = !proximityReady || proximityMutedPlayerIds.Contains(playerId)
+            GetParticipantProximityMix(playerId, out int localVolume, out bool proximityMuted);
+            bool muted = proximityMuted
+                || (wantsDirection && !hasSpeakerAnchor)
                 || participant.IsMuted || service.IsOutputDeviceMuted;
-            ApplyUnityVoiceSourceMix(output.Source, localVolume, muted || !output.Tap.IsRunning);
+            ApplyUnityVoiceSourceListenerMix(output.Source, localVolume, muted || !output.Tap.IsRunning,
+                GetParticipantListeningPreference(playerId));
         }
     }
 
@@ -91,7 +99,7 @@ public sealed partial class VivoxVoiceManager
                 throw new InvalidOperationException("The participant audio tap could not register.");
 
             tapObject.transform.SetParent(transform, false);
-            ConfigureUnityVoiceSource(source, settings);
+            ConfigureUnityVoiceSource(source, settings, directional: false);
             output = new ParticipantVoiceOutput { Participant = participant, Tap = tap, Source = source };
             unityVoiceOutputs.Add(participant, output);
             return output;
@@ -106,14 +114,32 @@ public sealed partial class VivoxVoiceManager
         }
     }
 
-    private static void ConfigureUnityVoiceSource(AudioSource source, VivoxVoiceSettings voiceSettings)
+    private static void PositionUnityVoiceSource(AudioSource source, Transform listener,
+        Transform speaker, bool directional)
+    {
+        Transform anchor = directional && speaker != null ? speaker : listener;
+        if (source != null && anchor != null)
+            source.transform.position = anchor.position;
+    }
+
+    private static void ConfigureUnityVoiceSource(AudioSource source, VivoxVoiceSettings voiceSettings,
+        bool directional)
     {
         source.playOnAwake = false;
         source.loop = true;
-        source.spatialBlend = 0f;
+        source.spatialBlend = directional ? 1f : 0f;
         source.panStereo = 0f;
         source.dopplerLevel = 0f;
+        source.spread = 0f;
         source.pitch = 1f;
+        source.spatialize = directional && !string.IsNullOrEmpty(AudioSettings.GetSpatializerPluginName());
+        source.minDistance = Mathf.Max(0.01f, voiceSettings.ConversationalDistance);
+        source.maxDistance = Mathf.Max(source.minDistance + 0.01f, voiceSettings.AudibleDistance);
+        if (source.rolloffMode != AudioRolloffMode.Custom)
+        {
+            source.rolloffMode = AudioRolloffMode.Custom;
+            source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, FlatVoiceRolloff);
+        }
         source.bypassEffects = false;
         source.bypassListenerEffects = false;
         source.bypassReverbZones = voiceSettings.EnvironmentReverbSend <= 0f;
@@ -123,9 +149,16 @@ public sealed partial class VivoxVoiceManager
 
     private static void ApplyUnityVoiceSourceMix(AudioSource source, int localVolume, bool muted)
     {
-        // Participant taps bypass the participant gain in Vivox's original mix.
-        source.volume = Mathf.Pow(10f, Mathf.Clamp(localVolume, MinimumVivoxLocalVolume, MaximumVivoxLocalVolume) / 20f);
-        source.mute = muted;
+        ApplyUnityVoiceSourceListenerMix(source, localVolume, muted, VoiceListeningPreference.Default);
+    }
+
+    private static void ApplyUnityVoiceSourceListenerMix(AudioSource source, int proximityVolume,
+        bool muted, VoiceListeningPreference preference)
+    {
+        // Taps expose unmixed audio: apply user gain once, after the unchanged distance gain.
+        var mix = new VoiceListeningMix(proximityVolume, muted, preference);
+        source.volume = mix.UnityVolume;
+        source.mute = mix.Muted;
     }
 
     private Transform ResolveUnityVoiceListener()

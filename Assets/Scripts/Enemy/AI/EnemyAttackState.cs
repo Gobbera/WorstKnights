@@ -22,7 +22,8 @@ public sealed class EnemyAttackState : EnemyAIState
             return;
         }
 
-        Brain.StopNavigation();
+        if (!Brain.UsesArcherCombat)
+            Brain.StopNavigation();
 
         if (!Brain.CanStartAttack)
         {
@@ -44,6 +45,12 @@ public sealed class EnemyAttackState : EnemyAIState
             return;
         }
 
+        if (Brain.TryMaintainArcherDistance())
+            return;
+
+        if (Brain.UsesArcherCombat)
+            Brain.StopNavigation();
+
         if (!Brain.IsCurrentTargetInsideAttackStartRange())
         {
             Brain.ChangeState(EnemyState.Chase);
@@ -60,6 +67,7 @@ public sealed class EnemyAttackState : EnemyAIState
     public override void Exit()
     {
         Brain.CancelBeholderAttack();
+        Brain.CancelArcherAttack();
     }
 
     private EnemyState ResolveFallbackState()
